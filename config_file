@@ -1,0 +1,32 @@
+server {
+    location / {
+
+    }
+    location /test {
+
+    }
+
+    root html;
+    listen localhost:8080;
+    accept_method GET DELETE;
+}
+
+server {
+    error_page err.html;
+    client_max_body_size 234;
+    root /var/www/html ;
+    autoindex off;
+    index index.html index.htm;
+    cgi_pass ./cgi_dir/ .php    ;
+    return www.google.com ;
+    accept_method DELETE;
+    accept_upload /var/www/html/savedfiles/ ;
+    listen 8081;
+    server_name name name2;
+    location / {
+
+    }
+    location /2 {
+
+    }
+}
