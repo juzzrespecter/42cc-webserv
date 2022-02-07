@@ -23,41 +23,95 @@ Parser::token_t::token_t(token_flag_t _ty, const std::string& _tk) : type(_ty), 
 
 Parser::token_t::token_t(const token_t& other) : type(other.type), token(other.token) { }
 
-Parser::location_block_t::location_block_t(void) { }
+location_block_t::location_block_t(void) { }
 
-Parser::location_block_t::location_block_t(const std::string& _uri) : uri(_uri) { }
+location_block_t::location_block_t(const std::string& _uri) : uri(_uri) { }
 
-Parser::location_block_t::location_block_t(const location_block_t& other) : 
+location_block_t::location_block_t(const location_block_t& other) : 
     uri(other.uri) { 
     *this = other;
 }
 
-Parser::location_block_t& Parser::location_block_t::operator=(const location_block_t& other) {
+/* falta montar un block default */
+location_block_t::location_block_t(const std::vector<std::string> srv_dir[]) {
+    uri = "/";
+
+    if (!srv_dir[D_ERROR_PAGE].empty()) {
+        dir[D_ERROR_PAGE] = srv_dir[D_ERROR_PAGE];
+    }
+    if (!srv_dir[]) return ;
+}
+
+location_block_t& location_block_t::operator=(const location_block_t& other) {
     if (this == &other) {
         return *this;
     }
     uri = other.uri;
-    for (int i = 0; i < N_LOCATION_DIR; i++) {
-        directive[i] = other.directive[i];
+    for (int i = 0; i < N_DIR_LOC; i++) {
+        dir[i] = other.dir[i];
     }
     return *this;
 }
 
-Parser::server_block_t::server_block_t(void) { }
+server_block_t::server_block_t(void) { }
 
-Parser::server_block_t::server_block_t(const server_block_t& other) { 
+server_block_t::server_block_t(const server_block_t& other) { 
     *this = other;
 }
 
-Parser::server_block_t& Parser::server_block_t::operator=(const server_block_t& other) {
+server_block_t& server_block_t::operator=(const server_block_t& other) {
     if (this == &other) {
         return *this;
     }
-    location = other.location;
-    for (int i = 0; i < N_SERVER_DIR; i++) {
-        directive[i] = other.directive[i];
+    loc = other.loc;
+    for (int i = 0; i < N_DIR_SRV; i++) {
+        dir[i] = other.dir[i];
     }
     return *this;
+}
+
+void    server_block_t::setup_default_directives(void) {
+    static const std::string default_dir[N_DIR_LOC - 4] = {"0",".","off","index.html","GET"};
+    for (int i = 0; i < N_DIR_LOC - 4; i++) {
+        if (dir[i].empty()) {
+            dir[i].push_back(default_dir[i]);
+        }
+    }
+    for (location_vector::iterator it = loc.begin(); it != loc.end(); it++) {
+        location_inherits_from_server(*it);
+    }
+}
+
+location_block_t&   server_block_t::location_inherits_from_server(location_block_t& loc) {
+    for (int i = 0; i < 3; i++) {
+        if (loc.dir[i].empty()) {
+            loc.dir[i].push_back(dir[i].front());
+        }
+    }
+    if (loc.dir[D_INDEX].empty()) {
+        for (std::vector<std::string>::iterator it = dir[D_INDEX].begin(); it != dir[D_INDEX].end(); it++) {
+            loc.dir[D_INDEX].push_back(*it);
+        }
+    }
+    if (loc.dir[D_METHOD].empty()) {
+        for (std::vector<std::string>::iterator it = dir[D_METHOD].begin(); it != dir[D_METHOD].end(); it++) {
+            loc.dir[D_METHOD].push_back(*it);
+        }
+    }
+    if (loc.dir[D_UPLOAD].empty() && !dir[D_UPLOAD].empty()) {
+        loc.dir[D_UPLOAD].push_back(dir[D_UPLOAD].front());
+    }
+    if (loc.dir[D_RETURN].empty() && !dir[D_RETURN].empty()) {
+        loc.dir[D_RETURN].push_back(dir[D_RETURN].front());
+    }
+    if (loc.dir[D_CGI_PASS].empty() && !loc.dir[D_CGI_PASS].empty()) {
+        for (std::vector<std::string>::iterator it = dir[D_CGI_PASS].begin(); it != dir[D_CGI_PASS].end(); it++) {
+            loc.dir[D_CGI_PASS].push_back(*it);
+        }
+    }
+    if (loc.dir[D_ERROR_PAGE].empty() && !dir[D_ERROR_PAGE].empty()) {
+        loc.dir[D_ERROR_PAGE].push_back(dir[D_ERROR_PAGE].front());
+    }
 }
 
 Parser::token_flag_t Parser::tokenize_id(char c) const {
@@ -68,14 +122,14 @@ Parser::token_flag_t Parser::tokenize_id(char c) const {
         return token_flag_t(i);
     }
     if (std::isspace(c)) {
-        return SPACE;
+        return T_SPACE;
     }
-    return std::isprint(c) ? WORD : NON_VALID_CHAR;
+    return std::isprint(c) ? T_WORD : T_INVALID_CHAR;
 }
 
 Parser::size_type Parser::tokenize_curly_bracket(int pos) {
     std::string  token;
-    token_flag_t cb_flag = (raw_input[pos] == '{') ? CBO : CBC;
+    token_flag_t cb_flag = (raw_input[pos] == '{') ? T_CBO : T_CBC;
 
     token += raw_input[pos];
     this->tok_lst.push_back(token_t(cb_flag, token));
@@ -86,7 +140,7 @@ Parser::size_type Parser::tokenize_semicolon(int pos) {
     (void) pos;
     std::string token(";");
 
-    this->tok_lst.push_back(token_t(SEMICOLON, token));
+    this->tok_lst.push_back(token_t(T_SEMICOLON, token));
     return 0;
 }
 
@@ -125,7 +179,7 @@ Parser::size_type Parser::tokenize_word(int pos) {
     }
     std::string token = raw_input.substr(pos, pos_end - pos);
     std::string clean_token(tokenize_word_clean_token(raw_input.substr(pos, pos_end - pos)));
-    this->tok_lst.push_back(token_t(WORD, clean_token));
+    this->tok_lst.push_back(token_t(T_WORD, clean_token));
     return token.size() - 1;
 }
 
@@ -141,7 +195,7 @@ size_t Parser::tokenize_space(int pos) {
 }
 
 void Parser::tokenize(void) {
-    const tokenize_options options[N_TOKEN_TYPE] = {
+    const tokenize_options options[N_TOK_TYPE] = {
         &Parser::tokenize_curly_bracket,
         &Parser::tokenize_curly_bracket,
         &Parser::tokenize_semicolon,
@@ -152,7 +206,7 @@ void Parser::tokenize(void) {
     for (size_type i = 0; i < raw_input.size(); i++) {
         token_flag_t token_id = tokenize_id(raw_input[i]);
 
-        if (token_id == NON_VALID_CHAR) {
+        if (token_id == T_INVALID_CHAR) {
             throw std::runtime_error("syntax error: found non valid character\n");
         }
         i += (this->*options[token_id])(i);
@@ -197,17 +251,17 @@ bool    Parser::is_addr(const std::string& addr) const {
 }
 
 bool    Parser::is_word(const token_t& tok) const {
-    return (tok.type == WORD);
+    return (tok.type == T_WORD);
 }
 bool    Parser::is_semicolon(const token_t& tok) const {
-    return (tok.type == SEMICOLON);
+    return (tok.type == T_SEMICOLON);
 }
 bool    Parser::is_cbo(const token_t& tok) const {
-    return (tok.type == CBO);
+    return (tok.type == T_CBO);
 }
 
 bool    Parser::is_cbc(const token_t& tok) const {
-    return (tok.type == CBC);
+    return (tok.type == T_CBC);
 }
 
 bool    Parser::syntax_directive_max_body_size(void) const {
@@ -278,33 +332,33 @@ bool    Parser::syntax_directive_location(void) const {
 directive_flag_t Parser::syntax_directive(void) {
     int id;
 
-    for (id = 0; id < N_VALID_DIR; id++) {
-        if (!current().token.compare(directive[id])) {
+    for (id = 0; id < N_DIR_MAX; id++) {
+        if (!current().token.compare(dir_name[id])) {
             break ;
         }
     }
-    if (id >= N_VALID_DIR) {
-        throw std::runtime_error("directive not recognized in token: \'" + current().token + "\'\n");
+    if (id >= N_DIR_MAX) {
+        throw std::runtime_error("dir not recognized in token: \'" + current().token + "\'\n");
     }
     next();
-    if (!(this->*directive_options[id])()) {
-        throw std::runtime_error("syntax error in directive: \'" + directive[id] + "\'\n");
+    if (!(this->*dir_options[id])()) {
+        throw std::runtime_error("syntax error in dir: \'" + dir_name[id] + "\'\n");
     }
     return directive_flag_t(id);
 }
 
-Parser::location_block_t   Parser::syntax_location_block(const std::string& uri) {
+location_block_t   Parser::syntax_location_block(const std::string& uri) {
     if (empty()) throw std::runtime_error("unexpected end of config file\n");
 
     location_block_t loc(uri);
 
     for (;!empty() && is_word(current()); next()) {
         directive_flag_t id = syntax_directive();
-        if (id >= N_LOCATION_DIR) {
-            throw std::runtime_error("directive not allowed in this context \'" + directive[id] + "\'\n");
+        if (id >= N_DIR_LOC) {
+            throw std::runtime_error("dir not allowed in this context \'" + dir_name[id] + "\'\n");
         }
         for (;!is_semicolon(current()); next()) {
-            loc.directive[id].push_back(current().token);
+            loc.dir[id].push_back(current().token);
         }
     }
     if (!is_cbc(current())) {
@@ -314,25 +368,41 @@ Parser::location_block_t   Parser::syntax_location_block(const std::string& uri)
     return loc;
 }
 
-Parser::server_block_t    Parser::syntax_server_block(void) {
-    server_block_t vserv;
+server_block_t&  Parser::syntax_server_block_default(server_block_t& vsrv) {
+    static const std::string default_dir[N_DIR_LOC - 4] = {
+        "0",
+        ".",
+        "off",
+        "index.html",
+        "GET"
+    };
+    for (int i = 0; i < N_DIR_LOC - 4; i++) {
+        if (vsrv.dir[i].empty()) {
+            vsrv.dir[i].push_back(default_dir[i]);
+        }
+    }
+    return vsrv;
+}
+
+server_block_t    Parser::syntax_server_block(void) {
+    server_block_t vsrv;
 
     while (!empty() && is_word(current())) {
         directive_flag_t id = syntax_directive();
-        if (id == LOCATION) {
+        if (id == D_LOCATION) {
             std::string uri(current().token);
-            for (std::vector<location_block_t>::iterator it = vserv.location.begin(); it != vserv.location.end(); it++) {
-                if (!uri.compare(it->uri)) throw std::runtime_error("duplicate directive declared in server \'" + directive[id] + "\'\n");
+            for (std::vector<location_block_t>::iterator it = vsrv.loc.begin(); it != vsrv.loc.end(); it++) {
+                if (!uri.compare(it->uri)) throw std::runtime_error("duplicate dir declared in server \'" + dir_name[id] + "\'\n");
             }
             next();
             next();
-            vserv.location.push_back(syntax_location_block(uri));
+            vsrv.loc.push_back(syntax_location_block(uri));
         } else {
-            if (!vserv.directive[id].empty()) {
-                throw std::runtime_error("duplicate directive declared in server \'" + directive[id] + "\'\n");
+            if (!vsrv.dir[id].empty()) {
+                throw std::runtime_error("duplicate dir declared in server \'" + dir_name[id] + "\'\n");
             }
             for ( ; !is_semicolon(current()); next()) {
-                vserv.directive[id].push_back(current().token);
+                vsrv.dir[id].push_back(current().token);
             }
             next();
         }
@@ -341,10 +411,11 @@ Parser::server_block_t    Parser::syntax_server_block(void) {
         throw std::runtime_error("syntax error near unexpected token \'" + current().token + "\'\n");
     }
     next();
-    return vserv;
+    syntax_server_block_default(vsrv);
+    return vsrv;
 }
 
-Parser::server_vector Parser::parse(const std::string& config_path) {
+server_vector Parser::parse(const std::string& config_path) {
     server_vector vsrv_vector;
 
     this->read_config_file(config_path);
@@ -367,7 +438,7 @@ Parser::server_vector Parser::parse(const std::string& config_path) {
     return vsrv_vector;
 }
 
-const std::string Parser::directive[N_VALID_DIR] = {
+const std::string Parser::dir_name[N_DIR_MAX] = {
     "error_page",
     "client_max_body_size",
     "root",
@@ -391,14 +462,14 @@ bool  Parser::empty(void) const {
 }
 
 Parser::token_t Parser::peek(size_type pos) const { 
-    return (pos <= this->tok_lst.size()) ? this->tok_lst.at(pos) : token_t(NON_VALID_CHAR, "");
+    return (pos <= this->tok_lst.size()) ? this->tok_lst.at(pos) : token_t(T_INVALID_CHAR, "");
 }
 
 void Parser::next(void) {
     this->tok_lst.pop_front();
 }
 
-Parser::directive_parse_table Parser::directive_options[N_VALID_DIR] = {
+Parser::directive_parse_table Parser::dir_options[N_DIR_MAX] = {
     &Parser::syntax_directive_rrue,
     &Parser::syntax_directive_max_body_size,
     &Parser::syntax_directive_rrue,
