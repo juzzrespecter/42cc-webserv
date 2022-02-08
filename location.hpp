@@ -3,6 +3,8 @@
 
 #include "parser.hpp"
 
+#define N_METHODS 3
+
 struct cgi_pass_directive_t {
     std::string cgi_file_ext;
     std::string cgi_path;
@@ -15,7 +17,7 @@ struct cgi_pass_directive_t {
 
 typedef std::vector<cgi_pass_directive_t> cgi_pass_vector;
 
-class location {
+class Location {
     private:
         std::string error_page;
         std::string root;
@@ -29,14 +31,26 @@ class location {
 
         unsigned int body_size;
         bool autoindex;
+
+        // method not allowed
+        typedef std::string (Location::*method_options)(const std::string&) const;
+
+        std::string http_method_get(const std::string&) const;
+        std::string http_method_post(const std::string&) const;
+        std::string http_method_delete(const std::string&) const;
+
+        std::string get_method_from_request(const std::string&) const;        
+        // bad request
     public:
         std::string uri;
 
-        location(void);
-        location(const location&);
-        location(const location_block_t&);
-        ~location();
-        location& operator=(const location_block_t&);
+        Location(void);
+        Location(const Location&);
+        Location(const location_block_t&);
+        ~Location();
+        Location& operator=(const Location&);
+
+        std::string select_requested_method(const std::string&) const;
 };
 
 #endif // __LOCATION_HPP__

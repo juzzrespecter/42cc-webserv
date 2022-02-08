@@ -1,14 +1,14 @@
-#include "parser.hpp"
+#include "Parser.hpp"
 
-parser::parser(void) : raw_input() { }
+Parser::Parser(void) : raw_input() { }
 
-parser::parser(const parser& other)  {
+Parser::Parser(const Parser& other)  {
     *this = other;
 }
 
-parser::~parser() { }
+Parser::~Parser() { }
 
-parser& parser::operator=(const parser& other) {
+Parser& Parser::operator=(const Parser& other) {
     if (this == &other) {
         return *this;
     }
@@ -19,11 +19,11 @@ parser& parser::operator=(const parser& other) {
     return *this;
 }
 
-parser::token_t::token_t(token_flag_t _ty, const std::string& _tk) : type(_ty), token(_tk) { }
+Parser::token_t::token_t(token_flag_t _ty, const std::string& _tk) : type(_ty), token(_tk) { }
 
-parser::token_t::token_t(const token_t& other) : type(other.type), token(other.token) { }
+Parser::token_t::token_t(const token_t& other) : type(other.type), token(other.token) { }
 
-parser::token_flag_t parser::tokenize_id(char c) const {
+Parser::token_flag_t Parser::tokenize_id(char c) const {
     static std::string special_char("{};#");
     size_type i = special_char.find(c);
 
@@ -36,7 +36,7 @@ parser::token_flag_t parser::tokenize_id(char c) const {
     return std::isprint(c) ? T_WORD : T_INVALID_CHAR;
 }
 
-parser::size_type parser::tokenize_curly_bracket(int pos) {
+Parser::size_type Parser::tokenize_curly_bracket(int pos) {
     std::string  token;
     token_flag_t cb_flag = (raw_input[pos] == '{') ? T_CBO : T_CBC;
 
@@ -45,7 +45,7 @@ parser::size_type parser::tokenize_curly_bracket(int pos) {
     return 0;
 }
 
-parser::size_type parser::tokenize_semicolon(int pos) {
+Parser::size_type Parser::tokenize_semicolon(int pos) {
     (void) pos;
     std::string token(";");
 
@@ -53,7 +53,7 @@ parser::size_type parser::tokenize_semicolon(int pos) {
     return 0;
 }
 
-std::string parser::tokenize_word_clean_token(const std::string& raw_token) const {
+std::string Parser::tokenize_word_clean_token(const std::string& raw_token) const {
     std::string clean_token(raw_token);
     size_type   pos = 0;
     char        type_q = OFF;
@@ -69,7 +69,7 @@ std::string parser::tokenize_word_clean_token(const std::string& raw_token) cons
     return clean_token;
 }
 
-parser::size_type parser::tokenize_word(int pos) {
+Parser::size_type Parser::tokenize_word(int pos) {
     const std::string      separator("\x20\x09\x0a\x0b\x0c\x0d;{}#");
     std::string::size_type flag_q = OFF, pos_end = pos;
     char    type_q = OFF;
@@ -92,7 +92,7 @@ parser::size_type parser::tokenize_word(int pos) {
     return token.size() - 1;
 }
 
-size_t parser::tokenize_space(int pos) {
+size_t Parser::tokenize_space(int pos) {
     size_type   pos_end;
 
     if (!(raw_input[pos] == '#')){
@@ -103,13 +103,13 @@ size_t parser::tokenize_space(int pos) {
     return pos_end != std::string::npos ? pos_end - (pos + 1): raw_input.size() - pos;
 }
 
-void parser::tokenize(void) {
+void Parser::tokenize(void) {
     const tokenize_options options[N_TOK_TYPE] = {
-        &parser::tokenize_curly_bracket,
-        &parser::tokenize_curly_bracket,
-        &parser::tokenize_semicolon,
-        &parser::tokenize_space,
-        &parser::tokenize_word
+        &Parser::tokenize_curly_bracket,
+        &Parser::tokenize_curly_bracket,
+        &Parser::tokenize_semicolon,
+        &Parser::tokenize_space,
+        &Parser::tokenize_word
     };
 
     for (size_type i = 0; i < raw_input.size(); i++) {
@@ -122,7 +122,7 @@ void parser::tokenize(void) {
     }
 }
 
-void parser::read_config_file(const std::string& path) {
+void Parser::read_config_file(const std::string& path) {
     std::ifstream   config_file(path, std::ios::in);
 
     if (!config_file.is_open()) {
@@ -134,14 +134,14 @@ void parser::read_config_file(const std::string& path) {
     config_file.close();
 }
 
-bool    parser::is_number(const std::string& str, int n_max, int n_min) const{
+bool    Parser::is_number(const std::string& str, int n_max, int n_min) const{
     char    *end_ptr;
 
     long int n = strtol(str.c_str(), &end_ptr, 0);
     return !(*end_ptr || n < n_min || (n_max && n > n_max));
 }
 
-bool    parser::is_addr(const std::string& addr) const {
+bool    Parser::is_addr(const std::string& addr) const {
     if (!addr.compare("localhost")) {
         return true;
     }
@@ -159,46 +159,46 @@ bool    parser::is_addr(const std::string& addr) const {
     return ip_addr.size() == 4 ? true : false;
 }
 
-bool    parser::is_word(const token_t& tok) const {
+bool    Parser::is_word(const token_t& tok) const {
     return (tok.type == T_WORD);
 }
-bool    parser::is_semicolon(const token_t& tok) const {
+bool    Parser::is_semicolon(const token_t& tok) const {
     return (tok.type == T_SEMICOLON);
 }
-bool    parser::is_cbo(const token_t& tok) const {
+bool    Parser::is_cbo(const token_t& tok) const {
     return (tok.type == T_CBO);
 }
 
-bool    parser::is_cbc(const token_t& tok) const {
+bool    Parser::is_cbc(const token_t& tok) const {
     return (tok.type == T_CBC);
 }
 
-bool    parser::syntax_directive_max_body_size(void) const {
+bool    Parser::syntax_directive_max_body_size(void) const {
     return (is_word(current()) && is_number(current().token) && is_semicolon(peek()));
 }
 
-bool    parser::syntax_directive_rrue(void) const {
+bool    Parser::syntax_directive_rrue(void) const {
     return (is_word(current()) && is_semicolon(peek()));
 }
 
-bool    parser::syntax_directive_autoindex(void) const { 
+bool    Parser::syntax_directive_autoindex(void) const { 
     return (is_word(current()) && 
            (current().token.compare("on") || current().token.compare("off")) &&
             is_semicolon(peek()));
 }
 
-bool    parser::syntax_directive_index(void) const {
+bool    Parser::syntax_directive_index(void) const {
     int count = 0;
 
     for ( ; is_word(peek(count)); count++) { }
     return (count && is_semicolon(peek(count)));
 }
 
-bool    parser::syntax_directive_cgi_pass(void) const { 
+bool    Parser::syntax_directive_cgi_pass(void) const { 
     return (is_word(current()) && is_word(peek()) && is_semicolon(peek(2)));
 }
 
-bool    parser::syntax_directive_accept_method(void) const { 
+bool    Parser::syntax_directive_accept_method(void) const { 
     int  count = 0;
 
     for ( ; is_word(peek(count)); count++) {
@@ -211,14 +211,14 @@ bool    parser::syntax_directive_accept_method(void) const {
     return (count && is_semicolon(peek(count)));
 }
 
-bool parser::syntax_directive_server_name(void) const {
+bool Parser::syntax_directive_server_name(void) const {
     int count = 0;
 
     for ( ; is_word(peek(count)); count++) { }
     return (count && is_semicolon(peek(count)));
 }
 
-bool    parser::syntax_directive_listen(void) const {
+bool    Parser::syntax_directive_listen(void) const {
     if (!is_word(current())) {
         return false;
     }
@@ -234,11 +234,11 @@ bool    parser::syntax_directive_listen(void) const {
             is_semicolon(peek()));
 }
 
-bool    parser::syntax_directive_location(void) const {
+bool    Parser::syntax_directive_location(void) const {
     return (is_word(current()) && is_cbo(peek()));
 }
 
-directive_flag_t parser::syntax_directive(void) {
+directive_flag_t Parser::syntax_directive(void) {
     int id;
 
     for (id = 0; id < N_DIR_MAX; id++) {
@@ -256,7 +256,7 @@ directive_flag_t parser::syntax_directive(void) {
     return directive_flag_t(id);
 }
 
-location_block_t   parser::syntax_location_block(const std::string& uri) {
+location_block_t   Parser::syntax_location_block(const std::string& uri) {
     if (empty()) throw std::runtime_error("unexpected end of config file\n");
 
     location_block_t loc(uri);
@@ -277,7 +277,7 @@ location_block_t   parser::syntax_location_block(const std::string& uri) {
     return loc;
 }
 
-server_block_t    parser::syntax_server_block(void) {
+server_block_t    Parser::syntax_server_block(void) {
     server_block_t vsrv;
 
     while (!empty() && is_word(current())) {
@@ -308,7 +308,7 @@ server_block_t    parser::syntax_server_block(void) {
     return vsrv;
 }
 
-server_vector parser::parse(const std::string& config_path) {
+server_vector Parser::parse(const std::string& config_path) {
     server_vector vsrv_vector;
 
     this->read_config_file(config_path);
@@ -331,7 +331,7 @@ server_vector parser::parse(const std::string& config_path) {
     return vsrv_vector;
 }
 
-const std::string parser::dir_name[N_DIR_MAX] = {
+const std::string Parser::dir_name[N_DIR_MAX] = {
     "client_max_body_size",
     "root",
     "autoindex",
@@ -346,33 +346,33 @@ const std::string parser::dir_name[N_DIR_MAX] = {
     "location"
 };
 
-const parser::token_t& parser::current(void) const { 
+const Parser::token_t& Parser::current(void) const { 
     return tok_lst.front(); 
 }
 
-bool  parser::empty(void) const { 
+bool  Parser::empty(void) const { 
     return this->tok_lst.empty();
 }
 
-parser::token_t parser::peek(size_type pos) const { 
+Parser::token_t Parser::peek(size_type pos) const { 
     return (pos <= this->tok_lst.size()) ? this->tok_lst.at(pos) : token_t(T_INVALID_CHAR, "");
 }
 
-void parser::next(void) {
+void Parser::next(void) {
     this->tok_lst.pop_front();
 }
 
-parser::directive_parse_table parser::dir_options[N_DIR_MAX] = {
-    &parser::syntax_directive_max_body_size,
-    &parser::syntax_directive_rrue,
-    &parser::syntax_directive_autoindex,
-    &parser::syntax_directive_index,
-    &parser::syntax_directive_accept_method,
-    &parser::syntax_directive_rrue,
-    &parser::syntax_directive_rrue,    
-    &parser::syntax_directive_cgi_pass,
-    &parser::syntax_directive_rrue,
-    &parser::syntax_directive_listen,
-    &parser::syntax_directive_server_name,
-    &parser::syntax_directive_location
+Parser::directive_parse_table Parser::dir_options[N_DIR_MAX] = {
+    &Parser::syntax_directive_max_body_size,
+    &Parser::syntax_directive_rrue,
+    &Parser::syntax_directive_autoindex,
+    &Parser::syntax_directive_index,
+    &Parser::syntax_directive_accept_method,
+    &Parser::syntax_directive_rrue,
+    &Parser::syntax_directive_rrue,    
+    &Parser::syntax_directive_cgi_pass,
+    &Parser::syntax_directive_rrue,
+    &Parser::syntax_directive_listen,
+    &Parser::syntax_directive_server_name,
+    &Parser::syntax_directive_location
 };

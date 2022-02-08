@@ -1,4 +1,4 @@
-#include "location.hpp"
+#include "Location.hpp"
 
 cgi_pass_directive_t::cgi_pass_directive_t(void) { }
 
@@ -7,6 +7,7 @@ cgi_pass_directive_t::cgi_pass_directive_t(const cgi_pass_directive_t& other) :
 
 cgi_pass_directive_t::cgi_pass_directive_t(const std::string& cgi_file_ext_, const std::string& cgi_path_) :
     cgi_file_ext(cgi_file_ext_), cgi_path(cgi_path_) { }
+
 
 cgi_pass_directive_t& cgi_pass_directive_t::operator=(const cgi_pass_directive_t& other) {
     if (this == &other)  {
@@ -17,22 +18,13 @@ cgi_pass_directive_t& cgi_pass_directive_t::operator=(const cgi_pass_directive_t
     return *this;
 }
 
-location::location(void) { }
+Location::Location(void) { }
 
-location::location(const location& other) {
-    uri = other.uri;
-    error_page = other.error_page;
-    root = other.root;
-    return_uri = other.return_uri;
-    upload_path = other.upload_path;
-    index = other.index;
-    accept_method = other.accept_method;
-    cgi_pass = other.cgi_pass;
-    body_size = other.body_size;
-    autoindex = other.autoindex;
+Location::Location(const Location& other) {
+    *this = other;
 }
 
-location::location(const location_block_t& loc_blk) {
+Location::Location(const location_block_t& loc_blk) {
     typedef std::vector<std::string> string_vector;
 
     this->uri = loc_blk.uri;
@@ -58,8 +50,60 @@ location::location(const location_block_t& loc_blk) {
         }
     }
     /* cgi pass directive constructor */
+    for (size_t i = 0; i < loc_blk.dir[D_CGI_PASS].size(); i += 2) {
+        /* protect call */
+        if (i + 1 < loc_blk.dir[D_CGI_PASS].size()) break ;
+        cgi_pass.push_back(cgi_pass_directive_t(loc_blk.dir[D_CGI_PASS][i], loc_blk.dir[D_CGI_PASS][i + 1])); /* clean this!! */
+    }
     this->body_size = std::atoi(loc_blk.dir[D_BODY_SIZE].front().c_str());
     this->autoindex = !loc_blk.dir[D_AUTOINDEX].front().compare("on") ? true : false;
 }
 
-location::~location() { }
+Location::~Location() { }
+
+Location& Location::operator=(const Location& other) {
+    if (this == &other) {
+        return *this;
+    }
+    uri = other.uri;
+    error_page = other.error_page;
+    root = other.root;
+    return_uri = other.return_uri;
+    upload_path = other.upload_path;
+    index = other.index;
+    accept_method = other.accept_method;
+    cgi_pass = other.cgi_pass;
+    body_size = other.body_size;
+    autoindex = other.autoindex;
+    return *this;
+}
+
+/* 
+ * Primero comprueba que el método existe, después comprueba que está dentro de los permitidos
+ * conforme a la configuración del servidor.
+ * 
+ * Lanza una respuesta predeterminada Bad Request 400 si el método no está definido,
+ * y una respuesta predeterminada Method Not Allowed 405 si el método existe pero
+ * no se encuentra dentro del vector de métodos permitidos.
+ */
+std::string Location::select_requested_method(const std::string& request) const {
+    static const std::string method_arr[N_METHODS] = {"GET", "POST", "DELETE"};
+    method_options  option_arr[N_METHODS] = {
+        Location::http_method_get,
+        Location::http_method_post,
+        Location::http_method_delete
+    };
+    std::string req_method = get_method_from_request(request);
+    int method_id;
+
+    for (method_id = 0; method_id < N_METHODS; method_id++) {
+        if (!req_method.compare(method_arr[method_id])) break ;
+    }
+    if (method_id == N_METHODS) {
+        return /* BAD REQUEST */;
+    }
+    if (std::find(accept_method.begin(), accept_method.end(), req_method) != accept_method.end()) {
+        return /* METHOD NOT ALLOWED */;
+    }
+    return (this->*option_arr[method_id])(request);
+}

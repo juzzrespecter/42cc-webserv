@@ -1,3 +1,6 @@
+#ifndef __SERVER_HPP__
+#define __SERVER_HPP__
+
 #include "parser.hpp"
 #include "location.hpp"
 
@@ -14,16 +17,23 @@ struct listen_directive_t {
     bool operator!=(const listen_directive_t&) const;
 };
 
-class server {
+class Server {
     private:
-        listen_directive_t       listen;
-        std::vector<std::string> server_name;
-        std::vector<location>    routes;
+        listen_directive_t       listen; /* dirección y puerto en los que escucha el server */
+        std::vector<Location>    routes; /* bloques de ruta dentro del servidor */
+
+        std::string get_uri_from_request(const std::string&) const;
     public:
-        server(void);
-        server(const server& other);
-        server(const server_block_t& server_block);
-        ~server();
+        Server(void);
+        Server(const Server& other);
+        Server(const server_block_t& Server_block);
+        ~Server();
+
+        std::vector<std::string> server_name;
 
         const listen_directive_t get_server_addr(void) const;
+
+        const Location& select_requested_location(const std::string&) const;
 };
+
+#endif // __SERVER_HPP__
