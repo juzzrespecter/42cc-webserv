@@ -17,8 +17,6 @@ typedef std::vector<cgi_pass_directive_t> cgi_pass_vector;
 
 class location {
     private:
-        std::string uri;
-
         std::string error_page;
         std::string root;
         std::string return_uri;
@@ -37,9 +35,8 @@ class location {
         location(void);
         location(const location&);
         location(const location_block_t&);
+        ~location();
         location& operator=(const location_block_t&);
-
-        location& inherit_from_server(const location_block_t&);
 };
 
 #endif // __LOCATION_HPP__

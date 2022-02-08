@@ -62,24 +62,4 @@ location::location(const location_block_t& loc_blk) {
     this->autoindex = !loc_blk.dir[D_AUTOINDEX].front().compare("on") ? true : false;
 }
 
-/* default values 
-  error_page: null
-  body_size: size_t(-1)
-  root: $pwd
-  autoindex: off
-  index: index.html
-  return: null
-  cgi_pass: null
-  accept_method: get
-  accept_upload: null
-*/
-
-/*
-three steps on location building:
-    set up default variables
-    set up server directives (can be overwritten by location blocks)
-    set up concrete location blocks with respective directives
-
-    default -> server (overrides default) -> location (overrides server & default)
-
-*/
+location::~location() { }

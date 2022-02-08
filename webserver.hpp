@@ -15,10 +15,13 @@ enum socket_mode_e {PASSV, ACTV};
 typedef struct sockaddr sa_t;
 
 struct socket_t {
-    int socket_fd;
     socket_mode_e type;
     listen_directive_t sock_addr;
     std::vector<server*> server_ref_v;
+    /* almacena la respuesta a la peticion en el socket ? */
+    std::string msg;
+
+    int fd;
 
     socket_t(void);
     socket_t(const socket_t&);

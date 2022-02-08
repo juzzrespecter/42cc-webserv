@@ -5,11 +5,11 @@ listen_directive_t::listen_directive_t(void) : addr("127.0.0.1"), port(8080) { }
 listen_directive_t::listen_directive_t(const listen_directive_t& other) : addr(other.addr), port(other.port) { }
 
 listen_directive_t::listen_directive_t(const std::string& raw_directive) {
-    std::string::size_type c(raw_directive.find('.'));
+    std::string::size_type c(raw_directive.find(':'));
 
     if (c != std::string::npos) {
         this->addr = raw_directive.substr(0, c);
-        this->port = std::atoi(raw_directive.substr(c).c_str());
+        this->port = std::atoi(raw_directive.substr(c + 1).c_str());
     } else {
         char *ptr;
 
@@ -22,10 +22,19 @@ listen_directive_t::listen_directive_t(const std::string& raw_directive) {
     }
 }
 
-bool listen_directive_t::operator==(const listen_directive_t& rhs) {
+listen_directive_t& listen_directive_t::operator=(const listen_directive_t& other) {
+    if (this == &other) {
+        return *this;
+    }
+    addr = other.addr;
+    port = other.port;
+    return *this;
+}
+
+bool listen_directive_t::operator==(const listen_directive_t& rhs) const {
     return addr == rhs.addr && port == rhs.port;
 }
-bool listen_directive_t::operator!=(const listen_directive_t& rhs) {
+bool listen_directive_t::operator!=(const listen_directive_t& rhs) const {
     return !(*this == rhs);
 }
 
@@ -42,7 +51,7 @@ server::server(const server_block_t& srv_blk) {
         listen = listen_directive_t(srv_blk.dir[D_LISTEN].front());
     }
     this->server_name = srv_blk.dir[D_SERVER_NAME];
-    for (location_vector::const_iterator it = server_block.location.begin(); it != server_block.location.end(); it++) {
+    for (location_vector::const_iterator it = srv_blk.loc.begin(); it != srv_blk.loc.end(); it++) {
         routes.push_back(*it);
     }
     for (it = routes.begin(); it != routes.end(); it++) {
@@ -52,6 +61,8 @@ server::server(const server_block_t& srv_blk) {
         routes.push_back(default_route);
     }
 }
+
+server::~server() { }
 
 const listen_directive_t server::get_server_addr(void) const {
     return listen;

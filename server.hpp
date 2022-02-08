@@ -10,8 +10,8 @@ struct listen_directive_t {
     listen_directive_t(const std::string&);
     listen_directive_t& operator=(const listen_directive_t&);
 
-    bool operator==(const listen_directive_t&);
-    bool operator!=(const listen_directive_t&);
+    bool operator==(const listen_directive_t&) const;
+    bool operator!=(const listen_directive_t&) const;
 };
 
 class server {
