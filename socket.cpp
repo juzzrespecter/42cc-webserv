@@ -58,6 +58,10 @@ void Socket::set_response(const std::string& response_) {
     response = response_;
 }
 
+const std::string& Socket::get_response(void) const {
+    return response;
+}
+
 /* 
  * Realiza busqueda del servidor solicitado según el header host 
  * que contiene (o debería contener) el mensaje mandado por el cliente.
@@ -65,8 +69,13 @@ void Socket::set_response(const std::string& response_) {
  * cabecera host en el mensaje, retorna el primer servidor.
  * Si encuentra una coincidencia entre los posibles nombres del servidor,
  * retorna el servidor.
- * Si no encunetra ninguna coincidencia, el primer servidor es retornado
- * como default.
+ * Si no encunetra ninguna coincidencia, retorna BAD_REQUEST
+ */
+
+/* Si la request lleva formato AbsoluteURI, el host se adquiere desde la 
+ * uri de la request, y se ignora la cabecera Host si la hubiera 
+ *
+ * (AbsoluteURI = http://www.hostname.com/ejemplo/)
  */
 
 const Server& Socket::select_requested_server(const std::string& request) {
@@ -83,7 +92,8 @@ const Server& Socket::select_requested_server(const std::string& request) {
             return srv;
         }
     }
-    return *server_ref_v.front();
+    //return *server_ref_v.front();
+    return /* BAD REQUEST */
 }
 
 bool    socket_comp::operator()(const Socket& lhs, const Socket& rhs) {

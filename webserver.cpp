@@ -14,6 +14,7 @@ void    Webserver::accept_new_connection(int i) {
     if (new_conn == -1) {
         throw std::runtime_error(strerror(errno));
     }
+    /* fcntl(fd, F_SETFL, O_NONBLOCK) */
     read_v.push_back(Socket(new_conn, read_v[i]));
 }
 
@@ -45,7 +46,7 @@ void    Webserver::read_from_socket(int i) {
         */
         const Server& srv = read_v[i].select_requested_server(request);
         const Location& loc = srv.select_requested_location(request);
-        read_v[i].set_response(loc.select_requested_method(request)); /* first check if available, then exec */
+        read_v[i].set_response(loc.select_requested_method(request));
         
         write_v.push_back(read_v[i]);
 
@@ -55,6 +56,7 @@ void    Webserver::read_from_socket(int i) {
 
 void    Webserver::write_to_socket(int i) {
     /* llamada a write con el mensaje guardado en el Socket */
+    write(write_v[i].fd, write_v[i].get_response().c_str(), write_v[i].get_response().size());
 
     read_v.push_back(write_v[i]);
     write_v.erase(write_v.begin() + i);
@@ -76,8 +78,18 @@ Webserver& Webserver::operator=(const Webserver& other) {
     return *this;
 }
 
-Webserver::Webserver(const server_vector& srv_blk_v) {
-    for (server_vector::const_iterator it = srv_blk_v.begin(); it != srv_blk_v.end(); it++) {
+void    Webserver::check_server_duplicates(const std::vector<Server>& srv_v) {
+    for (std::vector<Server>::const_iterator it = srv_v.begin(); it != --srv_v.end(); it++) {
+        for (std::vector<Server>::const_iterator it_n = it + 1; it_n != srv_v.end(); it_n++) {
+            if (*it_n == *it) {
+                throw std::runtime_error("duplicate server error\n");
+            }
+        }
+    }
+}
+
+Webserver::Webserver(const std::vector<server_block_t>& srv_blk_v) {
+    for (std::vector<server_block_t>::const_iterator it = srv_blk_v.begin(); it != srv_blk_v.end(); it++) {
         server_v.push_back(*it);
     }
     for (std::vector<Server>::iterator it = server_v.begin(); it != server_v.end(); it++) {
@@ -107,8 +119,8 @@ void Webserver::run(void) {
         for (std::vector<Socket>::iterator it = write_v.begin(); it != write_v.end(); it++) {
             FD_SET(it->fd, &writefds);
         }
-        std::vector<Socket>::iterator max_rd = std::max_element(read_v.begin(), read_v.end(), Webserver::Socket_comp());
-        std::vector<Socket>::iterator max_wr = std::max_element(write_v.begin(), write_v.end(), Webserver::Socket_comp());
+        std::vector<Socket>::iterator max_rd = std::max_element(read_v.begin(), read_v.end(), socket_comp());
+        std::vector<Socket>::iterator max_wr = std::max_element(write_v.begin(), write_v.end(), socket_comp());
         int nfds = max_wr == write_v.end() ? max_rd->fd : std::max(max_rd->fd, max_wr->fd);
 
         if ((select(nfds, &readfds, &writefds, NULL, NULL)) == -1) {

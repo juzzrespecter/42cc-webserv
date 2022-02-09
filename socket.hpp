@@ -13,7 +13,7 @@ typedef struct sockaddr sa_t;
 class Socket {
     private:
         socket_mode_f type; /* tipo de socket: pasivo o activo */
-        listen_directive_t sock_addr; /* dirección y puerto en los que el socket escucha */
+        listen_directive_t sock_addr; /* dirección y puerto en los qu e el socket escucha */
         std::vector<Server*> server_ref_v; /* vector de servidores que comparten el mismo socket */ 
         std::string response; /* respuesta generada a partir de la petición y la config. del servidor */
 
@@ -33,6 +33,7 @@ class Socket {
         const listen_directive_t& get_socket_addr(void) const;
         void add_server_ref(Server&);
         void set_response(const std::string&);
+        const std::string& get_response(void) const;
 
         const Server& select_requested_server(const std::string&);
 };

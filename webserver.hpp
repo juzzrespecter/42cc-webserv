@@ -7,12 +7,6 @@
 
 #define BUFFER_SIZE 100
 
-typedef std::vector<std::string>      string_vector;
-typedef std::vector<server_block_t>   server_block_vector;
-typedef std::vector<location_block_t> location_block_vector;
-typedef std::vector<Server>           server_vector;
-typedef std::vector<Location>         location_vector;
-
 class Webserver {
     private:
         std::vector<Server> server_v;
@@ -29,16 +23,17 @@ class Webserver {
             private:
                 const listen_directive_t& addr;
         };
+        void check_server_duplicates(const std::vector<Server>&);
 
-        void accept_new_connection(int i);
-        void read_from_socket(int i);
-        void write_to_socket(int i);
+        void accept_new_connection(int);
+        void read_from_socket(int);
+        void write_to_socket(int);
 
         Webserver(void);
         Webserver(const Webserver&);
         Webserver& operator=(const Webserver&);
     public:
-        Webserver(const server_vector&);
+        Webserver(const std::vector<server_block_t>&);
         ~Webserver();
 
         void run(void);

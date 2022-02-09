@@ -34,6 +34,9 @@ class Server {
         const listen_directive_t get_server_addr(void) const;
 
         const Location& select_requested_location(const std::string&) const;
+
+        bool operator==(const Server&) const;
+        bool operator!=(const Server&) const;
 };
 
 #endif // __SERVER_HPP__

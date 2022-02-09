@@ -30,10 +30,9 @@ struct location_block_t {
     location_block_t(const location_block_t&);
     location_block_t& operator=(const location_block_t&);
 };
-typedef std::vector<location_block_t> location_vector;
 
 struct server_block_t {
-    location_vector          loc;
+    std::vector<location_block_t> loc;
     std::vector<std::string> dir[N_DIR_SRV];
 
     server_block_t(void);
@@ -45,6 +44,5 @@ struct server_block_t {
 
     operator location_block_t(void) const; 
 };
-typedef std::vector<server_block_t>   server_vector;
 
 #endif // __CONFIG_BLOCKS_HPP__

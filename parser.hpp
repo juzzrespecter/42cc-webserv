@@ -93,8 +93,6 @@ class Parser {
         bool    syntax_directive_server_name(void) const;
         bool    syntax_directive_location(void) const;
 
-        /* función que compruebe que no han sido declarados dos bloques de servidor idénticos */
-
         directive_flag_t syntax_directive(void);
         location_block_t syntax_location_block(const std::string& uri);
         server_block_t   syntax_server_block(void);

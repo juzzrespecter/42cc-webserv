@@ -51,7 +51,7 @@ Server::Server(const server_block_t& srv_blk) {
         listen = listen_directive_t(srv_blk.dir[D_LISTEN].front());
     }
     this->server_name = srv_blk.dir[D_SERVER_NAME];
-    for (location_vector::const_iterator it = srv_blk.loc.begin(); it != srv_blk.loc.end(); it++) {
+    for (std::vector<location_block_t>::const_iterator it = srv_blk.loc.begin(); it != srv_blk.loc.end(); it++) {
         routes.push_back(*it);
     }
     for (it = routes.begin(); it != routes.end(); it++) {
@@ -76,11 +76,49 @@ const listen_directive_t Server::get_server_addr(void) const {
 
 const Location& Server::select_requested_location(const std::string& request) const { /* check constness */
     if (routes.size() == 1) {
-        return routes.front(); /* sólo existe la ruta por default dentro del servidor */
+        return routes.front(); /* caso:  sólo existe la ruta por default dentro del servidor */
     }
-    std::string requested_uri = get_uri_from_request(request);
-    for (location_vector::iterator it_l = routes.begin(); it_l != routes.end(); it_l++) {
-        /* algoritmo de selección de rutas */
+    /* algoritmo de selección de rutas */
+
+    /*
+    string path = get_path_from_request() ;
+    vector<string> request_path_v = split_path() ;
+
+    vector<int> number_of_coincidences_between_each_path_and_request_path ;
+    for (location_iterator it = routes.begin(); it != routes.end(); it++) {
+        
+        size_t number_of_coincidences_between_current_path_and_request_path ;
+        vectorr<string> current_path_v = split_path() ;
+        for (size_t i = 0; i < request_path_v.size() || i < current_path_v.size(); i++) {
+            if (path_v[i].compare(uri_v[i])) break ;
+        }
+        if (number_of_tal == request_path_v.size()) {
+            return *it; <- exact coincidence
+        } else {
+            number_of_v.push_back(number_of);
+        }
     }
-    /* return x */
+    int id = 0;
+    for (std::vector<int>::iterator it = n_c_v.begin(); it != --n_c_v.end(); it++) {
+        if (*it > *(it + 1)) {
+            id = *it;
+        }
+    }
+    return routes[id];
+    */
+}
+
+bool Server::operator==(const Server& rhs) const {
+    if (get_server_addr() == rhs.get_server_addr()) {
+        for (std::vector<std::string>::const_iterator it = server_name.begin(); it != server_name.end(); it++) {
+            if (std::find(rhs.server_name.begin(), rhs.server_name.end(), *it) != rhs.server_name.end()) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool Server::operator!=(const Server& rhs) const {
+    return !(*this != rhs);
 }

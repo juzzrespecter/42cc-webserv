@@ -1,6 +1,6 @@
 .PHONY:	all clean fclean
 
-SRC_TEST    = config_blocks.cpp parser.cpp webserver.cpp server.cpp location.cpp main.cpp
+SRC_TEST    = config_blocks.cpp parser.cpp webserver.cpp server.cpp location.cpp socket.cpp main.cpp
 OBJ_TEST	= $(SRC_TEST:%.cpp=%.o)
 HEADER_TEST = config_blocks.hpp parser.hpp webserver.hpp server.hpp location.hpp
 

@@ -32,15 +32,13 @@ class Location {
         unsigned int body_size;
         bool autoindex;
 
-        // method not allowed
         typedef std::string (Location::*method_options)(const std::string&) const;
 
         std::string http_method_get(const std::string&) const;
         std::string http_method_post(const std::string&) const;
         std::string http_method_delete(const std::string&) const;
 
-        std::string get_method_from_request(const std::string&) const;        
-        // bad request
+        std::string get_method_from_request(const std::string&) const;
     public:
         std::string uri;
 
