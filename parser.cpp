@@ -308,8 +308,8 @@ server_block_t    Parser::syntax_server_block(void) {
     return vsrv;
 }
 
-server_vector Parser::parse(const std::string& config_path) {
-    server_vector vsrv_vector;
+std::vector<server_block_t> Parser::parse(const std::string& config_path) {
+    std::vector<server_block_t> vsrv_vector;
 
     this->read_config_file(config_path);
     this->tokenize();

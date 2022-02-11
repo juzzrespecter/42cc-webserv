@@ -121,7 +121,7 @@ class Parser {
 
         Parser& operator=(const Parser& other);
 
-        server_vector    parse(const std::string& config_path);
+        std::vector<server_block_t> parse(const std::string& config_path);
 };
 
 #endif // __PARSER_HPP__

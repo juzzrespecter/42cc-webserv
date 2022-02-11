@@ -1,9 +1,8 @@
 .PHONY:	all clean fclean
 
-SRC_TEST    = config_blocks.cpp parser.cpp webserver.cpp server.cpp location.cpp socket.cpp main.cpp
+SRC_TEST    = config_blocks.cpp parser.cpp webserver.cpp server.cpp location.cpp socket.cpp main_test.cpp
 OBJ_TEST	= $(SRC_TEST:%.cpp=%.o)
 HEADER_TEST = config_blocks.hpp parser.hpp webserver.hpp server.hpp location.hpp
-
 CXX	= clang++
 CXXFLAGS = -Wall -Werror -Wextra -std=c++98 -g3
 

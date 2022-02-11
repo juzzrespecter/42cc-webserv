@@ -14,8 +14,8 @@ std::string dir_name[N_DIR_SRV] = {
     "D_SERVER_NAME:"
 };
 
-void check_parser(server_vector& v) {
-    for (server_vector::iterator it_s = v.begin(); it_s != v.end(); it_s++) {
+void check_parser(std::vector<server_block_t>& v) {
+    for (std::vector<server_block_t>::iterator it_s = v.begin(); it_s != v.end(); it_s++) {
         std::cout << "[server]\n";
         for (int i = 0; i < N_DIR_SRV; i++) {
             std::cout << "\t" << dir_name[i];
@@ -24,7 +24,7 @@ void check_parser(server_vector& v) {
             }
             std::cout << "\n";
         }
-        for (location_vector::iterator it_l = it_s->loc.begin(); it_l != it_s->loc.end(); it_l++) {
+        for (std::vector<location_block_t>::iterator it_l = it_s->loc.begin(); it_l != it_s->loc.end(); it_l++) {
             std::cout << "\t[loc]\n";
             for (int i = 0; i < N_DIR_LOC; i++) {
                 std::cout << "\t\t"  << dir_name[i];;
@@ -47,11 +47,11 @@ int main(int argc, char *argv[]) {
     if (argc == 2) {
         config_path = argv[1];
     }
-    parser p;
+    Parser p;
     try {
-        server_vector v = p.parse(config_path);
+        std::vector<server_block_t> v = p.parse(config_path);
         check_parser(v);
-        webserver w(v);
+        Webserver w(v);
 
         w.run();
     } catch (std::runtime_error& e) {
