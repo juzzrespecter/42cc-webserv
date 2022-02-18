@@ -74,7 +74,7 @@ const listen_directive_t Server::get_server_addr(void) const {
  * Selecciona la ruta con la uri más extensa coincidente (hace una búsqueda aproximada).
  */
 
-const Location& Server::select_requested_location(const std::string& request) const { /* check constness */
+const Location& Server::select_requested_location(const Requuest& req) const { /* check constness */
     if (routes.size() == 1) {
         return routes.front(); /* caso:  sólo existe la ruta por default dentro del servidor */
     }

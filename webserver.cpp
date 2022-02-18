@@ -6,60 +6,158 @@ bool    Webserver::addr_comp::operator()(const Socket& other) {
 
 Webserver::addr_comp::addr_comp(const listen_directive_t& addr) : addr(addr) { }
 
-void    Webserver::accept_new_connection(int i) {
+/* condición de server duplicado: comparten mismas directivas listen y server_name */
+void    Webserver::check_server_duplicates(const std::vector<Server>& srv_v) {
+    for (std::vector<Server>::const_iterator it = srv_v.begin(); it != --srv_v.end(); it++) {
+        for (std::vector<Server>::const_iterator it_n = it + 1; it_n != srv_v.end(); it_n++) {
+            if (*it_n == *it) {
+                throw std::runtime_error("duplicate server error\n");
+            }
+        }
+    }
+}
+
+std::string    Webserver::timestamp(void) const {
+    std::string time_fmt;
+    std::time_t t = std::time(0);
+    std::tm*    time = std::localtime(&t);
+
+    time_fmt += (time->tm_year + 1900) << '-' 
+              + (time->tm_mon + 1) << '-'
+              +  time->tm_mday;
+    return time_fmt;
+}
+
+void    Webserver::log(const std::string& error) const {
+    std::cerr << "[ " << timestamp() << "]: " << error << "\n";
+}
+
+void    Webserver::nfds_up(int fd) {
+    if (fd + 1 >= nfds) {
+        nfds = fd + 1;
+    }
+}
+
+void    Webserver::nfds_down(int fd) {
+    if (fd + 1 == nfds) {
+        --nfds;
+    }
+}
+
+/* acepta nuevas conexiones de los sockets pasivos; no trata fallos en accept como críticos */
+void    Webserver::accept_new_connection(const Socket& passv) {
     struct sockaddr_in addr_in;
     socklen_t addr_len;
 
-    int new_conn = accept(read_v[i].fd, reinterpret_cast<sa_t*>(&addr_in), &addr_len);
+    int new_conn = accept(passv.fd, reinterpret_cast<sa_t*>(&addr_in), &addr_len);
     if (new_conn == -1) {
-        throw std::runtime_error(strerror(errno));
+        log (strerror(errno));
+        return ;
     }
-    /* fcntl(fd, F_SETFL, O_NONBLOCK) */
-    read_v.push_back(Socket(new_conn, read_v[i]));
+    fcntl(new_conn, F_SETFL, O_NONBLOCK);
+    read_v.push_back(Socket(new_conn, passv));
+    nfds_up(read_v.back().fd);
 }
 
-void    Webserver::read_from_socket(int i) {
-    char msg_buff[BUFFER_SIZE];
-    std::string request;
-    int read_ret;
-
-    /* limpia buffer */
-    while ((read_ret = read(read_v[i].fd, msg_buff, BUFFER_SIZE)) == BUFFER_SIZE) { /* problema cuando size(msg) == BUFF */
-        request += msg_buff;
-    }
-    if (!read_ret) {
-        close(read_v[i].fd);
+request_status_f    Webserver::process_request(Socket& conn, char* buffer) {
+    /* comprobar si la petición es nueva*/
+    /* si es verdad, inicializar nueva petición */
+    /* si no es verdad, continuar rellenando parámetros de petición */
+    Request& req = conn.get_request();
+    if (req.status() == EMPTY) {
+        req.parsingCheck();
     } else {
-        /* pasa el mensaje a request parser y guarda en Socket */
-        /*
-            msg voyage -> respuesta se almacena en Socket a la espera de llamada en write
-            1. busca servidor(es) con misma direccion que el Socket
-            2. en caso de que haya más de uno, cribar por directiva Server_name y header host en msg
-            3. en servidor, cribar por uri en request entre bloques de ruta
-            4. parsear según configuración de ruta y generar respuesta
-            5. la respuesta se almacena en el Socket a la espera de tal
-
-            1. en teoría ya hecho (vector de punteros a servidores)
-            2. competencia de Socket?? select_Server { get_hostname; compare(host, serv_name) ? select : next }
-            3. competencia de Server?? select_location(msg) { get_uri; compare(uri, uri) ? select : next}
-            4. competencia de location?? 
-        */
-        const Server& srv = read_v[i].select_requested_server(request);
-        const Location& loc = srv.select_requested_location(request);
-        read_v[i].set_response(loc.select_requested_method(request));
-        
-        write_v.push_back(read_v[i]);
-
+        /* método que lee chunked body */
+        req.parseChunkedRequest();
     }
-    read_v.erase(read_v.begin() + i);
+    /* si, tras la llamada a la construcción de la petición, ya está completada, 
+     * construimos la respuesta */
+    if (req.status() == IN_PROCESS) {
+        return IN_PROCESS;
+    }
+    conn.set_response(&req, req.getRequestLine, conn.get_server_list());
+    req.clean();
+    
+    return READY;
 }
 
-void    Webserver::write_to_socket(int i) {
-    /* llamada a write con el mensaje guardado en el Socket */
-    write(write_v[i].fd, write_v[i].get_response().c_str(), write_v[i].get_response().size());
+socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
+    char req_buff[REQUEST_BUFFER_SIZE];
 
-    read_v.push_back(write_v[i]);
-    write_v.erase(write_v.begin() + i);
+    memset(req_buff, 0, REQUEST_BUFFER_SIZE);
+    int socket_rd_stat = read(conn_socket.fd, req_buff, REQUEST_BUFFER_SIZE);
+    if (socket_rd_stat == -1) {
+        /* supón error EAGAIN, la conexión estaba marcada como activa pero ha bloqueado,
+         * se guarda a la espera de que el cliente envíe información */
+        log(std::strerror(errno));
+        return STANDBY;
+    }
+    if (socket_rd_stat == 0) {
+        /* cliente ha cerrado conexión; cerramos socket y eliminamos de la lista */
+        conn_socket.close_socket();
+        nfds_down(conn_socket.fd);
+        //read_v.erase(read_v.begin() + i);
+        return CLOSED;
+    }
+    /* puede ser que una lectura del socket traiga más de una request ?? (std::vector<Request>) */
+    /* pipelining; sending multiple requests without waiting for an response */
+    request_status_f stat = process_request(conn_socket, req_buff);
+    return stat == READY ? CONTINUE : STANDBY;
+}
+
+socket_status_f    Webserver::write_to_socket(Socket& conn_socket) {
+    /* llamada a write con el mensaje guardado en el Socket */
+    /* Response struct with bool indicating if request asked to close connection after sending response */
+    /* if request was sent by HTTP 1.0 client and no keep-alive flag was present, close connection */
+    Response& resp = conn_socket.get_response();
+
+    int socket_wr_stat = write(conn_socket.fd, resp.getBuffer().c_str(), resp.getSize())
+    if (socket_wr_stat == -1) {
+        /* supón error EAGAIN, el buffer de write está lleno y como trabajamos con sockets
+         * no bloqueadores retorna con señal de error, la respuesta sigue siendo válida y el cliente espera */
+        log(strerror(errno));
+        return STANDBY;
+    }
+    if (/* Cliente ha indicado en cabecera que hay que cerrar la conexión */) {
+        conn_socket.close_socket();
+        return CLOSED;
+    }
+    resp.clear();
+    return CONTINUE;
+}
+
+void Webserver::ready_to_read_loop(void) {
+    for (size_t i = 0; i < read_v.size(); i++) {
+        if (FD_ISSET(read_v[i].fd, &readfds)){
+            if (read_v[i].is_passv()) {
+                accept_new_connection(read_v[i]);
+                continue ;
+            }
+            socket_status_f conn_stat = read_from_socket(read_v[i]);
+
+            if (conn_stat == CONTINUE) {
+                write_v.push_back(read_v[i]);
+            }
+            if (conn_stat != STANDBY) {
+                read_v.erase(read_v.begin() + i);
+            }
+        }
+    }
+}
+
+void Webserver::ready_to_write_loop(void) {
+    for (size_t i = 0; i < write_v.size(); i++) {
+        if (FD_ISSET(write_v[i].fd, &writefds)) {
+            socket_status_f conn_stat = write_to_socket(write_v[i]);
+
+            if (conn_stat == CONTINUE) {
+                read_v.push_back(write_v[i]);
+            }
+            if (conn_stat != STANDBY) {
+                write_v.erase(write_v.begin() + i);
+            }
+        }
+    }
 }
 
 Webserver::Webserver(void) { }
@@ -78,20 +176,12 @@ Webserver& Webserver::operator=(const Webserver& other) {
     return *this;
 }
 
-void    Webserver::check_server_duplicates(const std::vector<Server>& srv_v) {
-    for (std::vector<Server>::const_iterator it = srv_v.begin(); it != --srv_v.end(); it++) {
-        for (std::vector<Server>::const_iterator it_n = it + 1; it_n != srv_v.end(); it_n++) {
-            if (*it_n == *it) {
-                throw std::runtime_error("duplicate server error\n");
-            }
-        }
-    }
-}
-
+/* inicializa servidores y sockets pasivos en base a las estructuras generadas por el parser */
 Webserver::Webserver(const std::vector<server_block_t>& srv_blk_v) {
     for (std::vector<server_block_t>::const_iterator it = srv_blk_v.begin(); it != srv_blk_v.end(); it++) {
         server_v.push_back(*it);
     }
+    check_server_duplicates(server_v);
     for (std::vector<Server>::iterator it = server_v.begin(); it != server_v.end(); it++) {
         Webserver::addr_comp comp(it->get_server_addr());
         std::vector<Socket>::iterator sock_it = std::find_if(read_v.begin(), read_v.end(), comp);
@@ -99,6 +189,7 @@ Webserver::Webserver(const std::vector<server_block_t>& srv_blk_v) {
         if (sock_it == read_v.end()) {
             read_v.push_back(it->get_server_addr());
             read_v.back().add_server_ref(*it);
+            nfds_up(read_v.back().fd);
         } else {
             sock_it->add_server_ref(*it);
         }
@@ -107,6 +198,7 @@ Webserver::Webserver(const std::vector<server_block_t>& srv_blk_v) {
 
 Webserver::~Webserver() { }
 
+/* main loop */
 void Webserver::run(void) {
     std::cout << "[servidor levantado]\n";
     while (true) {
@@ -119,28 +211,10 @@ void Webserver::run(void) {
         for (std::vector<Socket>::iterator it = write_v.begin(); it != write_v.end(); it++) {
             FD_SET(it->fd, &writefds);
         }
-        std::vector<Socket>::iterator max_rd = std::max_element(read_v.begin(), read_v.end(), socket_comp());
-        std::vector<Socket>::iterator max_wr = std::max_element(write_v.begin(), write_v.end(), socket_comp());
-        int nfds = max_wr == write_v.end() ? max_rd->fd : std::max(max_rd->fd, max_wr->fd);
-
         if ((select(nfds, &readfds, &writefds, NULL, NULL)) == -1) {
             throw std::runtime_error(strerror(errno));
         }
-
-        for (size_t i = 0; i < read_v.size(); i++) {
-            if (FD_ISSET(read_v[i].fd, &readfds)){
-                if (read_v[i].is_passv()) {
-                    accept_new_connection(i);
-                } else {
-                    read_from_socket(i);
-                }
-            }
-        }
-
-        for (size_t i = 0; i < write_v.size(); i++) {
-            if (FD_ISSET(write_v[i].fd, &writefds)) {
-                write_to_socket(i);
-            }
-        }
+        ready_to_read_loop();
+        ready_to_write_loop();
     }
 }

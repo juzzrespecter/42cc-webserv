@@ -12,8 +12,8 @@
 #include "msg_format/StatusLine.hpp"
 #include "msg_format/Body.hpp"
 
-#include "parser.hpp"
-#include "server.hpp"
+#include "Parser.hpp"
+#include "Server.hpp"
 
 class Response
 {
@@ -21,7 +21,7 @@ class Response
 	
 		/* ------------------------- ATTRIBUTES ------------------------ */
 
-		const std::vector<ServerInfo>*		_infoVirServs;	// Servers blocks from config file that match a specific port
+		const std::vector<Server*>		_infoVirServs;	// Servers blocks from config file that match a specific port
 		Request*				_req;		// Request object when the request is fully received, used to create response
 
 		StatusLine				_staLine;	// Fist line of http response
@@ -37,7 +37,7 @@ class Response
 		/* ------------------------ COPLIEN FORM ----------------------- */
 
 		Response();
-		Response(Request* req, const StatusLine& staLine, const std::vector<ServerInfo>* infoVirServs);
+		Response(Request* req, const StatusLine& staLine, const std::vector<Server>* infoVirServs);
 		Response(const Response& c);
 		~Response();
 		Response& operator=(Response a);
@@ -47,7 +47,7 @@ class Response
 
 		void setRequest(Request* req);
 		void setStatusLine(const StatusLine& staLine);
-		void setInfoVirtualServs(const std::vector<ServerInfo>* infoVirServs);
+		void setInfoVirtualServs(const std::vector<Server>* infoVirServs);
 
 
 		/* --------------------------- GETTERS ------------------------- */
@@ -69,6 +69,10 @@ class Response
 	private:
 
 		/* ----------------------- PRIVATE METHODS --------------------- */
+
+		typedef std::pair<const std::string, const Location* > location_pair;
+
+		location_pair locationSearcher(const std::vector<Server*>& srv_vec) const;
 
 		// Fills buffer with Content-length header
 		void fillContentlengthHeader(const std::string& size);

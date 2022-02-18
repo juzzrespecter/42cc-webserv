@@ -54,12 +54,8 @@ void  Socket::add_server_ref(Server& srv) {
     server_ref_v.push_back(&srv);
 }
 
-void Socket::set_response(const std::string& response_) {
-    response = response_;
-}
-
-const std::string& Socket::get_response(void) const {
-    return response;
+void Socket::close_socket(void) const {
+    close(fd);
 }
 
 /* 
@@ -69,7 +65,7 @@ const std::string& Socket::get_response(void) const {
  * cabecera host en el mensaje, retorna el primer servidor.
  * Si encuentra una coincidencia entre los posibles nombres del servidor,
  * retorna el servidor.
- * Si no encunetra ninguna coincidencia, retorna BAD_REQUEST
+ * Si no encunetra ninguna coincidencia, retorna primer servidor definido
  */
 
 /* Si la request lleva formato AbsoluteURI, el host se adquiere desde la 
@@ -77,6 +73,9 @@ const std::string& Socket::get_response(void) const {
  *
  * (AbsoluteURI = http://www.hostname.com/ejemplo/)
  */
+
+/* la request ha de tener un identificador Host aunque este no coincida con ningun hostname en 
+ * la lista de servidores virtuales, si no se da el caso el parser debe haber mandado un 400 BAD REQUEST */
 
 const Server& Socket::select_requested_server(const std::string& request) {
     if (server_ref_v.size() == 1) {
@@ -92,8 +91,7 @@ const Server& Socket::select_requested_server(const std::string& request) {
             return srv;
         }
     }
-    //return *server_ref_v.front();
-    return /* BAD REQUEST */
+    return *server_ref_v.front();
 }
 
 bool    socket_comp::operator()(const Socket& lhs, const Socket& rhs) {

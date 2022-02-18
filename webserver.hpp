@@ -4,17 +4,19 @@
 #include "parser.hpp"
 #include "socket.hpp"
 #include <unistd.h>
+#include <fcntl.h>
 
-#define BUFFER_SIZE 100
+enum socket_status_f {
+    CLOSED, /* fin de la conexión */
+    STANDBY, /* socket no está aún preparado para realizar acción */
+    CONTINUE /* socket preparado */
+};
 
 class Webserver {
     private:
         std::vector<Server> server_v;
-        std::vector<Socket> /*rd_socket_v;*/ read_v;
-        std::vector<Socket> /*wr_socket_v; */ write_v;
-
-        fd_set readfds;
-        fd_set writefds;
+        std::vector<Socket> read_v;
+        std::vector<Socket> write_v;
 
         struct addr_comp {
             public:
@@ -23,11 +25,29 @@ class Webserver {
             private:
                 const listen_directive_t& addr;
         };
+
+        std::string timestamp(void) const;
+        void log(const std::string&) const;
+
+        /* parámetros para llamada a select() */
+        int nfds;
+        fd_set readfds;
+        fd_set writefds;
+
         void check_server_duplicates(const std::vector<Server>&);
 
-        void accept_new_connection(int);
-        void read_from_socket(int);
-        void write_to_socket(int);
+        void nfds_up(int);
+        void nfds_down(int);
+
+        void accept_new_connection(const Socket&);
+
+        request_status_f process_request(Socket&, char*);
+
+        socket_status_f read_from_socket(Socket&);
+        socket_status_f write_to_socket(Socket&);
+
+        void ready_to_read_loop(void);
+        void ready_to_write_loop(void);
 
         Webserver(void);
         Webserver(const Webserver&);

@@ -1,15 +1,15 @@
 #include "Location.hpp"
 
-cgi_pass_directive_t::cgi_pass_directive_t(void) { }
+std::pair<std::string, std::string>::std::pair<std::string, std::string>(void) { }
 
-cgi_pass_directive_t::cgi_pass_directive_t(const cgi_pass_directive_t& other) :
+std::pair<std::string, std::string>::std::pair<std::string, std::string>(const std::pair<std::string, std::string>& other) :
     cgi_file_ext(other.cgi_file_ext), cgi_path(other.cgi_path) { }
 
-cgi_pass_directive_t::cgi_pass_directive_t(const std::string& cgi_file_ext_, const std::string& cgi_path_) :
+std::pair<std::string, std::string>::std::pair<std::string, std::string>(const std::string& cgi_file_ext_, const std::string& cgi_path_) :
     cgi_file_ext(cgi_file_ext_), cgi_path(cgi_path_) { }
 
 
-cgi_pass_directive_t& cgi_pass_directive_t::operator=(const cgi_pass_directive_t& other) {
+std::pair<std::string, std::string>& std::pair<std::string, std::string>::operator=(const std::pair<std::string, std::string>& other) {
     if (this == &other)  {
         return *this;
     }
@@ -51,7 +51,7 @@ Location::Location(const location_block_t& loc_b) {
     }
     for (string_vector::const_iterator it = loc_b.dir[D_CGI_PASS].begin(); it != loc_b.dir[D_CGI_PASS].end(); it++) {
         if ((it + 1) == loc_b.dir[D_CGI_PASS].end()) throw std::runtime_error("si ves esto el parser está roto\n");
-        cgi_pass.push_back(cgi_pass_directive_t(*it, *++it));
+        cgi_pass.push_back(std::pair<std::string, std::string>(*it, *++it));
     }
     this->body_size = std::atoi(loc_b.dir[D_BODY_SIZE].front().c_str());
     this->autoindex = !loc_b.dir[D_AUTOINDEX].front().compare("on") ? true : false;
@@ -76,33 +76,33 @@ Location& Location::operator=(const Location& other) {
     return *this;
 }
 
-/* 
- * Primero comprueba que el método existe, después comprueba que está dentro de los permitidos
- * conforme a la configuración del servidor.
- * 
- * Lanza una respuesta predeterminada Not Implemented 501 si el método no está definido,
- * y una respuesta predeterminada Method Not Allowed 405 si el método existe pero
- * no se encuentra dentro del vector de métodos permitidos.
- */
-std::string Location::select_requested_method(const std::string& request) const {
-    static const std::string method_arr[N_METHODS] = {"GET", "POST", "DELETE"};
-    method_options  option_arr[N_METHODS] = {
-        Location::http_method_get,
-        Location::http_method_post,
-        Location::http_method_delete
-    };
-    std::string req_method = get_method_from_request(request);
-    /* std::string req_method = request.method() */
-    int method_id;
+const std::string& get_error_page(void) const {
+    return error_page;
+}
+const std::string& get_root(void) const {
+    return root;
+}
+const std::string& get_return_uri(void) const {
+    return return_uri;
+}
+const std::string& get_upload_path(void) const {
+    return upload_path;
+}
 
-    for (method_id = 0; method_id < N_METHODS; method_id++) {
-        if (!req_method.compare(method_arr[method_id])) break ;
-    }
-    if (method_id == N_METHODS) {
-        return /* NOT IMPLEMENTED */;
-    }
-    if (std::find(accept_method.begin(), accept_method.end(), req_method) != accept_method.end()) {
-        return /* METHOD NOT ALLOWED */;
-    }
-    return (this->*option_arr[method_id])(request);
+const std::vector<std::string>& get_index(void) const {
+    return index;
+}        
+const std::vector<std::string>& get_methods(void) const {
+    return accept_method;
+}
+
+const std::pair<std::string, std::string>& get_cgi_pass(void) const {
+    return cgi_pass;
+}
+
+unsigned int get_body_size(void) const {
+    return body_size;
+}
+bool get_autoindex(void) const {
+    return autoindex;
 }

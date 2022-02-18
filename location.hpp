@@ -2,20 +2,10 @@
 #define __LOCATION_HPP__
 
 #include "parser.hpp"
+#include "request.hpp"
+#include <unistd.h>
 
 #define N_METHODS 3
-
-struct cgi_pass_directive_t {
-    std::string cgi_file_ext;
-    std::string cgi_path;
-
-    cgi_pass_directive_t(void);
-    cgi_pass_directive_t(const cgi_pass_directive_t&);
-    cgi_pass_directive_t(const std::string&, const std::string&);
-    cgi_pass_directive_t& operator=(const cgi_pass_directive_t&);
-};
-
-typedef std::vector<cgi_pass_directive_t> cgi_pass_vector;
 
 class Location {
     private:
@@ -27,18 +17,13 @@ class Location {
         std::vector<std::string> index;
         std::vector<std::string> accept_method;
 
-        cgi_pass_vector cgi_pass;
+        std::pair<std::string, std::string> cgi_pass;
 
         unsigned int body_size;
         bool autoindex;
 
         typedef std::string (Location::*method_options)(const std::string&) const;
 
-        std::string http_method_get(const std::string&) const;
-        std::string http_method_post(const std::string&) const;
-        std::string http_method_delete(const std::string&) const;
-
-        std::string get_method_from_request(const std::string&) const;
     public:
         std::string uri;
 
@@ -48,7 +33,19 @@ class Location {
         ~Location();
         Location& operator=(const Location&);
 
-        std::string select_requested_method(const std::string&) const;
+        const std::string& get_error_page(void) const;
+        const std::string& get_root(void) const;
+        const std::string& get_return_uri(void) const;
+        const std::string& get_upload_path(void) const;
+
+        const std::vector<std::string>& get_index(void) const;        
+        const std::vector<std::string>& get_methods(void) const;
+
+        const std::pair<std::string, std::string>& get_cgi_pass(void) const;
+
+        unsigned int get_body_size(void) const;
+        bool get_autoindex(void) const;
+
 };
 
 #endif // __LOCATION_HPP__

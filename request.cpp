@@ -1,36 +1,49 @@
-#include "request.hpp"
+#include "Request.hpp"
 
-Request::Request(void) {
+Request::Request() : statusFlag(EMPTY) { }
+
+/*Request::Request(const std::vector<Server*> infoVirServs) {
+
+}*/
+
+Request::Request(const Request& c) {
+
+}
+Request::~Request() {
+
+}
+Request& Request::operator=(Request a) {
 
 }
 
-Request::Request(const Request&) {
+const RequestLine& Request::getRequestLine() const {
+
+}
+const std::map<std::string, std::string>& Request::getHeaders() const {
+
+}
+const Body& Request::getBody() const {
+
+}
+const std::string& Request::getBuffer() const {
+
+}
+int Request::getMethod() const {
+
+}
+const std::string& Request::getPath() const {
+
+}
+const std::string& Request::getQuery() const {
 
 }
 
-Request::Request(const std::string& message) {
-    /* parse request line */ /*separator*/
-    /* parse loop() headers */ /*crlf*/
-    /* crlf*/
-    /* parse request body */
-}
-
-Request& Request::operator=(const Request&) {
+void Request::setPath(const std::string& path) {
 
 }
 
-const std::string& Request::method(void) const {
+bool newLineReceived(size_t posCLRF) {
 
 }
 
-const std::string& Request::uri(void) const {
-
-}
-
-const std::string& Request::host(void) const {
-
-}
-
-const std::string& Request::header(request_header_f) const {
-
-}
+void parseRequestLine(size_t posCLRF);

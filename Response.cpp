@@ -442,6 +442,10 @@ void Response::execDelete(const std::string& realUri)
     fillDateHeader();    
 }
 
+Response::location_pair Response::locationSearcher(const std::vector<Server*>& srv_vec) const {
+
+}
+
 /* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */
 
 void swap(Response& a, Response& b)
