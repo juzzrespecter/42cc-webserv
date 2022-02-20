@@ -19,8 +19,8 @@ enum methods { GET, HEAD, POST, DELETE };
 #define REQUEST_BUFFER_SIZE 2046
 
 // End the line for status / request line and headers
-#define CLRF "\r\n"
-#define CLRF_OCTET_SIZE 2
+#define CRLF "\r\n"
+#define CRLF_OCTET_SIZE 2
 
 #define SEND_BUFFER_SIZE 65536
 

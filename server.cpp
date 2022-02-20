@@ -68,46 +68,6 @@ const listen_directive_t Server::get_server_addr(void) const {
     return listen;
 }
 
-/* 
- * Según la uri solicitada en la petición del cliente, selecciona de entre 
- * los posibles bloques de ruta (locations) dentro del servidor.
- * Selecciona la ruta con la uri más extensa coincidente (hace una búsqueda aproximada).
- */
-
-const Location& Server::select_requested_location(const Requuest& req) const { /* check constness */
-    if (routes.size() == 1) {
-        return routes.front(); /* caso:  sólo existe la ruta por default dentro del servidor */
-    }
-    /* algoritmo de selección de rutas */
-
-    /*
-    string path = get_path_from_request() ;
-    vector<string> request_path_v = split_path() ;
-
-    vector<int> number_of_coincidences_between_each_path_and_request_path ;
-    for (location_iterator it = routes.begin(); it != routes.end(); it++) {
-        
-        size_t number_of_coincidences_between_current_path_and_request_path ;
-        vectorr<string> current_path_v = split_path() ;
-        for (size_t i = 0; i < request_path_v.size() || i < current_path_v.size(); i++) {
-            if (path_v[i].compare(uri_v[i])) break ;
-        }
-        if (number_of_tal == request_path_v.size()) {
-            return *it; <- exact coincidence
-        } else {
-            number_of_v.push_back(number_of);
-        }
-    }
-    int id = 0;
-    for (std::vector<int>::iterator it = n_c_v.begin(); it != --n_c_v.end(); it++) {
-        if (*it > *(it + 1)) {
-            id = *it;
-        }
-    }
-    return routes[id];
-    */
-}
-
 bool Server::operator==(const Server& rhs) const {
     if (get_server_addr() == rhs.get_server_addr()) {
         for (std::vector<std::string>::const_iterator it = server_name.begin(); it != server_name.end(); it++) {

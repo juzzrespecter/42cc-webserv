@@ -41,10 +41,4 @@ class Socket {
         void close_socket(void) const;
 };
 
-/* Uso en webserver::run para seleccionar el socket con mayor fd en la llamada a select */
-struct socket_comp {
-    public:
-        bool operator()(const Socket&, const Socket&);
-};
-
-#endif //__Socket_HPP__
+#endif //__SOCKET_HPP__

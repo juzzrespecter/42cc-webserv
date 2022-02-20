@@ -21,67 +21,41 @@ class Body
 		
 		/* ------------------------ COPLIEN FORM ----------------------- */
 
-		Body() : _recv(false), _size(), _maxSize(-1) {}
-		Body(const Body& c) :_recv(c._recv), _size(c._size), _maxSize(c._maxSize), _buff(c._buff) {}
-		~Body() {}
-		Body& operator=(Body a)
-		{
-			swap(*this, a);
-			return *this;
-		}
+		Body();
+		Body(const Body& c);
+		~Body();
+		Body& operator=(Body a);
 		
 		/* --------------------------- GETTERS ------------------------- */
 
-		const std::string& getBody() const { return _buff; }
-		size_t getSize() const { return _size; }
-		size_t getMaxSize() const { return _maxSize; }
+		const std::string& getBody() const ;
+		size_t getSize() const ;
+		size_t getMaxSize() const ;
 
 
 		/* --------------------------- SETTERS ------------------------- */
 		
-		void setSize(size_t size) { _size = size; }
-		void setMaxSize(long maxSize) { _maxSize = maxSize; }
-		void setBuff(std::string const &buf) { _buff = buf; }
-		void startReceiving() { _recv = true; }
+		void setSize(size_t size);
+		void setMaxSize(long maxSize);
+		void setBuff(std::string const &buf);
+		void startReceiving();
 
 
 		/* --------------------------- METHODS ------------------------- */
 
 		// Returns true or false depending if request line + all headers have been received
-		bool isReceiving() const { return _recv; }
+		bool isReceiving() const;
 		
 		// Reset the Body object
-		void clear()
-		{
-			_recv = false;
-			_size = 0;
-			_buff.clear();
-		}
+		void clear();
 		
 		// Append buffer received from client until content-length octets have been received.
-		int recvBuffer(const std::string& buffer, size_t index, size_t lenToRead)
-		{
-			// maxSize will be evaluated only if previously set using setMaxSize before, because 
-			// default constructor initilized it to -1
-			if (_maxSize >= 0 && (_maxSize -= lenToRead) < 0)
-				return -1;
-
-			_buff.append(buffer, index, _size);
-			_size -= lenToRead;
-			return 0;
-		}
+		int recvBuffer(const std::string& buffer, size_t index, size_t lenToRead);
 		
 	
 		/* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */
 
-		friend void swap(Body& a, Body& b)
-		{
-			std::swap(a._recv, b._recv);
-			std::swap(a._size, b._size);
-			std::swap(a._maxSize, b._maxSize);
-			std::swap(a._buff, b._buff);
-		}
-		
+		friend void swap(Body& a, Body& b);
 }; 
 
 #endif

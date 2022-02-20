@@ -19,48 +19,35 @@ class RequestLine
 
 		/* ------------------------ COPLIEN FORM ----------------------- */
 
-		RequestLine() : _method(-1) {}
-		RequestLine(const RequestLine& c) :_method(c._method), _path(c._path), _query(c._query) {}
-		~RequestLine() {}
-		RequestLine& operator=(RequestLine a)
-		{
-			swap(*this, a);
-			return *this;
-		}
+		RequestLine();
+		RequestLine(const RequestLine& c) ;
+		~RequestLine();
+		RequestLine& operator=(RequestLine a);
 		
 		/* --------------------------- GETTERS ------------------------- */
 
-		int getMethod() const { return _method; }
-		const std::string& getPath() const { return _path; }
-		const std::string& getQuery() const { return _query; }
+		int getMethod() const;
+		const std::string& getPath() const;
+		const std::string& getQuery() const;
 
 
 		/* --------------------------- SETTERS ------------------------- */
 		
-		void setMethod(int method) { _method = method; }
-		void setPath(const std::string& path) { _path = path; }
-		void setQuery(const std::string& query) { _query = query; }
+		void setMethod(int method);
+		void setPath(const std::string& path);
+		void setQuery(const std::string& query);
 		
 
 		/* -------------------------- METHODS -------------------------- */
 
 		// Clear RequestLine object
-		void clear()
-		{
-			_method = -1;
-			_path.clear();
-			_query.clear();
-		}
+		void clear();
 
 		// Returns true if no path has been set in RequestLine object, false otherwise
-		bool empty() const { return _path.empty(); }
+		bool empty() const ;
 
 		// Print on stdout RequestLine object
-		void print() const
-		{
-			std::cout << "------ REQUEST LINE ------\nmet: " << _method << ", path: |" << _path
-				<< "|, query: |" << _query << "|\n";
-		}
+		void print() const;
 
 
 		/* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */
@@ -77,14 +64,6 @@ class RequestLine
 /* -------------------- OPERATOR OVERLOADS --------------------- */
 
 // Print the RequestLine method, path, and query if there is one
-inline std::ostream& operator<<(std::ostream& stream, const RequestLine& reqLine)
-{
-	stream << "Method = " << reqLine.getMethod() << ", path = |" << reqLine.getPath() << "|";
-	
-	if (!reqLine.getQuery().empty())
-		stream << ", query = |" << reqLine.getQuery() << "|";
-		
-	return stream;
-}
+inline std::ostream& operator<<(std::ostream& stream, const RequestLine& reqLine);
 
 #endif

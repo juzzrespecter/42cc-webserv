@@ -60,31 +60,27 @@ void    Webserver::accept_new_connection(const Socket& passv) {
 }
 
 request_status_f    Webserver::process_request(Socket& conn, char* buffer) {
-    /* comprobar si la petición es nueva*/
-    /* si es verdad, inicializar nueva petición */
-    /* si no es verdad, continuar rellenando parámetros de petición */
-    Request& req = conn.get_request();
+    /*Request& req = conn.get_request();
     if (req.status() == EMPTY) {
         req.parsingCheck();
     } else {
-        /* método que lee chunked body */
         req.parseChunkedRequest();
     }
-    /* si, tras la llamada a la construcción de la petición, ya está completada, 
-     * construimos la respuesta */
     if (req.status() == IN_PROCESS) {
         return IN_PROCESS;
     }
     conn.set_response(&req, req.getRequestLine, conn.get_server_list());
     req.clean();
     
-    return READY;
+    return READY;*/
 }
 
 socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
     char req_buff[REQUEST_BUFFER_SIZE];
 
     memset(req_buff, 0, REQUEST_BUFFER_SIZE);
+    /* paso a una sola llamada a read por llamada a select, para evitar que una petición muy grande
+     * nos bloquee el servidor */
     int socket_rd_stat = read(conn_socket.fd, req_buff, REQUEST_BUFFER_SIZE);
     if (socket_rd_stat == -1) {
         /* supón error EAGAIN, la conexión estaba marcada como activa pero ha bloqueado,
@@ -100,25 +96,23 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
         return CLOSED;
     }
     /* puede ser que una lectura del socket traiga más de una request ?? (std::vector<Request>) */
-    /* pipelining; sending multiple requests without waiting for an response */
-    request_status_f stat = process_request(conn_socket, req_buff);
+    /* (pipelining; sending multiple requests without waiting for an response) */
+    conn_socket.get_request() += req_buff;
     return stat == READY ? CONTINUE : STANDBY;
 }
 
 socket_status_f    Webserver::write_to_socket(Socket& conn_socket) {
     /* llamada a write con el mensaje guardado en el Socket */
-    /* Response struct with bool indicating if request asked to close connection after sending response */
-    /* if request was sent by HTTP 1.0 client and no keep-alive flag was present, close connection */
     Response& resp = conn_socket.get_response();
 
-    int socket_wr_stat = write(conn_socket.fd, resp.getBuffer().c_str(), resp.getSize())
+    int socket_wr_stat = write(conn_socket.fd, resp.getBuffer().c_str(), /*func. get request size*/);
     if (socket_wr_stat == -1) {
         /* supón error EAGAIN, el buffer de write está lleno y como trabajamos con sockets
          * no bloqueadores retorna con señal de error, la respuesta sigue siendo válida y el cliente espera */
         log(strerror(errno));
         return STANDBY;
     }
-    if (/* Cliente ha indicado en cabecera que hay que cerrar la conexión */) {
+    if (/* Cliente ha indicado en cabecera que hay que cerrar la conexión tras enviar la respuesta */) {
         conn_socket.close_socket();
         return CLOSED;
     }

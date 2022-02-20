@@ -14,11 +14,11 @@
 #include "msg_format/RequestLine.hpp"
 #include "msg_format/Body.hpp"
 
-enum request_status_f {
+/*enum request_status_f {
 	EMPTY,
 	IN_PROCESS,
 	READY
-};
+};*/
 
 class Request
 {
@@ -34,6 +34,7 @@ class Request
         std::map<std::string, std::string>	_headers;	// Store the headers
         Body					_body;		// Store the body
 	
+	/*	request_status_f	_stat;	 flag de estado de la petición */
 	
 	public:
 
@@ -86,10 +87,10 @@ class Request
 		// Check if a new line was received (corresponding to a request line or an header).
 		// If the request line is superior to MAX_URI_LEN or if an header line is superior 
 		// to MAX_HEADER_LEN, throws a status line with the appropriate code.
-        	bool newLineReceived(size_t posCLRF);
+        	bool newLineReceived(size_t posCRLF);
 
 		// Checks that the request line received respect the RFC norme.
-		void parseRequestLine(size_t posCLRF);
+		void parseRequestLine(size_t posCRLF);
 
 		// Checks that the first word in a request line in a appropriate method.
 		void parseMethodToken(const std::string& token);
@@ -102,7 +103,7 @@ class Request
 		void parseHTTPVersion(const std::string& token);
         
 		// Check that the header line received respect the RFC norme.
-        	void parseHeaderLine(size_t posCLRF);
+        	void parseHeaderLine(size_t posCRLF);
 		
 		// Received the body until n octets (from content-length header) has been received. Then throw 
 		// a status line with the appropriate code.
