@@ -13,6 +13,7 @@
 #include "msg_format/StatusLine.hpp"
 #include "msg_format/RequestLine.hpp"
 #include "msg_format/Body.hpp"
+#include "Headers.hpp"
 
 /*enum request_status_f {
 	EMPTY,

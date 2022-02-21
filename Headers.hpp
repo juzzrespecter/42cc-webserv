@@ -1,10 +1,11 @@
 #ifndef HEADER_HPP
 #define HEADER_HPP
 
-#define N_MAX 37
+#include <string>
+#define N_HEADER_MAX 37
 
 namespace header {
-    std::string hlist[N_MAX] = {
+    std::string hlist[N_HEADER_MAX] = {
         "A-IM",
         "Accept",
         "Accept-Charset",

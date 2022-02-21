@@ -19,7 +19,7 @@
 
 Request::Request() { }
 
-/*Request::Request(const std::vector<Server*> infoVirServs) { */
+Request::Request(const std::vector<Server*> infoVirServs) { }
 
 Request::Request(const Request& c) { }
 
@@ -59,14 +59,15 @@ void Request::setPath(const std::string& path) {
 
 }
 
-bool newLineReceived(size_t posCLRF) {
+bool Request::newLineReceived(size_t posCLRF) {
 
 }
 
-void parseRequestLine(size_t posCLRF);
+void Request::parseRequestLine(size_t posCLRF);
 
 void Request::parseRequestLine(size_t posCRLF) {
     std::string request_line = _buffer.substr(posCRLF, _buffer.find(CRLF));
+
 
     parseMethodToken();
     parseURI();
@@ -75,11 +76,9 @@ void Request::parseRequestLine(size_t posCRLF) {
     if more tokens in request_line {
         throw StatusLine(400, REASON_400, "syntax error on request-line");
     }
-
-    _reqLine = /*tal*/;
 }
 
-void parseMethodToken(const std::string& token) {
+void Request::parseMethodToken(const std::string& token) {
     std::string method_list[NB_METHODS] = { "HEAD","GET","POST","DELETE" };
     int id = 0;
 
@@ -89,26 +88,65 @@ void parseMethodToken(const std::string& token) {
     if (id == NB_METHODS) {
         throw StatusLine(400, REASON_400, "syntax error on METHOD token");
     }
+    _reqLine.setMethod(id);
+    _index += token.size();
 }
 
-void parseURI(std::string token) {
-    /* check uri syntax: {regular URI, absolute-URI} */
+void Request::parseURI(std::string token) {
+    /*
+        absolureURI -> http://[...][/abs_path], if ![abs_path], then abs_path == '/'
+        abs_path -> /[...] 
+    */
     /* si es absolute-URI, pillar el Host y meterlo en el mapa de headers */
+
+    std::string abs_path;
+    std::string host;
+
+    if (!token.compare(0, sizeof("http://"), "http://")) {
+        host = token.substr(0, token.find('/'));
+        abs_path = token.substr(token.find(sizeof("http://"), '/'));
+    } else if (token[0] != '/') {
+        throw StatusLine(400, REASON_400, "syntax error on request-URI");
+    } else {
+        abs_path = token;
+    }
+    if (!host.empty()) {
+        _headers.insert(std::pair<std::string, std::string>("Host", host));
+    }
+    _reqLine.setPath(abs_path);
+    _index += token.size();
 }
 
 
-void parseHTTPVersion(const std::string& token) {
+void Request::parseHTTPVersion(const std::string& token) {
     if (token.compare("HTTP/1.1")) {
         throw StatusLine(400, REASON_400, "syntax error on HTTP-version token");
     }
+    _index += token.size();
 }
         
-void parseHeaderLine(size_t posCRLF) {
-    /* muy permisivo, la única condición es que termine en CRLF */
-    /* si está mal formateado, o es un header desconocido, ignorar */
+void Request::parseHeaderLine(size_t posCRLF) {
+    /* 
+     * muy permisivo, la única condición es que termine en CRLF
+     * si está mal formateado, o es un header desconocido, ignorar 
+    */
+
+    std::string header = _buffer.substr(posCRLF, _buffer.find(CRLF, posCRLF));
+
+    std::string field_name = header.substr(0, header.find(':'));
+    std::string field_value = header.substr(header.find(':') + 1);
+    if (field_value.empty()) {
+        return ;
+    }
+    for (int i = 0; i < N_HEADER_MAX; i++) {
+        if (!field_name.compare(header::hlist[i])) {
+            _headers.insert(std::pair<std::string, std::string>(field_name, field_value));
+            return ;
+        }
+    }
 }
 		
-void parseBody() {
+void Request::parseBody() {
     /* casos:
        Transfer-Encoding header no seteado: una única lectura.
        T-E seteado a 'chunked': varias lecturas hasta recibir el chunk final.
@@ -120,8 +158,14 @@ void parseBody() {
     */
 }
 		
-long findMaxSize(const std::string& hostName) {
+long Request::findMaxSize(const std::string& hostName) {
+    /* encuentra servidor, encuentra ruta, pilla body_size */
+    find_server_by_host comp_srv(hostName);
 
+    std::vector<Server*>::const_iterator server_it = std::find(_infoVirServs.begin(), _infoVirServs.end(), comp_srv);
+    Server* server_host = (server_it == _infoVirServs.end()) ? _infoVirServs[0] : *server_it;
+
+    /* algoritmo de selección de ruta, tanto para aquí como para la respuesta */
 }
 		
 void swap(Request& a, Request& b) {
