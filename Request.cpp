@@ -19,7 +19,7 @@
 
 Request::Request() { }
 
-Request::Request(const std::vector<Server*> infoVirServs) { }
+Request::Request(const std::vector<Server*> vservVec) { }
 
 Request::Request(const Request& c) { }
 
@@ -52,27 +52,10 @@ const std::string& Request::getPath() const {
     return 
 }
 const std::string& Request::getQuery() const {
-
 }
 
 void Request::setPath(const std::string& path) {
 
-}
-
-bool Request::newLineReceived(size_t posCLRF) {
-
-}
-
-void Request::parseBody() {
-    /* casos:
-       Transfer-Encoding header no seteado: una única lectura.
-       T-E seteado a 'chunked': varias lecturas hasta recibir el chunk final.
-
-       Si en una lectura el chunk o el msg-body no corresponde con el valor del tamaño 
-       en la cabezera del chunk (primer caso) o la cabezera Content-Type (segundo), throw 400
-
-       Si max_size == set y content-type > max_size, throw
-    */
 }
 		
 void swap(Request& a, Request& b) {
@@ -134,19 +117,21 @@ void    Request::parseMethodToken(const std::string& token) {
     THROW_STATUS("unknown method in request");
 }
 
-void    Request::parseURI(const std::string& token) {
-    // absoluteURI o abs_path
-    if (!token.compare(0, sizeof("http://"), "http://")) {
-        /* absoluteURI, cogemos HOST y lo metemos en Header */
-        std::string hostname = token.substr(0, token.find("/", sizeof("http://")));
-        std::string abs_path = token.substr(hostname.size());
+void    Request::parseURI(const std::string& token) {   /* to do QUERY */
+    std::string allowed_ptcl[2] = { "http://", "https://" };
 
-        _headers.insert(std::pair<std::string, std::string>("Host", hostname));
-        if (abs_path.empty()) {
-            abs_path.append("/");
+    for (size_t i = 0; i < 2; i++) {
+        if (!token.compare(0, allowed_ptcl[i].size(), allowed_ptcl[i])) {
+            std::string hostname = token.substr(0, token.find("/", allowed_ptcl[i].size()));
+            std::string abs_path = token.substr(hostname.size());
+
+            _headers.insert(std::pair<std::string, std::string>("Host", hostname));
+            if (abs_path.empty()) {
+                abs_path.append("/");
+            }
+            _reqLine.setPath(abs_path);
+            return ;
         }
-        _reqLine.setPath(abs_path);
-        return ;
     }
     if (token[0] == '/') {
         _reqLine.setPath(token);
@@ -219,11 +204,34 @@ void    Request::setUpRequestBody(void) {
     }
 }
 
-void    Request::parseChunkedRequestBody(void) {
+
+/* casos:
+       Transfer-Encoding header no seteado: una única lectura.
+       T-E seteado a 'chunked': varias lecturas hasta recibir el chunk final.
+
+       Si en una lectura el chunk o el msg-body no corresponde con el valor del tamaño 
+       en la cabezera del chunk (primer caso) o la cabezera Content-Type (segundo), throw 400
+
+       Si max_size == set y content-type > max_size, throw
+    */
+void    Request::parseChunkedRequestBody(void) {        /* to do */
     /* parseo sizeOfChunk CRLF Chunk CRLF */
     /* ultimo chunk 0 CRLF CRLF */
-    std::string sizeChunkStr = _buffer.substr(_index, _buffer.find(CRLF));
-    size_t  sizeChunk;
+    {
+        std::string sizeChunkStr = _buffer.substr(_index, _buffer.find(CRLF));
+        size_t  sizeChunk = std::atoi(sizeChunkStr);
+        /* case sizeChunk == 0 */
+        _index += sizeChunkStr.size();
+        // _buffer[_index] == 0
+    }
+    {
+        std::string chunk = _buffer.substr(_index, _buffer.find(CRLF));
+
+        if (chunk.size() != sizeChunk) {
+            THROW_STATUS("...");
+        }
+        _body.recvBuffer(chunk);
+    }
 
 }
 
@@ -238,15 +246,24 @@ void    Request::parseChunkedBody(void) {
 }
 
 long Request::findMaxSize(void) const {
-    find_server_by_host comp(hostName);
-    std::vector<Server*>::const_iterator it;
-    Server* servHost = _vservVec[0];
-
-    std::vector<Server*>::const_iterator it = std::find(_vservVec.begin(), _vservVec.end(), comp);
+    std::vector<Server*>::const_iterator it = /
+        std::find(_vservVec.begin(), _vservVec.end(), find_server_by_host(host()));
     Server* server_host = (it == _vservVec.end()) ? _vservVec[0] : *it;
 
-    const Location& loc = server_host->get_location_by_path(getPath());
-    return loc.getBodySize();
+    return server_host->get_location_by_path(getPath()).getBodySize();
+}
+
+bool    Request::transferencodingIsChunked(void) const {
+    header_map::const_iterator te = _headers.find("Transfer-Encoding");
+    header_map::const_iterator 
+
+    if ((te != _headers.end() && !te->second.compare("chunked")))
+}
+
+const std::string&  Request::host(void) const {
+    header_map::const_iterator h = _headers.find("Host");
+
+    return (h != _headers.end()) ? h->second : "";
 }
 
 /* Undefined behavior if used before safety check in headerMeetsRequirements */

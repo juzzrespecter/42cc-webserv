@@ -131,7 +131,10 @@ class Request
 		// returns -1.
 		long findMaxSize(void) const;
 		bool transferEncodingIsChunked(void) const;
-		size_t contentLength(void) const;
+
+		// Header accesses
+		const std::string&	host(void) const;
+		size_t 				contentLength(void) const;
 
 		
 		/* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */
