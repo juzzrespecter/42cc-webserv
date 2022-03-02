@@ -21,30 +21,40 @@
 	READY
 };*/
 
+enum request_stage_f { 
+	request_line_stage,
+	header_stage,
+	request_body_stage,
+	request_is_ready
+};
+
 #define THROW_STATUS(extraInfo)	throw StatusLine(400, REASON_400, extraInfo)
 
 class Request
 {
 	private:
-
+		typedef std::map<std::string, std::string>	header_map;
 		/* ------------------------- ATTRIBUTES ------------------------ */
 
-		std::string			_buffer;		// Store the request received
-		size_t				_index;			// Indicates which part of the buffer is left to treat
-		const std::vector<Server*>	_infoVirServs;	// Server blocks from config file that match the appropriate port
+		std::string	_buffer;		// Store the request received
+		size_t		_index;			// Indicates which part of the buffer is left to treat
+
+		const std::vector<Server*>	_vservVec;	// Server blocks from config file that match the appropriate port
         
-		RequestLine			_reqLine;	// Contains all the information from the request line
-        std::map<std::string, std::string>	_headers;	// Store the headers
-        Body					_body;		// Store the body
+		size_t	_headerCount;
+
+		RequestLine	_reqLine;	// Contains all the information from the request line
+        header_map	_headers;	// Store the headers
+        Body		_body;		// Store the body
 	
-	/*	request_status_f	_stat;	 flag de estado de la petición */
+		request_stage_f	_stage;
 	
 	public:
 
 		/* ------------------------ COPLIEN FORM ----------------------- */
 
 		Request();
-		Request(const std::vector<Server*> infoVirServs);
+		Request(const std::vector<Server*> vservVec);
 		Request(const Request& c);
 		~Request();
 		Request& operator=(Request a);
@@ -53,7 +63,7 @@ class Request
 		/* --------------------------- GETTERS ------------------------- */
 
 		const RequestLine& getRequestLine() const;
-		const std::map<std::string, std::string>& getHeaders() const;
+		const header_map& getHeaders() const;
 		const Body& getBody() const;
 		const std::string& getBuffer() const;
 		int getMethod() const;
@@ -69,11 +79,12 @@ class Request
 		/* --------------------------- METHODS ------------------------- */
 
 		// Add the buffer from receive to request object
-		Request& operator+=(const char* charBuffer);
+		//Request& operator+=(const char* charBuffer);
+		void recvBuffer(const std::string&);
 
 		// Check if the data received is correct. If an error occur or if a request was
 		// fully received, throws a status line with the appropriate code.
-		void parsingCheck();
+		// void parsingCheck();
 
 		// Reset the request object
 		void clear();
@@ -90,32 +101,37 @@ class Request
 		// Check if a new line was received (corresponding to a request line or an header).
 		// If the request line is superior to MAX_URI_LEN or if an header line is superior 
 		// to MAX_HEADER_LEN, throws a status line with the appropriate code.
-        	bool newLineReceived(size_t posCRLF);
+        //	bool newLineReceived(size_t posCRLF);
 
 		// Checks that the request line received respect the RFC norme.
-		void parseRequestLine(size_t posCRLF);
+		void parseRequestLine(void);
 
 		// Checks that the first word in a request line in a appropriate method.
 		void parseMethodToken(const std::string& token);
 
 		// Check that the URI in the request line respect the RFC norme.
-		void parseURI(std::string token);
+		void parseURI(const std::string& token);
 
 		// Check that the HTTP version in the request line is respecting the RFC norme and is equal 
 		// to 1.1.
 		void parseHTTPVersion(const std::string& token);
         
 		// Check that the header line received respect the RFC norme.
-        	void parseHeaderLine(size_t posCRLF);
+       	void parseHeaderLine(void);
+		void headerMeetsRequirements(void) const;
+		void setUpRequestBody(void);
 		
 		// Received the body until n octets (from content-length header) has been received. Then throw 
 		// a status line with the appropriate code.
-		void parseBody();
+		void parseChunkedRequestBody(void);
+		void parseRequestBody(void);
 		
 		// Search for the correct server block (matching host header field, if not using default server
 		// block) and returns an unsigned max_body_size if the field is existing in the config file, otherwise
 		// returns -1.
-		long findMaxSize(const std::string& hostName);
+		long findMaxSize(void) const;
+		bool transferEncodingIsChunked(void) const;
+		size_t contentLength(void) const;
 
 		
 		/* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */

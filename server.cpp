@@ -79,6 +79,19 @@ const listen_directive_t Server::get_server_addr(void) const {
     return listen;
 }
 
+const Location& Server::get_location_by_path(const std::string& abs_path) const {
+    std::vector<size_t> tracker(routes.size());
+
+    for (std::vector<Location>::const_iterator it = routes.begin(); it != routes.end(); it++) {
+        if (!it->uri.compare(0, it->uri.size(), abs_path)) {
+            tracker[std::distance(routes.begin(), it)] = it->uri.size();
+        }
+    }
+    size_t  loc_id = std::distance(tracker.begin(), std::max(tracker.begin(), tracker.end()));
+    
+    return (routes.at(loc_id));
+}
+
 bool Server::operator==(const Server& rhs) const {
     if (get_server_addr() != rhs.get_server_addr()) {
         return false;

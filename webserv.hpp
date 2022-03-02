@@ -14,6 +14,7 @@ enum methods { GET, HEAD, POST, DELETE };
 // Max octets length of a status / request / header line
 #define MAX_URI_LEN 8000
 #define MAX_HEADER_LEN 8000
+#define HEADER_LIM 100
 
 // Number of octets that the request buffer can contain
 #define REQUEST_BUFFER_SIZE 2046

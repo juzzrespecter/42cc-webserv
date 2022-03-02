@@ -34,13 +34,15 @@ class Server {
         std::string get_uri_from_request(const std::string&) const;
     public:
         Server(void);
-        Server(const Server& other);
-        Server(const server_block_t& Server_block);
+        Server(const Server&);
+        Server(const server_block_t&);
         ~Server();
 
         std::vector<std::string> server_name;
 
         const listen_directive_t get_server_addr(void) const;
+
+        const Location& get_location_by_path(const std::string&) const;
 
         bool operator==(const Server&) const;
         bool operator!=(const Server&) const;

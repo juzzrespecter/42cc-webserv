@@ -32,7 +32,7 @@ Request& Request::operator=(Request a) {
 const RequestLine& Request::getRequestLine() const { }
 
 }
-const std::map<std::string, std::string>& Request::getHeaders() const {
+const header_map& Request::getHeaders() const {
     return _headers;
 }
 
@@ -63,89 +63,6 @@ bool Request::newLineReceived(size_t posCLRF) {
 
 }
 
-void Request::parseRequestLine(size_t posCLRF);
-
-void Request::parseRequestLine(size_t posCRLF) {
-    std::string request_line = _buffer.substr(posCRLF, _buffer.find(CRLF));
-
-
-    parseMethodToken();
-    parseURI();
-    parseHTTPVersion();
-
-    if more tokens in request_line {
-        throw StatusLine(400, REASON_400, "syntax error on request-line");
-    }
-}
-
-void Request::parseMethodToken(const std::string& token) {
-    std::string method_list[NB_METHODS] = { "HEAD","GET","POST","DELETE" };
-    int id = 0;
-
-    for (; id < NB_METHODS; id++) {
-        if (!token.compare(method_list[id])) break ;
-    }
-    if (id == NB_METHODS) {
-        throw StatusLine(400, REASON_400, "syntax error on METHOD token");
-    }
-    _reqLine.setMethod(id);
-    _index += token.size();
-}
-
-void Request::parseURI(std::string token) {
-    /*
-        absolureURI -> http://[...][/abs_path], if ![abs_path], then abs_path == '/'
-        abs_path -> /[...] 
-    */
-    /* si es absolute-URI, pillar el Host y meterlo en el mapa de headers */
-
-    std::string abs_path;
-    std::string host;
-
-    if (!token.compare(0, sizeof("http://"), "http://")) {
-        host = token.substr(0, token.find('/'));
-        abs_path = token.substr(token.find(sizeof("http://"), '/'));
-    } else if (token[0] != '/') {
-        throw StatusLine(400, REASON_400, "syntax error on request-URI");
-    } else {
-        abs_path = token;
-    }
-    if (!host.empty()) {
-        _headers.insert(std::pair<std::string, std::string>("Host", host));
-    }
-    _reqLine.setPath(abs_path);
-    _index += token.size();
-}
-
-
-void Request::parseHTTPVersion(const std::string& token) {
-    if (token.compare("HTTP/1.1")) {
-        throw StatusLine(400, REASON_400, "syntax error on HTTP-version token");
-    }
-    _index += token.size();
-}
-        
-void Request::parseHeaderLine(size_t posCRLF) {
-    /* 
-     * muy permisivo, la única condición es que termine en CRLF
-     * si está mal formateado, o es un header desconocido, ignorar 
-    */
-
-    std::string header = _buffer.substr(posCRLF, _buffer.find(CRLF, posCRLF));
-
-    std::string field_name = header.substr(0, header.find(':'));
-    std::string field_value = header.substr(header.find(':') + 1);
-    if (field_value.empty()) {
-        return ;
-    }
-    for (int i = 0; i < N_HEADER_MAX; i++) {
-        if (!field_name.compare(header::hlist[i])) {
-            _headers.insert(std::pair<std::string, std::string>(field_name, field_value));
-            return ;
-        }
-    }
-}
-		
 void Request::parseBody() {
     /* casos:
        Transfer-Encoding header no seteado: una única lectura.
@@ -158,16 +75,6 @@ void Request::parseBody() {
     */
 }
 		
-long Request::findMaxSize(const std::string& hostName) {
-    /* encuentra servidor, encuentra ruta, pilla body_size */
-    find_server_by_host comp_srv(hostName);
-
-    std::vector<Server*>::const_iterator server_it = std::find(_infoVirServs.begin(), _infoVirServs.end(), comp_srv);
-    Server* server_host = (server_it == _infoVirServs.end()) ? _infoVirServs[0] : *server_it;
-
-    /* algoritmo de selección de ruta, tanto para aquí como para la respuesta */
-}
-		
 void swap(Request& a, Request& b) {
 
 }
@@ -175,18 +82,18 @@ void swap(Request& a, Request& b) {
 void    Request::recvBuffer(const std::string& newBuffer) {
     _buffer.append(newBuffer);
 
-    if (stage == request_line_stage) {
+    if (_stage == request_line_stage) {
         parseRequestLine();
     }
-    while (stage == header_stage && _buffer[_index]) {
+    while (_stage == header_stage && _buffer[_index]) {
         parseHeaderLine();
-        if (stage != header_stage) {/* move to header checking and body setup */
+        if (_stage != header_stage) {/* move to header checking and body setup */
             headerMeetsRequirements();
             setUpRequestBody();
         }
     }
-    if (stage == request_body_stage) {
-        if (transferEncodingToChunked() == true) {
+    if (_stage == request_body_stage) {
+        if (transferEncodingIsChunked() == true) {
             parseChunkedRequestBody();
         } else {
             parseRequestBody();
@@ -213,7 +120,6 @@ void    Request::parseRequestLine(void) {
     parseMethodToken(token[0]);
     parseURI(token[1]);
     parseHTTPVersion(token[2]);
-    _index += requestLine.size();
 }
 
 void    Request::parseMethodToken(const std::string& token) {
@@ -254,3 +160,105 @@ void    Request::parseHTTPVersion(const std::string& token) {
         THROW_STATUS("unknown or not supported HTTP version");
     }
 }
+
+void    Request::parseHeaderLine(void) {
+    std::string headerLine = _buffer.substr(_index, _buffer.find(CRLF));
+
+    if (headerLine.empty()) {
+        _stage = (_reqLine.getMethod() == POST) ? request_body_stage : request_is_ready;
+        return ;
+    }
+    _index += headerLine.size();
+    if (!_buffer[_index]) {
+        THROW_STATUS("syntax error on request");
+    }
+    std::string fieldName = headerLine.substr(0, headerLine.find(':'));
+    std::string fieldValue = headerLine.substr(fieldName.size() + 1);
+
+    if (fieldValue.empty()) {
+        return ;
+    }
+    if (_headerCount++ > HEADER_LIM) {
+        THROW_STATUS("too many headers on request");
+    }
+    for (int i = 0; i < N_HEADER_MAX; i++) {
+        if (!fieldName.compare(header::hlist[i])) {
+            _headers.insert(std::pair<std::string, std::string>(fieldName, fieldValue));
+            return ;
+        }
+    }
+}
+
+void    Request::headerMeetsRequirements(void) const {
+    header_map::const_iterator hd = _headers.find("Host");
+    header_map::const_iterator cl = _headers.find("Content-Length");
+    
+    /* debe estar presente un Host definido en la request */
+    if (hd == _headers.end()) {
+        THROW_STATUS("requested host not defined");
+    }
+
+    /* si existe un header Content-Length definido, su field-value ha de ser un numero positivo */
+    if (cl != _headers.end()) {
+        char *ptr;
+
+        int contentLengthVal = strtol(cl->second, &ptr, 0);
+        if (contentLengthVal < 0 || *ptr) {
+            THROW_STATUS("invalid value for header Content-Length");
+        }
+    }
+}
+
+void    Request::setUpRequestBody(void) {
+    find_server_by_host comp(host());
+    header_map::iterator cl = _headers.find("Content-Length");
+
+    _body.setMaxSize(findMaxSize());
+    if (cl != _headers.end()) {
+        _body.setSize(std::atoi(cl->second));
+    }
+}
+
+void    Request::parseChunkedRequestBody(void) {
+    /* parseo sizeOfChunk CRLF Chunk CRLF */
+    /* ultimo chunk 0 CRLF CRLF */
+    std::string sizeChunkStr = _buffer.substr(_index, _buffer.find(CRLF));
+    size_t  sizeChunk;
+
+}
+
+void    Request::parseChunkedBody(void) {
+    std::string bodyBuffer = _buffer.substr(_index);
+
+    _index += _bodyBuffer.size();
+    _body.recvBuffer(bodyBuffer);
+    if (_body.getBuffer().size() > contentLength()) {
+        THROW_STATUS("request body overflows content-length limit");
+    }
+}
+
+long Request::findMaxSize(void) const {
+    find_server_by_host comp(hostName);
+    std::vector<Server*>::const_iterator it;
+    Server* servHost = _vservVec[0];
+
+    std::vector<Server*>::const_iterator it = std::find(_vservVec.begin(), _vservVec.end(), comp);
+    Server* server_host = (it == _vservVec.end()) ? _vservVec[0] : *it;
+
+    const Location& loc = server_host->get_location_by_path(getPath());
+    return loc.getBodySize();
+}
+
+/* Undefined behavior if used before safety check in headerMeetsRequirements */
+size_t  Request::contentLength(void) const {
+    header_map::const_iterator cl = _headers.find("Content-Length");
+
+    if (cl != _headers.end()) {
+        return std::atoi(cl->second);
+    }
+    return 0;
+}
+
+
+
+
