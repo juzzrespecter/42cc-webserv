@@ -17,20 +17,27 @@
 
 /* al final del parseo de headers hay que comprobar si está seteado Host; si no, matamos request*/
 
-Request::Request() { }
+Request::Request() : stage(request_line_stage) { }
 
-Request::Request(const std::vector<Server*> vservVec) { }
+Request::Request(const std::vector<Server*> vservVec) :
+    _vservVec(vservVec), stage(request_line_stage) { }
 
-Request::Request(const Request& c) { }
+Request::Request(const Request& c) { 
+    *this = c;
+}
 
 Request::~Request() { }
 
 Request& Request::operator=(Request a) { 
-    /* swap requests */
+    if (this == &a) {
+        return *this;
+    }
+    swap(*this, a);
+    return *this;
 }
 
 const RequestLine& Request::getRequestLine() const { }
-
+    return _reqLine;
 }
 const header_map& Request::getHeaders() const {
     return _headers;
@@ -45,21 +52,29 @@ const std::string& Request::getBuffer() const {
 }
 
 int Request::getMethod() const {
-
+    return _reqLine.getMethod();
 }
 
 const std::string& Request::getPath() const {
-    return 
+    return _reqLine.getPath();
 }
 const std::string& Request::getQuery() const {
+    return _reqLine.getQuery();
 }
 
 void Request::setPath(const std::string& path) {
-
+    _reqLine.setPath(path);
 }
 		
 void swap(Request& a, Request& b) {
-
+   swap(a._buffer, b._buffer);
+   swap(a._index, b._index);
+   swap(a._vservVec, b._vservVec);
+   swap(a._headerCount, b._headerCount);
+   swap(a._reqLine, b._reqLine);
+   swap(a._headers, b._headers);
+   swap(a._body, b._body);
+   swap(a._stage, b._stage);
 }
 
 void    Request::recvBuffer(const std::string& newBuffer) {
@@ -117,9 +132,14 @@ void    Request::parseMethodToken(const std::string& token) {
     THROW_STATUS("unknown method in request");
 }
 
-void    Request::parseURI(const std::string& token) {   /* to do QUERY */
+void    Request::parseURI(const std::string& token) {
     std::string allowed_ptcl[2] = { "http://", "https://" };
+    size_t queryPos = token.find('?');
 
+    if (queryPos != std::string::npos) {
+            _reqLine.setQuery(token.substr(++queryPos));
+            token = token.substr(0, --queryPos);
+    }
     for (size_t i = 0; i < 2; i++) {
         if (!token.compare(0, allowed_ptcl[i].size(), allowed_ptcl[i])) {
             std::string hostname = token.substr(0, token.find("/", allowed_ptcl[i].size()));
