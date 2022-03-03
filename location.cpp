@@ -1,22 +1,4 @@
-#include "Location.hpp"
-
-std::pair<std::string, std::string>::std::pair<std::string, std::string>(void) { }
-
-std::pair<std::string, std::string>::std::pair<std::string, std::string>(const std::pair<std::string, std::string>& other) :
-    cgi_file_ext(other.cgi_file_ext), cgi_path(other.cgi_path) { }
-
-std::pair<std::string, std::string>::std::pair<std::string, std::string>(const std::string& cgi_file_ext_, const std::string& cgi_path_) :
-    cgi_file_ext(cgi_file_ext_), cgi_path(cgi_path_) { }
-
-
-std::pair<std::string, std::string>& std::pair<std::string, std::string>::operator=(const std::pair<std::string, std::string>& other) {
-    if (this == &other)  {
-        return *this;
-    }
-    this->cgi_path = other.cgi_path;
-    this->cgi_file_ext = other.cgi_file_ext;
-    return *this;
-}
+#include "location.hpp"
 
 Location::Location(void) { }
 
@@ -76,33 +58,33 @@ Location& Location::operator=(const Location& other) {
     return *this;
 }
 
-const std::string& get_error_page(void) const {
+const std::string& Location::get_error_page(void) const {
     return error_page;
 }
-const std::string& get_root(void) const {
+const std::string& Location::get_root(void) const {
     return root;
 }
-const std::string& get_return_uri(void) const {
+const std::string& Location::get_return_uri(void) const {
     return return_uri;
 }
-const std::string& get_upload_path(void) const {
+const std::string& Location::get_upload_path(void) const {
     return upload_path;
 }
 
-const std::vector<std::string>& get_index(void) const {
+const std::vector<std::string>& Location::get_index(void) const {
     return index;
 }        
-const std::vector<std::string>& get_methods(void) const {
+const std::vector<std::string>& Location::get_methods(void) const {
     return accept_method;
 }
 
-const std::pair<std::string, std::string>& get_cgi_pass(void) const {
+const std::vector<std::pair<std::string, std::string> >& Location::get_cgi_pass(void) const {
     return cgi_pass;
 }
 
-unsigned int get_body_size(void) const {
+unsigned int Location::get_body_size(void) const {
     return body_size;
 }
-bool get_autoindex(void) const {
+bool Location::get_autoindex(void) const {
     return autoindex;
 }

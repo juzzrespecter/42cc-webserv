@@ -9,11 +9,11 @@
 #include <map>
 
 #include "webserv.hpp"
-#include "Server.hpp"
+#include "server.hpp"
 #include "msg_format/StatusLine.hpp"
 #include "msg_format/RequestLine.hpp"
 #include "msg_format/Body.hpp"
-#include "Headers.hpp"
+#include "headers.hpp"
 
 /*enum request_status_f {
 	EMPTY,
@@ -39,7 +39,7 @@ class Request
 		std::string	_buffer;		// Store the request received
 		size_t		_index;			// Indicates which part of the buffer is left to treat
 
-		const std::vector<Server*>	_vservVec;	// Server blocks from config file that match the appropriate port
+		std::vector<const Server*>	_vservVec;	// Server blocks from config file that match the appropriate port
         
 		size_t	_headerCount;
 
@@ -54,7 +54,7 @@ class Request
 		/* ------------------------ COPLIEN FORM ----------------------- */
 
 		Request();
-		Request(const std::vector<Server*> vservVec);
+		Request(const std::vector<const Server*>& vservVec);
 		Request(const Request& c);
 		~Request();
 		Request& operator=(Request a);
@@ -110,7 +110,7 @@ class Request
 		void parseMethodToken(const std::string& token);
 
 		// Check that the URI in the request line respect the RFC norme.
-		void parseURI(const std::string& token);
+		void parseURI(std::string& token);
 
 		// Check that the HTTP version in the request line is respecting the RFC norme and is equal 
 		// to 1.1.
@@ -123,8 +123,11 @@ class Request
 		
 		// Received the body until n octets (from content-length header) has been received. Then throw 
 		// a status line with the appropriate code.
-		void parseChunkedRequestBody(void);
 		void parseRequestBody(void);
+
+		size_t parseChunkSize(void);
+		std::string parseChunkBody(void);
+		void parseChunkedRequestBody(void);
 		
 		// Search for the correct server block (matching host header field, if not using default server
 		// block) and returns an unsigned max_body_size if the field is existing in the config file, otherwise
@@ -133,8 +136,8 @@ class Request
 		bool transferEncodingIsChunked(void) const;
 
 		// Header accesses
-		const std::string&	host(void) const;
-		size_t 				contentLength(void) const;
+		std::string	host(void) const;
+		size_t 		contentLength(void) const;
 
 		
 		/* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */

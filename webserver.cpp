@@ -1,4 +1,4 @@
-#include "Webserver.hpp"
+#include "webserver.hpp"
 
 bool    Webserver::addr_comp::operator()(const Socket& other) {
     return addr == other.get_socket_addr();
@@ -18,14 +18,10 @@ void    Webserver::check_server_duplicates(const std::vector<Server>& srv_v) {
 }
 
 std::string    Webserver::timestamp(void) const {
-    std::string time_fmt;
     std::time_t t = std::time(0);
     std::tm*    time = std::localtime(&t);
 
-    time_fmt += (time->tm_year + 1900) << '-' 
-              + (time->tm_mon + 1) << '-'
-              +  time->tm_mday;
-    return time_fmt;
+    return asctime(time);
 }
 
 void    Webserver::log(const std::string& error) const {
@@ -59,24 +55,9 @@ void    Webserver::accept_new_connection(const Socket& passv) {
     nfds_up(read_v.back().fd);
 }
 
-request_status_f    Webserver::process_request(Socket& conn, char* buffer) {
-    /*Request& req = conn.get_request();
-    if (req.status() == EMPTY) {
-        req.parsingCheck();
-    } else {
-        req.parseChunkedRequest();
-    }
-    if (req.status() == IN_PROCESS) {
-        return IN_PROCESS;
-    }
-    conn.set_response(&req, req.getRequestLine, conn.get_server_list());
-    req.clean();
-    
-    return READY;*/
-}
-
 socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
-    char req_buff[REQUEST_BUFFER_SIZE];
+    Request& req = conn_socket.get_request();
+    char     req_buff[REQUEST_BUFFER_SIZE];
 
     memset(req_buff, 0, REQUEST_BUFFER_SIZE);
     /* paso a una sola llamada a read por llamada a select, para evitar que una petición muy grande
@@ -97,22 +78,30 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
     }
     /* puede ser que una lectura del socket traiga más de una request ?? (std::vector<Request>) */
     /* (pipelining; sending multiple requests without waiting for an response) */
-    conn_socket.get_request() += req_buff;
-    return stat == READY ? CONTINUE : STANDBY;
+    try {
+        req.recvBuffer(req_buff);
+    } catch (StatusLine& sl) {
+        log(sl.getReason() + ": " + sl.getAdditionalInfo());
+        conn_socket.set_response(Response(&req, sl /*, */));
+        return CONTINUE;
+    }
+    return STANDBY;
+    //return (req.getStage() == request_is_ready) ? CONTINUE : STANDBY;
 }
 
 socket_status_f    Webserver::write_to_socket(Socket& conn_socket) {
     /* llamada a write con el mensaje guardado en el Socket */
     Response& resp = conn_socket.get_response();
 
-    int socket_wr_stat = write(conn_socket.fd, resp.getBuffer().c_str(), /*func. get request size*/);
+    int socket_wr_stat = write(conn_socket.fd, resp.getBuffer().c_str(), resp.getBuffer().size());
     if (socket_wr_stat == -1) {
         /* supón error EAGAIN, el buffer de write está lleno y como trabajamos con sockets
          * no bloqueadores retorna con señal de error, la respuesta sigue siendo válida y el cliente espera */
         log(strerror(errno));
         return STANDBY;
     }
-    if (/* Cliente ha indicado en cabecera que hay que cerrar la conexión tras enviar la respuesta */) {
+    //if (/* Cliente ha indicado en cabecera que hay que cerrar la conexión tras enviar la respuesta */) {
+    if (resp.markedForClosing()) {
         conn_socket.close_socket();
         return CLOSED;
     }

@@ -1,4 +1,4 @@
-#include "Server.hpp"
+#include "server.hpp"
 
 listen_directive_t::listen_directive_t(void) : addr("127.0.0.1"), port(8080) { }
 
@@ -40,8 +40,8 @@ bool listen_directive_t::operator!=(const listen_directive_t& rhs) const {
 
 find_server_by_host::find_server_by_host(const std::string& _hn) : hostname(_hn) { }
 
-bool find_server_by_host::operator() (const Server& srv) {
-    for (std::vector<std::string>::const_iterator it = srv.server_name.begin(); it != srv.server_name.end(); it++) {
+bool find_server_by_host::operator() (const Server* srv) {
+    for (std::vector<std::string>::const_iterator it = srv->server_name.begin(); it != srv->server_name.end(); it++) {
         if (!hostname.compare(*it)) {
             return true;
         }
@@ -52,7 +52,7 @@ bool find_server_by_host::operator() (const Server& srv) {
 Server::Server(void) : listen() { }
 
 Server::Server(const Server& other) : 
-    listen(other.listen), server_name(other.server_name), routes(other.routes) { }
+    listen(other.listen), routes(other.routes), server_name(other.server_name) { }
 
 Server::Server(const server_block_t& srv_blk) {
     location_block_t default_route(srv_blk);
@@ -105,5 +105,5 @@ bool Server::operator==(const Server& rhs) const {
 }
 
 bool Server::operator!=(const Server& rhs) const {
-    return !(*this != rhs);
+    return !(*this == rhs);
 }

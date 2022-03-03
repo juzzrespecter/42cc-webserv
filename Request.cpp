@@ -1,26 +1,9 @@
-#include "Request.hpp"
+#include "request.hpp"
 
-/* REQUEST FORMAT:
-        request-line
-        *((header-line) CRLF)
-        CRLF
-        [ message-body ]
-*/
+Request::Request() : _stage(request_line_stage) { }
 
-/* el único header obligatorio en peticiones para HTTP 1.1 es el header HOST, que también puede ser 
- * declarado de forma implícita en la URI de la petición si está formateada como Absolute-URI
- * Absolute-URI = "http://" + host + /
- * 
- * ¿qué headers aceptamos?
- * Todos ??
- */
-
-/* al final del parseo de headers hay que comprobar si está seteado Host; si no, matamos request*/
-
-Request::Request() : stage(request_line_stage) { }
-
-Request::Request(const std::vector<Server*> vservVec) :
-    _vservVec(vservVec), stage(request_line_stage) { }
+Request::Request(const std::vector<const Server*>& vservVec) :
+    _vservVec(vservVec), _stage(request_line_stage) { }
 
 Request::Request(const Request& c) { 
     *this = c;
@@ -36,19 +19,15 @@ Request& Request::operator=(Request a) {
     return *this;
 }
 
-const RequestLine& Request::getRequestLine() const { }
+const RequestLine& Request::getRequestLine() const {
     return _reqLine;
 }
-const header_map& Request::getHeaders() const {
+const Request::header_map& Request::getHeaders() const {
     return _headers;
 }
 
 const Body& Request::getBody() const {
     return _body;
-}
-
-const std::string& Request::getBuffer() const {
-    return _buffer;
 }
 
 int Request::getMethod() const {
@@ -68,14 +47,20 @@ void Request::setPath(const std::string& path) {
 		
 void swap(Request& a, Request& b) {
    swap(a._buffer, b._buffer);
-   swap(a._index, b._index);
+   std::swap(a._index, b._index);
    swap(a._vservVec, b._vservVec);
-   swap(a._headerCount, b._headerCount);
+   std::swap(a._headerCount, b._headerCount);
    swap(a._reqLine, b._reqLine);
    swap(a._headers, b._headers);
    swap(a._body, b._body);
-   swap(a._stage, b._stage);
+   std::swap(a._stage, b._stage);
 }
+
+// Sintaxis:
+//        request-line
+//        *((header-line) CRLF)
+//        CRLF
+//        [ message-body ]
 
 void    Request::recvBuffer(const std::string& newBuffer) {
     _buffer.append(newBuffer);
@@ -103,7 +88,7 @@ void    Request::parseRequestLine(void) {
     std::string requestLine = _buffer.substr(_index, _buffer.find(CRLF, _index));
 
     _index += requestLine.size();
-    if (requestLine.empty() || !_buffer[_index]) {
+    if (requestLine.empty() || requestLine.size() > MAX_URI_LEN || _buffer.compare(_index, CRLF_OCTET_SIZE, CRLF)) {
         THROW_STATUS("syntax error in request-line");
     }
     std::stringstream   lineBuffer(requestLine);
@@ -132,7 +117,7 @@ void    Request::parseMethodToken(const std::string& token) {
     THROW_STATUS("unknown method in request");
 }
 
-void    Request::parseURI(const std::string& token) {
+void    Request::parseURI(std::string& token) {
     std::string allowed_ptcl[2] = { "http://", "https://" };
     size_t queryPos = token.find('?');
 
@@ -167,14 +152,15 @@ void    Request::parseHTTPVersion(const std::string& token) {
 }
 
 void    Request::parseHeaderLine(void) {
-    std::string headerLine = _buffer.substr(_index, _buffer.find(CRLF));
-
-    if (headerLine.empty()) {
+    if (!_buffer.compare(_index, CRLF_OCTET_SIZE, CRLF)) {
+        _index += CRLF_OCTET_SIZE;
         _stage = (_reqLine.getMethod() == POST) ? request_body_stage : request_is_ready;
         return ;
     }
+    std::string headerLine = _buffer.substr(_index, _buffer.find(CRLF));
+
     _index += headerLine.size();
-    if (!_buffer[_index]) {
+    if (headerLine.size() > MAX_HEADER_LEN || _buffer.compare(_index, CRLF_OCTET_SIZE, CRLF)) {
         THROW_STATUS("syntax error on request");
     }
     std::string fieldName = headerLine.substr(0, headerLine.find(':'));
@@ -183,7 +169,7 @@ void    Request::parseHeaderLine(void) {
     if (fieldValue.empty()) {
         return ;
     }
-    if (_headerCount++ > HEADER_LIM) {
+    if (_headerCount++ > HEADER_LIMIT) {
         THROW_STATUS("too many headers on request");
     }
     for (int i = 0; i < N_HEADER_MAX; i++) {
@@ -198,16 +184,16 @@ void    Request::headerMeetsRequirements(void) const {
     header_map::const_iterator hd = _headers.find("Host");
     header_map::const_iterator cl = _headers.find("Content-Length");
     
-    /* debe estar presente un Host definido en la request */
+    // Debe estar presente un Host definido en la request
     if (hd == _headers.end()) {
         THROW_STATUS("requested host not defined");
     }
 
-    /* si existe un header Content-Length definido, su field-value ha de ser un numero positivo */
+    // si existe un header Content-Length definido, su field-value ha de ser un numero positivo
     if (cl != _headers.end()) {
         char *ptr;
 
-        int contentLengthVal = strtol(cl->second, &ptr, 0);
+        int contentLengthVal = strtol(cl->second.c_str(), &ptr, 0);
         if (contentLengthVal < 0 || *ptr) {
             THROW_STATUS("invalid value for header Content-Length");
         }
@@ -220,80 +206,105 @@ void    Request::setUpRequestBody(void) {
 
     _body.setMaxSize(findMaxSize());
     if (cl != _headers.end()) {
-        _body.setSize(std::atoi(cl->second));
+        _body.setSize(std::atoi(cl->second.c_str()));
     }
 }
 
+size_t Request::parseChunkSize(void) {
+    char*       last;
+    std::string sizeToken = _buffer.substr(_index, _buffer.find(CRLF));
+    int         size = strtol(sizeToken.c_str(), &last, 0);
 
-/* casos:
-       Transfer-Encoding header no seteado: una única lectura.
-       T-E seteado a 'chunked': varias lecturas hasta recibir el chunk final.
-
-       Si en una lectura el chunk o el msg-body no corresponde con el valor del tamaño 
-       en la cabezera del chunk (primer caso) o la cabezera Content-Type (segundo), throw 400
-
-       Si max_size == set y content-type > max_size, throw
-    */
-void    Request::parseChunkedRequestBody(void) {        /* to do */
-    /* parseo sizeOfChunk CRLF Chunk CRLF */
-    /* ultimo chunk 0 CRLF CRLF */
-    {
-        std::string sizeChunkStr = _buffer.substr(_index, _buffer.find(CRLF));
-        size_t  sizeChunk = std::atoi(sizeChunkStr);
-        /* case sizeChunk == 0 */
-        _index += sizeChunkStr.size();
-        // _buffer[_index] == 0
+    _index += sizeToken.size();
+    if (sizeToken.empty() || _buffer.compare(_index, CRLF_OCTET_SIZE, CRLF) || *last || size < 0) {
+        THROW_STATUS("bad chunked-request syntax");
     }
-    {
-        std::string chunk = _buffer.substr(_index, _buffer.find(CRLF));
-
-        if (chunk.size() != sizeChunk) {
-            THROW_STATUS("...");
-        }
-        _body.recvBuffer(chunk);
-    }
-
+    _index += CRLF_OCTET_SIZE;
+    return static_cast<size_t>(size);
 }
 
-void    Request::parseChunkedBody(void) {
+std::string Request::parseChunkBody(void) {
+    std::string chunkToken = _buffer.substr(_index, _buffer.find(CRLF));
+
+    _index += chunkToken.size();
+    if (_buffer.compare(_index, CRLF_OCTET_SIZE, CRLF)) {
+        THROW_STATUS("bad chunked-request syntax");
+    }
+    _index += CRLF_OCTET_SIZE;
+    return chunkToken;
+}
+
+// Sintaxis SIZE CRLF CHUNK CRLF
+// Para el último chunk, sintaxis 0 CRLF CRLF y marcamos Request como preparada para servir
+void    Request::parseChunkedRequestBody(void) {
+    size_t      size = parseChunkSize();
+    std::string chunk = parseChunkBody();
+
+    if ((!size && !chunk.empty()) && (size != chunk.size())) {
+        THROW_STATUS("bad chunked-request syntax");
+    }
+    _body.recvBuffer(chunk);
+    if (!size) {
+     _stage = request_is_ready;
+    }
+}
+
+void    Request::parseRequestBody(void) {
     std::string bodyBuffer = _buffer.substr(_index);
 
-    _index += _bodyBuffer.size();
+    _index += bodyBuffer.size();
     _body.recvBuffer(bodyBuffer);
-    if (_body.getBuffer().size() > contentLength()) {
+    if (_body.getBody().size() > contentLength()) {
         THROW_STATUS("request body overflows content-length limit");
+    }
+    if (_body.getBody().size() == contentLength()) {
+     _stage = request_is_ready;
     }
 }
 
 long Request::findMaxSize(void) const {
-    std::vector<Server*>::const_iterator it = /
-        std::find(_vservVec.begin(), _vservVec.end(), find_server_by_host(host()));
-    Server* server_host = (it == _vservVec.end()) ? _vservVec[0] : *it;
+    std::vector<const Server*>::const_iterator it = \
+        std::find_if(_vservVec.begin(), _vservVec.end(), find_server_by_host(host()));
+    const Server* server_host = (it == _vservVec.end()) ? _vservVec[0] : *it;
 
-    return server_host->get_location_by_path(getPath()).getBodySize();
+    return server_host->get_location_by_path(getPath()).get_body_size();
 }
 
-bool    Request::transferencodingIsChunked(void) const {
+bool    Request::transferEncodingIsChunked(void) const {
     header_map::const_iterator te = _headers.find("Transfer-Encoding");
-    header_map::const_iterator 
+    header_map::const_iterator cl = _headers.find("Content-Length");
 
-    if ((te != _headers.end() && !te->second.compare("chunked")))
+    if ((te != _headers.end() && !te->second.compare("chunked")) || (cl == _headers.end())) {
+        return true;
+    }
+    return false;
 }
 
-const std::string&  Request::host(void) const {
+std::string  Request::host(void) const {
     header_map::const_iterator h = _headers.find("Host");
 
     return (h != _headers.end()) ? h->second : "";
 }
 
-/* Undefined behavior if used before safety check in headerMeetsRequirements */
+// Comportamiento indefinido si se llama antes de pasar por headerMeetsRequirements 
 size_t  Request::contentLength(void) const {
     header_map::const_iterator cl = _headers.find("Content-Length");
 
     if (cl != _headers.end()) {
-        return std::atoi(cl->second);
+        return std::atoi(cl->second.c_str());
     }
     return 0;
+}
+
+void Request::print(void) const {
+    std::cout << "[ request ]\n";
+    std::cout << "* -------------------- *\n\n";
+    _reqLine.print();
+    for (header_map::const_iterator it = _headers.begin(); it != _headers.end(); it++) {
+        std::cout << it->first << ": " << it->second << "\n";
+    }
+    std::cout << "\n" << _body.getBody() << "\n";
+    std::cout << "* -------------------- *\n\n";
 }
 
 

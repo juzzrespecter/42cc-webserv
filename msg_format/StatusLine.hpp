@@ -19,69 +19,43 @@ class StatusLine
 
 		/* ------------------------ COPLIEN FORM ----------------------- */
 
-		StatusLine() : _code(-1), _reason() {}
-		StatusLine(int code, const char* reason, const std::string& addInfos = "") :_code(code), _reason(reason), _addInfos(addInfos) {}
-		StatusLine(const StatusLine& c) :_code(c._code), _reason(c._reason), _addInfos(c._addInfos) {}
-		~StatusLine() {}
-		StatusLine& operator=(StatusLine a)
-		{
-			swap(*this, a);
-			return *this;
-		}
+		StatusLine();
+		StatusLine(int code, const char* reason, const std::string& addInfos);
+		StatusLine(const StatusLine& c);
+		~StatusLine();
+		StatusLine& operator=(StatusLine a);
 
 		/* --------------------------- SETTERS ------------------------- */
 
-		void setCode(int code)								{ _code = code; }
-		void setReason(const std::string& reason)			{ _reason = reason; }
-		void setAdditionalInfo(const std::string& addInfos)	{ _addInfos  = addInfos; }
+		void setCode(int code);
+		void setReason(const std::string& reason);
+		void setAdditionalInfo(const std::string& addInfos);
 
 
 		/* --------------------------- GETTERS ------------------------- */
 
-		int getCode() const { return _code; }
-		const std::string& getReason() const { return _reason; }
-		const std::string& getAdditionalInfo() const { return _addInfos; }
+		int getCode() const;
+		const std::string& getReason() const;
+		const std::string& getAdditionalInfo() const;
 
 
 		/* --------------------------- METHODS ------------------------- */
 
 		// Clear the StatusLine object
-		void clear()
-		{
-			_code = -1;
-			_reason.clear();
-			_addInfos.clear();
-		}
+		void clear();
 		
 		// Print the StatusLine object
-		void print() const
-		{
-			std::cout << "------ REQUEST LINE ------\ncode: " << _code << ", reason: |" << _reason
-				<< "|, add info: |" << _addInfos << "|\n";
-		}
+		void print() const;
 
 		/* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */
 
-		friend void swap(StatusLine& a, StatusLine& b)
-		{
-			std::swap(a._code, b._code);
-			std::swap(a._reason, b._reason);
-			std::swap(a._addInfos, b._addInfos);
-		}
+		friend void swap(StatusLine& a, StatusLine& b);
 		
 };
 
 
 /* -------------------- OPERATOR OVERLOADS --------------------- */
 
-inline std::ostream& operator<<(std::ostream& stream, const StatusLine& staLine)
-{
-	stream << staLine.getCode() << ": " << staLine.getReason();
-	
-	if (!staLine.getAdditionalInfo().empty())
-		stream << ": " << staLine.getAdditionalInfo();
-		
-	return stream;
-}
+inline std::ostream& operator<<(std::ostream& stream, const StatusLine& staLine);
 
 #endif

@@ -44,7 +44,7 @@ void    server_block_t::setup_default_directives(void) {
             dir[i].push_back(default_dir[i]);
         }
     }
-    for (location_vector::iterator it = loc.begin(); it != loc.end(); it++) {
+    for (std::vector<location_block_t>::iterator it = loc.begin(); it != loc.end(); it++) {
         location_inherits_from_server(*it);
     }
 }

@@ -1,8 +1,9 @@
 #ifndef __WEBSERVER_HPP__
 #define __WEBSERVER_HPP__
 
-#include "parser.hpp"
 #include "socket.hpp"
+#include "parser.hpp"
+#include "request.hpp"
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -40,8 +41,6 @@ class Webserver {
         void nfds_down(int);
 
         void accept_new_connection(const Socket&);
-
-        request_status_f process_request(Socket&, char*);
 
         socket_status_f read_from_socket(Socket&);
         socket_status_f write_to_socket(Socket&);

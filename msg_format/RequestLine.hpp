@@ -52,12 +52,7 @@ class RequestLine
 
 		/* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */
 
-		friend void swap(RequestLine& a, RequestLine& b)
-		{
-			std::swap(a._method, b._method);
-			std::swap(a._path, b._path);
-			std::swap(a._query, b._query);
-		}
+		friend void swap(RequestLine& a, RequestLine& b);
 		
 }; 
 

@@ -7,13 +7,13 @@
 #include <fstream>
 #include <iostream>
 
-#include "Request.hpp"
+#include "request.hpp"
 //#include "Cgi.hpp"
 #include "msg_format/StatusLine.hpp"
 #include "msg_format/Body.hpp"
 
-#include "Parser.hpp"
-#include "Server.hpp"
+#include "parser.hpp"
+#include "server.hpp"
 
 class Response
 {
@@ -37,7 +37,7 @@ class Response
 		/* ------------------------ COPLIEN FORM ----------------------- */
 
 		Response();
-		Response(Request* req, const StatusLine& staLine, const std::vector<Server>* infoVirServs);
+		Response(Request* req, const StatusLine& staLine/*, const std::vector<Server>* infoVirServs*/); // tmp
 		Response(const Response& c);
 		~Response();
 		Response& operator=(Response a);
@@ -64,6 +64,7 @@ class Response
 
 		// Fill response buffer according to request object and status line previously set
 		void fillBuffer();
+		bool markedForClosing(); // tmp
 
 
 	private:

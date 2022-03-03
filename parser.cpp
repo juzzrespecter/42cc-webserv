@@ -1,4 +1,4 @@
-#include "Parser.hpp"
+#include "parser.hpp"
 
 Parser::Parser(void) : raw_input() { }
 
@@ -204,7 +204,8 @@ bool    Parser::syntax_directive_accept_method(void) const {
     for ( ; is_word(peek(count)); count++) {
         if (peek(count).token.compare("GET") &&
             peek(count).token.compare("POST") &&
-            peek(count).token.compare("DELETE")) {
+            peek(count).token.compare("DELETE") &&
+            peek(count).token.compare("HEAD")) {
             return false;
         }
     }

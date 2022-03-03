@@ -1,53 +1,69 @@
-package main;
+package main
 
 import (
-        "fmt"
-        "net"
-        "net/http"
-        "ioutil"
+	"bytes"
+	"fmt"
+	"net/http"
+	"os"
 )
 
-var url string = "http://localhost:8080";
+// test GET
+// test POST
+// test POST chunked
+// test DELETE
+// test bigPOST
+
+var url string = "http://localhost:8000/"
 
 func errCheck(err error) {
-        if err != nil {
-                fmt.printf("[ ERROR ] %s\n", err);
-                panic("...");
-        }
+	if err != nil {
+		fmt.Printf("[ ERROR ] %s\n", err)
+		panic("fatal error")
+	}
 }
 
-func testGet(c http.Client&) {
-        req, err := http.NewRequest("GET", url, nil);
+func testGet(c http.Client) {
+	resp, err := c.Get(url)
 
-        errCheck(err);
-        resp, err := c.Do(&req);
+	errCheck(err)
+	defer resp.Body.Close()
 
-        defer(resp.Body.Close());
-        errCheck(err);
 }
 
-func testPost(c http.Client&) {
-        bodyText := "placeholder";
-        bodyReq  := bytes.NewBuffer(bodyText);
-        req, err := http.NewRequest("POST", url, bodyReq);
+func main() {
+	client := http.Client{}
 
-        errCheck(err);
-        resp, err := c.Do(&req);
+	pathToFile := "./test_file"
+	//bodyText := []byte("this is the body of the request.");
 
-        defer(resp.Body.Close());
-        errCheck(err);
-        body, err := ioutil(ReadAll(res.Body));
+	bodyText, err := os.ReadFile(pathToFile)
+	if err != nil {
+		fmt.Printf("[ ERROR ] %s\n", err)
+		return
+	}
+	bodyReq := bytes.NewBuffer(bodyText)
 
-        errCheck(err);
-        log.Println(string(body));
-}
+	req, err := http.NewRequest("POST", url, bodyReq)
+	if err != nil {
+		fmt.Printf("[ ERROR ] %s\n", err)
+		return
+	}
+	//req.Header.Set("Transfer-Encoding", "chunked");
+	//req.TransferEncoding = []string{"chunked"};
+	//req.ContentLength = 0;
 
-// func testChunkedPost
-// log.Fatal(err)
+	//response, err := client.Get("http://localhost:8000/");
+	//response, err := client.Post(url, "text/html", bodyResp);
+	response, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("[ ERROR ] %s\n", err)
+		return
+	}
+	fmt.Println("Sent request")
+	defer response.Body.Close()
+	//body, err := ioutil.ReadAll(response.Body);
+	//fmt.Printf("Body: %s\n", body);
+	fmt.Printf("Status: %s\n", response.Status)
 
-func main {
-        client := &http.Client{};
-
-        testGet(client);
-        // to do
+	return
 }

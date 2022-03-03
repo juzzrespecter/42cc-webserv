@@ -1,4 +1,4 @@
-#include "body.hpp"
+#include "Body.hpp"
 
 Body::Body() : _recv(false), _size(), _maxSize(-1) {}
 
@@ -59,16 +59,16 @@ void Body::clear()
 	_buff.clear();
 }
 
-int Body::recvBuffer(const std::string& buffer, size_t index, size_t lenToRead)
+void Body::recvBuffer(const std::string& buffer/*, size_t index, size_t lenToRead*/)
 {
 	// maxSize will be evaluated only if previously set using setMaxSize before, because 
 	// default constructor initilized it to -1
-	if (_maxSize >= 0 && (_maxSize -= lenToRead) < 0)
-		return -1;
+	//if (_maxSize >= 0 && (_maxSize -= lenToRead) < 0)
+	//	return -1;
 
-	_buff.append(buffer, index, _size);
-	_size -= lenToRead;
-	return 0;
+	_buff.append(buffer);
+	//_size -= lenToRead;
+	//return 0;
 }
 
 void swap(Body& a, Body& b)

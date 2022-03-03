@@ -50,7 +50,7 @@ class Body
 		void clear();
 		
 		// Append buffer received from client until content-length octets have been received.
-		int recvBuffer(const std::string& buffer, size_t index, size_t lenToRead);
+		/*int*/void recvBuffer(const std::string& buffer/*, size_t index, size_t lenToRead*/);
 		
 	
 		/* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */

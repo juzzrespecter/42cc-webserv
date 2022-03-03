@@ -2,8 +2,8 @@
 #define __LOCATION_HPP__
 
 #include "parser.hpp"
-#include "request.hpp"
 #include <unistd.h>
+#include <utility>
 
 #define N_METHODS 3
 
@@ -17,7 +17,7 @@ class Location {
         std::vector<std::string> index;
         std::vector<std::string> accept_method;
 
-        std::pair<std::string, std::string> cgi_pass;
+        std::vector<std::pair<std::string, std::string> > cgi_pass;
 
         unsigned int body_size;
         bool autoindex;
@@ -41,7 +41,7 @@ class Location {
         const std::vector<std::string>& get_index(void) const;        
         const std::vector<std::string>& get_methods(void) const;
 
-        const std::pair<std::string, std::string>& get_cgi_pass(void) const;
+        const std::vector<std::pair<std::string, std::string> >& get_cgi_pass(void) const;
 
         unsigned int get_body_size(void) const;
         bool get_autoindex(void) const;

@@ -17,15 +17,6 @@ struct listen_directive_t {
     bool operator!=(const listen_directive_t&) const;
 };
 
-class find_server_by_host {
-    public:
-        find_server_by_host(const std::string&);
-        bool operator() (const Server&);
-
-    private:
-        std::string hostname;
-};
-
 class Server {
     private:
         listen_directive_t       listen; /* dirección y puerto en los que escucha el server */
@@ -46,6 +37,15 @@ class Server {
 
         bool operator==(const Server&) const;
         bool operator!=(const Server&) const;
+};
+
+class find_server_by_host {
+    public:
+        find_server_by_host(const std::string&);
+        bool operator() (const Server*);
+
+    private:
+        std::string hostname;
 };
 
 #endif // __SERVER_HPP__
