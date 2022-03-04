@@ -5,11 +5,11 @@
 
 Response::Response() {}
 
-Response::Response(Request* req, const StatusLine& staLine, const std::vector<ServerInfo>* infoVirServs) :
-	_infoVirServs(infoVirServs), _req(req), _staLine(staLine), _autoIndex(false) {}
+Response::Response(Request* req, const StatusLine& staLine/*, const std::vector<Server*> infoVirServs*/) :
+	/*_infoVirServs(infoVirServs),*/ _req(req), _staLine(staLine), _autoIndex(false) {}
 
 Response::Response(const Response& c) : 
-	_infoVirServs(c._infoVirServs), _req(c._req), _staLine(c._staLine), _buffer(c._buffer),
+	/*_infoVirServs(c._infoVirServs),*/ _req(c._req), _staLine(c._staLine), _buffer(c._buffer),
     _autoIndex(c._autoIndex) {}
 
 Response::~Response() {}
@@ -31,11 +31,11 @@ void Response::setStatusLine(const StatusLine& staLine)
 {
 	_staLine = staLine;
 }
-
-void Response::setInfoVirtualServs(const std::vector<ServerInfo>* infoVirServs)
+/*
+void Response::setInfoVirtualServs(const std::vector<Server*> infoVirServs)
 {
 	_infoVirServs = infoVirServs;
-}
+}*/
 
 
 /* --------------------------- GETTERS ------------------------- */
@@ -73,13 +73,13 @@ void Response::fillBuffer()
 	try
 	{
 		// Keeping only host name and removing port
-		std::string hostName(_req->getHeaders().find("host")->second);
-		hostName = hostName.substr(0, hostName.find(':'));
+		std::string hostName(_req->getHeaders().find("Host")->second);
+		hostName = hostName.substr(0, hostName.find(':')); // * tal vez no sea necesario *
 		
 		// Looking for the location block matching the URI. If returns NULL, then no appropriate block was found
 		// and no additionnal configuration (index, root...) will change the URI
-		std::pair<const std::string, const Location*> loc = locationSearcher(_infoVirServs,
-				std::pair<std::string, std::string>(hostName, _req->getPath()));
+		std::pair<const std::string, const Location*> loc = _req->getLocation();/*locationSearcher(_infoVirServs,
+				std::pair<std::string, std::string>(hostName, _req->getPath())); */
 		
 		#if DEBUG
 			if (loc.second)
@@ -89,16 +89,16 @@ void Response::fillBuffer()
 		#endif
 
         // Doing an HTTP redirection (301) if redirect field filled in matched location block
-        if (loc.second && !loc.second->getRedirect().empty())
+        if (loc.second && !loc.second->get_return_uri().empty())
         {
             // Replacing location name in the URI with the redirect string set in config file
             std::string redirectedUri = _req->getPath();
-            replaceLocInUri(&redirectedUri, loc.second->getRedirect(), loc.first);
+            replaceLocInUri(&redirectedUri, loc.second->/*get_redirect()*/get_return_uri(), loc.first);
 
             // Replacing previous requested URI with redirected URI for next client request
             // (Location header in 301 response will be set with this URI)
-            _req->setPath(std::string("http://localhost:" + 
-                    convertNbToString(loc.second->getPort()) + redirectedUri));
+            _req->setPath(/*std::string("http://localhost:" + 
+                    convertNbToString(loc.second->getPort()) + */redirectedUri)); /* no es necesario pasar host por path CREO */
 
             throw StatusLine(301, REASON_301, "http redirection");
         }
@@ -142,7 +142,7 @@ void Response::execCgi(const std::string& realUri, std::string* cgiName)
 
 void Response::fillContentlengthHeader(const std::string& size) 
 {
-	_buffer += "Content-Length: " + size + CLRF;
+	_buffer += "Content-Length: " + size + CRLF;
 }
 
 void Response::fillServerHeader() 
@@ -164,9 +164,10 @@ void Response::fillDateHeader()
 
 	// Formating header date.
 	// ctime format = Thu May 20 14:33:40 2021 >> to header date format : Thu, 20 May 2021 12:16:42 GMT
-	_buffer += "Date: " + date[0] + ", " + date[2] + " " + date[1] + " " + date[4] + " " + date[3] + " GMT" + CLRF;
+	_buffer += "Date: " + date[0] + ", " + date[2] + " " + date[1] + " " + date[4] + " " + date[3] + " GMT" + CRLF;
 }
 
+/* st_mtimespec no portable (#define st_mtime st_mtimespec.tv_sec) */
 void Response::fillLastModifiedHeader(const char* uri)
 {
 	struct stat infFile;
@@ -174,19 +175,19 @@ void Response::fillLastModifiedHeader(const char* uri)
 	if (stat(uri, &infFile) == -1)
 		throw StatusLine(404, REASON_404, "fillLastModifiedHeader method");
 
-	struct tm* lm = localtime(&infFile.MTIMESPEC.tv_sec);
+	struct tm* lm = localtime(&infFile.st_mtimespec.tv_sec);
 
 	const std::string day[7] = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
 	const std::string mon[12] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
 	_buffer += "Last-Modified: " + day[lm->tm_wday - 1] + ", " + convertNbToString(lm->tm_mday) + " " + mon[lm->tm_mon] + " " 
 			+ convertNbToString(lm->tm_year + 1900) + " " + convertNbToString(lm->tm_hour) + ":" + 
-			convertNbToString(lm->tm_min) + ":" + convertNbToString(lm->tm_sec) + " GMT" + CLRF;
+			convertNbToString(lm->tm_min) + ":" + convertNbToString(lm->tm_sec) + " GMT" + CRLF;
 }
 
 void Response::fillLocationHeader(const std::string& redirectedUri)
 {
-    _buffer += "Location:" + redirectedUri + CLRF;
+    _buffer += "Location:" + redirectedUri + CRLF;
 }
 
 void Response::fillStatusLine(const StatusLine& staLine)
@@ -194,16 +195,16 @@ void Response::fillStatusLine(const StatusLine& staLine)
 	_buffer = "HTTP/1.1 " + convertNbToString(staLine.getCode()) + " " + staLine.getReason();
 	if (!staLine.getAdditionalInfo().empty())
 		_buffer += " (" + staLine.getAdditionalInfo() + ")";
-	_buffer += CLRF;
+	_buffer += CRLF;
 }
 
 void printLoc(const Location* loc)
 {
-	std::cout << "root: " << loc->getRoot() << "\n";
-	for (std::vector<std::string>::const_iterator it = loc->getMethods().begin(); it != loc->getMethods().end(); it++)
+	std::cout << "root: " << loc->get_root() << "\n";
+	for (std::vector<std::string>::const_iterator it = loc->get_methods().begin(); it != loc->get_methods().end(); it++)
 		std::cout << "methods: " << *it << "\n";
 		
-	for (std::vector<std::string>::const_iterator it = loc->getIndex().begin(); it != loc->getIndex().end(); it++)
+	for (std::vector<std::string>::const_iterator it = loc->get_index().begin(); it != loc->get_index().end(); it++)
 		std::cout << "index: " << *it << "\n";
 }
 
@@ -282,11 +283,11 @@ std::string Response::reconstructFullURI(int method,
 	}
 
 	// Replacing the part of the URI that matched with the root path if there is one existing
-	if (!loc.second->getRoot().empty() && !(method == POST && !loc.second->getUploadPath().empty()))
-		replaceLocInUri(&uri, loc.second->getRoot(), loc.first);
+	if (!loc.second->get_root().empty() && !(method == POST && !loc.second->get_upload_path().empty()))
+		replaceLocInUri(&uri, loc.second->get_root(), loc.first);
 
-	else if (method == POST && !loc.second->getUploadPath().empty())
-		replaceLocInUri(&uri, loc.second->getUploadPath(), loc.first);
+	else if (method == POST && !loc.second->get_upload_path().empty())
+		replaceLocInUri(&uri, loc.second->get_upload_path(), loc.first);
 	
 	// If no root in location block, or root doesn't start with a '.', need to add it to find the file using
 	// relative path
@@ -300,15 +301,15 @@ std::string Response::reconstructFullURI(int method,
 
     // Case we match a directory and an autoindex isn't set. We try all the possible indexs, if none
     // works addIndex throw a 403 error StatusLine object
-	if (fileExist && S_ISDIR(infFile.st_mode) && !((method == GET || method == HEAD) && loc.second->getAutoIndex()))
-		uri = addIndex(uri, loc.second->getIndex());
+	if (fileExist && S_ISDIR(infFile.st_mode) && !((method == GET || method == HEAD) && loc.second->get_autoindex()))
+		uri = addIndex(uri, loc.second->get_index());
 
-    else if (fileExist && S_ISDIR(infFile.st_mode) && ((method == GET || method == HEAD) && loc.second->getAutoIndex()))
+    else if (fileExist && S_ISDIR(infFile.st_mode) && ((method == GET || method == HEAD) && loc.second->get_autoindex()))
     {
 	    _autoIndex = true;
     }
 
-	checkMethods(method, loc.second->getMethods());
+	checkMethods(method, loc.second->get_methods());
 
 	return uri;
 }
@@ -339,7 +340,7 @@ void Response::fillError(const StatusLine& sta)
 
 	// Looking in each virtual server names if one match host header field value, if
     // not using default server
-	const ServerInfo* servMatch = findVirtServ(_infoVirServs, hostValue);
+	const Server**servMatch = findVirtServ(_infoVirServs, hostValue);
     if (!servMatch)
 	{
         servMatch = &_infoVirServs->front();
@@ -367,7 +368,7 @@ void Response::fillError(const StatusLine& sta)
 	FileParser body(pathError.c_str(), true);
 
 	fillContentlengthHeader(convertNbToString(body.getRequestFileSize()));
-	_buffer += CLRF + body.getRequestFile();
+	_buffer += CRLF + body.getRequestFile();
 }
 
 void Response::postToFile(const std::string& uri)
@@ -396,7 +397,7 @@ void Response::execGet(const std::string& realUri)
         // Setting size after storing the body in FileParser object, then setting Last-Modified header
         fillContentlengthHeader(convertNbToString(body.getRequestFileSize()));
         fillLastModifiedHeader(realUri.c_str());
-        _buffer += CLRF;
+        _buffer += CRLF;
 
         // For GET, writing the body previously stored to the buffer
         if (_req->getMethod() == GET)
@@ -410,7 +411,7 @@ void Response::execGet(const std::string& realUri)
         autoIndexDisplayer(realUri, &autoIndexPage);
 
         fillContentlengthHeader(convertNbToString(autoIndexPage.size()));
-        _buffer += CLRF + autoIndexPage;
+        _buffer += CRLF + autoIndexPage;
     }
 }
 

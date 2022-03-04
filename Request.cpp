@@ -42,6 +42,14 @@ const std::string& Request::getQuery() const {
     return _reqLine.getQuery();
 }
 
+const Location& Request::getLocation(void) const {
+    std::vector<const Server*>::const_iterator it = \
+        std::find_if(_vservVec.begin(), _vservVec.end(), find_server_by_host(host()));
+    const Server* server_host = (it == _vservVec.end()) ? _vservVec[0] : *it;
+
+    return server_host->get_location_by_path(getPath());
+}
+
 void Request::setPath(const std::string& path) {
     _reqLine.setPath(path);
 }
@@ -189,7 +197,7 @@ void    Request::headerMeetsRequirements(void) const {
         THROW_STATUS("requested host not defined");
     }
 
-    // si existe un header Content-Length definido, su field-value ha de ser un numero positivo
+    // Si existe un header Content-Length definido, su field-value ha de ser un numero positivo
     if (cl != _headers.end()) {
         char *ptr;
 
@@ -204,7 +212,7 @@ void    Request::setUpRequestBody(void) {
     find_server_by_host comp(host());
     header_map::iterator cl = _headers.find("Content-Length");
 
-    _body.setMaxSize(findMaxSize());
+    _body.setMaxSize(getMaxSize());
     if (cl != _headers.end()) {
         _body.setSize(std::atoi(cl->second.c_str()));
     }
@@ -249,12 +257,8 @@ void    Request::parseRequestBody(void) {
     }
 }
 
-long Request::findMaxSize(void) const {
-    std::vector<const Server*>::const_iterator it = \
-        std::find_if(_vservVec.begin(), _vservVec.end(), find_server_by_host(host()));
-    const Server* server_host = (it == _vservVec.end()) ? _vservVec[0] : *it;
-
-    return server_host->get_location_by_path(getPath()).get_body_size();
+long Request::getMaxSize(void) const {
+    return getLocation().get_body_size();
 }
 
 bool    Request::transferEncodingIsChunked(void) const {

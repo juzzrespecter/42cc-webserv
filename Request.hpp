@@ -66,6 +66,7 @@ class Request
 		int getMethod() const;
 		const std::string& getPath() const;
 		const std::string& getQuery() const;
+		const Location& getLocation() const;
 
 
 		/* --------------------------- SETTERS ------------------------- */
@@ -128,7 +129,7 @@ class Request
 		// Search for the correct server block (matching host header field, if not using default server
 		// block) and returns an unsigned max_body_size if the field is existing in the config file, otherwise
 		// returns -1.
-		long findMaxSize(void) const;
+		long getMaxSize(void) const;
 		bool transferEncodingIsChunked(void) const;
 
 		// Header accesses

@@ -21,7 +21,7 @@ class Response
 	
 		/* ------------------------- ATTRIBUTES ------------------------ */
 
-		const std::vector<Server*>		_infoVirServs;	// Servers blocks from config file that match a specific port
+		//const std::vector<Server*>		_infoVirServs;	// Servers blocks from config file that match a specific port
 		Request*				_req;		// Request object when the request is fully received, used to create response
 
 		StatusLine				_staLine;	// Fist line of http response
@@ -47,7 +47,7 @@ class Response
 
 		void setRequest(Request* req);
 		void setStatusLine(const StatusLine& staLine);
-		void setInfoVirtualServs(const std::vector<Server>* infoVirServs);
+		//void setInfoVirtualServs(const std::vector<Server>* infoVirServs);
 
 
 		/* --------------------------- GETTERS ------------------------- */
@@ -73,7 +73,7 @@ class Response
 
 		typedef std::pair<const std::string, const Location* > location_pair;
 
-		location_pair locationSearcher(const std::vector<Server*>& srv_vec) const;
+		//location_pair locationSearcher(const std::vector<Server*>& srv_vec) const;
 
 		// Fills buffer with Content-length header
 		void fillContentlengthHeader(const std::string& size);
