@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
     try {
         req.recvBuffer(req_buffer);
     } catch(StatusLine& sl){
-        std::cerr << sl.getReason() << "\n";
+        std::cerr << sl.getReason() << ": " << sl.getAdditionalInfo() << "\n";
         return EXIT_FAILURE;
     }
     req.print();

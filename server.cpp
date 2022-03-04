@@ -38,17 +38,6 @@ bool listen_directive_t::operator!=(const listen_directive_t& rhs) const {
     return !(*this == rhs);
 }
 
-find_server_by_host::find_server_by_host(const std::string& _hn) : hostname(_hn) { }
-
-bool find_server_by_host::operator() (const Server* srv) {
-    for (std::vector<std::string>::const_iterator it = srv->server_name.begin(); it != srv->server_name.end(); it++) {
-        if (!hostname.compare(*it)) {
-            return true;
-        }
-    }
-    return false;
-}
-
 Server::Server(void) : listen() { }
 
 Server::Server(const Server& other) : 
@@ -107,3 +96,15 @@ bool Server::operator==(const Server& rhs) const {
 bool Server::operator!=(const Server& rhs) const {
     return !(*this == rhs);
 }
+
+find_server_by_host::find_server_by_host(const std::string& _hn) : hostname(_hn) { }
+
+bool find_server_by_host::operator() (const Server* srv) {
+    for (std::vector<std::string>::const_iterator it = srv->server_name.begin(); it != srv->server_name.end(); it++) {
+        if (!hostname.compare(*it)) {
+            return true;
+        }
+    }
+    return false;
+}
+

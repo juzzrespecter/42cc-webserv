@@ -1,9 +1,10 @@
 #include "request.hpp"
 
-Request::Request() : _stage(request_line_stage) { }
+Request::Request() : 
+    _buffer(), _index(0), _vservVec(), _headerCount(0), _reqLine(), _headers(), _body(), _stage(request_line_stage) { }
 
 Request::Request(const std::vector<const Server*>& vservVec) :
-    _vservVec(vservVec), _stage(request_line_stage) { }
+    _buffer(), _index(0), _vservVec(vservVec), _headerCount(0), _reqLine(), _headers(), _body(), _stage(request_line_stage) { }
 
 Request::Request(const Request& c) { 
     *this = c;
@@ -70,12 +71,12 @@ void    Request::recvBuffer(const std::string& newBuffer) {
     }
     while (_stage == header_stage && _buffer[_index]) {
         parseHeaderLine();
-        if (_stage != header_stage) {/* move to header checking and body setup */
+        if (_stage != header_stage) {
             headerMeetsRequirements();
-            setUpRequestBody();
         }
     }
     if (_stage == request_body_stage) {
+        setUpRequestBody();
         if (transferEncodingIsChunked() == true) {
             parseChunkedRequestBody();
         } else {
@@ -85,10 +86,9 @@ void    Request::recvBuffer(const std::string& newBuffer) {
 }
 
 void    Request::parseRequestLine(void) {
-    std::string requestLine = _buffer.substr(_index, _buffer.find(CRLF, _index));
+    std::string requestLine = _getNextLine();
 
-    _index += requestLine.size();
-    if (requestLine.empty() || requestLine.size() > MAX_URI_LEN || _buffer.compare(_index, CRLF_OCTET_SIZE, CRLF)) {
+    if (requestLine.empty() || requestLine.size() > MAX_URI_LEN) {
         THROW_STATUS("syntax error in request-line");
     }
     std::stringstream   lineBuffer(requestLine);
@@ -97,12 +97,13 @@ void    Request::parseRequestLine(void) {
     for (int i = 0; i < 3; i++) {
         lineBuffer >> token[i];
     }
-    if (!lineBuffer.rdbuf()->in_avail()) {
+    if (lineBuffer.rdbuf()->in_avail()) {
         THROW_STATUS("syntax error in request-line");
     }
     parseMethodToken(token[0]);
     parseURI(token[1]);
     parseHTTPVersion(token[2]);
+    _stage = header_stage;
 }
 
 void    Request::parseMethodToken(const std::string& token) {
@@ -157,10 +158,9 @@ void    Request::parseHeaderLine(void) {
         _stage = (_reqLine.getMethod() == POST) ? request_body_stage : request_is_ready;
         return ;
     }
-    std::string headerLine = _buffer.substr(_index, _buffer.find(CRLF));
+    std::string headerLine = _getNextLine();
 
-    _index += headerLine.size();
-    if (headerLine.size() > MAX_HEADER_LEN || _buffer.compare(_index, CRLF_OCTET_SIZE, CRLF)) {
+    if (headerLine.size() > MAX_HEADER_LEN) {
         THROW_STATUS("syntax error on request");
     }
     std::string fieldName = headerLine.substr(0, headerLine.find(':'));
@@ -172,8 +172,8 @@ void    Request::parseHeaderLine(void) {
     if (_headerCount++ > HEADER_LIMIT) {
         THROW_STATUS("too many headers on request");
     }
-    for (int i = 0; i < N_HEADER_MAX; i++) {
-        if (!fieldName.compare(header::hlist[i])) {
+    for (int i = 0; i < HEADER_LIST_SIZE; i++) {
+        if (!fieldName.compare(header_list[i])) {
             _headers.insert(std::pair<std::string, std::string>(fieldName, fieldValue));
             return ;
         }
@@ -212,33 +212,20 @@ void    Request::setUpRequestBody(void) {
 
 size_t Request::parseChunkSize(void) {
     char*       last;
-    std::string sizeToken = _buffer.substr(_index, _buffer.find(CRLF));
+    std::string sizeToken = _getNextLine();
     int         size = strtol(sizeToken.c_str(), &last, 0);
 
-    _index += sizeToken.size();
-    if (sizeToken.empty() || _buffer.compare(_index, CRLF_OCTET_SIZE, CRLF) || *last || size < 0) {
+    if (sizeToken.empty() || *last || size < 0) {
         THROW_STATUS("bad chunked-request syntax");
     }
-    _index += CRLF_OCTET_SIZE;
     return static_cast<size_t>(size);
-}
-
-std::string Request::parseChunkBody(void) {
-    std::string chunkToken = _buffer.substr(_index, _buffer.find(CRLF));
-
-    _index += chunkToken.size();
-    if (_buffer.compare(_index, CRLF_OCTET_SIZE, CRLF)) {
-        THROW_STATUS("bad chunked-request syntax");
-    }
-    _index += CRLF_OCTET_SIZE;
-    return chunkToken;
 }
 
 // Sintaxis SIZE CRLF CHUNK CRLF
 // Para el último chunk, sintaxis 0 CRLF CRLF y marcamos Request como preparada para servir
 void    Request::parseChunkedRequestBody(void) {
     size_t      size = parseChunkSize();
-    std::string chunk = parseChunkBody();
+    std::string chunk = _getNextLine();
 
     if ((!size && !chunk.empty()) && (size != chunk.size())) {
         THROW_STATUS("bad chunked-request syntax");
@@ -307,6 +294,29 @@ void Request::print(void) const {
     std::cout << "* -------------------- *\n\n";
 }
 
+std::string Request::_getNextLine(void) {
+    std::string line;
+    size_t      endLine = _buffer.find(CRLF, _index);
 
+    if (endLine == std::string::npos) {
+        throw StatusLine(400, REASON_400, "syntax error found on request");
+    }
+    line = _buffer.substr(_index, endLine - _index);
+    _index += line.size() + CRLF_OCTET_SIZE;
+    return line;
+}
+
+const std::string Request::header_list[HEADER_LIST_SIZE] = {
+    "A-IM",             "Accept",          "Accept-Charset",                "Accept-Encoding",
+    "Accept-Language",  "Accept-Datetime", "Access-Control-Request-Method", "Access-Control-Request-Headers",
+    "Authorization",    "Cache-Control",   "Connection",                    "Content-Length",
+    "Content-Type",     "Cookie",          "Date",                          "Expect",
+    "Forwarded",        "From",            "Host",                          "If-Match",
+    "If-Modified-Since","If-None-Match",   "If-Range",                      "If-Unmodified-Since",
+    "Max-Forwards",     "Origin",          "Pragma",                        "Proxy-Authorization",
+    "Range",            "Referer",         "TE",                            "Trailer",
+    "Transfer-Encoding","User-Agent",      "Upgrade",                       "Via",
+    "Warning"
+};
 
 

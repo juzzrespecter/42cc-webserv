@@ -13,13 +13,8 @@
 #include "msg_format/StatusLine.hpp"
 #include "msg_format/RequestLine.hpp"
 #include "msg_format/Body.hpp"
-#include "headers.hpp"
 
-/*enum request_status_f {
-	EMPTY,
-	IN_PROCESS,
-	READY
-};*/
+#define HEADER_LIST_SIZE 37
 
 enum request_stage_f { 
 	request_line_stage,
@@ -49,6 +44,8 @@ class Request
 	
 		request_stage_f	_stage;
 	
+		static const std::string header_list[HEADER_LIST_SIZE];
+
 	public:
 
 		/* ------------------------ COPLIEN FORM ----------------------- */
@@ -126,7 +123,6 @@ class Request
 		void parseRequestBody(void);
 
 		size_t parseChunkSize(void);
-		std::string parseChunkBody(void);
 		void parseChunkedRequestBody(void);
 		
 		// Search for the correct server block (matching host header field, if not using default server
@@ -138,6 +134,8 @@ class Request
 		// Header accesses
 		std::string	host(void) const;
 		size_t 		contentLength(void) const;
+
+		std::string _getNextLine(void);
 
 		
 		/* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */
