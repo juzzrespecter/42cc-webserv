@@ -123,7 +123,7 @@ void Parser::tokenize(void) {
 }
 
 void Parser::read_config_file(const std::string& path) {
-    std::ifstream   config_file(path, std::ios::in);
+    std::ifstream   config_file(path.c_str(), std::ios::in);
 
     if (!config_file.is_open()) {
         throw std::runtime_error("could not open configuration file\n");
