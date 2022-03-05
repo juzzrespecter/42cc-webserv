@@ -1,5 +1,6 @@
-GET https://localhost:8080?:-) HTTP/1.1
-Content-Length: 8
-Host: host-header
-
+GET / HTTP/1.1
+Host: localhost
+Content-Length: 56
+Accept: ni idea de que es esto
+Transfer-Encoding: chunked
 

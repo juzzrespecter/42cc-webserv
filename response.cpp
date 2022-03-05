@@ -1,4 +1,4 @@
-#include "Response.hpp"
+#include "response.hpp"
 
 
 /* ------------------------ COPLIEN FORM ----------------------- */
@@ -340,21 +340,18 @@ void Response::fillError(const StatusLine& sta)
 
 	// Looking in each virtual server names if one match host header field value, if
     // not using default server
-	const Server**servMatch = findVirtServ(_infoVirServs, hostValue);
-    if (!servMatch)
-	{
-        servMatch = &_infoVirServs->front();
-	}
 	
+    const Location& loc = req->getLocation(); /* location getter implementado en req. */
+
 	std::string pathError;
 	std::string errorCodeHTML = "/" + convertNbToString(sta.getCode()) + ".html";
 
     // Custom error pages if set in config file
-	if (!servMatch->getError().empty())
+	if (!loc->get_error_page().empty())
 	{
         // Adding relative file access if not well filled in config file
-        pathError = (servMatch->getError()[0] == '/') ? 
-                "." + servMatch->getError() + errorCodeHTML: servMatch->getError() + errorCodeHTML;
+        pathError = (loc.get_error_page()[0] == '/') ? 
+                "." + loc.get_error_page() + errorCodeHTML: loc.get_error_page() + errorCodeHTML;
 
 		struct stat infFile;
 		if (stat(pathError.c_str(), &infFile) == -1)
@@ -446,6 +443,8 @@ void Response::execDelete(const std::string& realUri)
 Response::location_pair Response::locationSearcher(const std::vector<Server*>& srv_vec) const {
 
 }
+
+/* convertNbToString implementation */
 
 /* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */
 

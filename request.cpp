@@ -45,7 +45,7 @@ const std::string& Request::getQuery() const {
 const Location& Request::getLocation(void) const {
     std::vector<const Server*>::const_iterator it = \
         std::find_if(_vservVec.begin(), _vservVec.end(), find_server_by_host(host()));
-    const Server* server_host = (it == _vservVec.end()) ? _vservVec[0] : *it;
+    const Server* server_host = (it == _vservVec.end()) ? _vservVec.front() : *it;
 
     return server_host->get_location_by_path(getPath());
 }
@@ -161,7 +161,7 @@ void    Request::parseHTTPVersion(const std::string& token) {
 }
 
 void    Request::parseHeaderLine(void) {
-    if (!_buffer.compare(_index, CRLF_OCTET_SIZE, CRLF)) {
+    if (!_buffer.compare(_index, CRLF_OCTET_SIZE, CRLF)) { /* esto da problemas */
         _index += CRLF_OCTET_SIZE;
         _stage = (_reqLine.getMethod() == POST) ? request_body_stage : request_is_ready;
         return ;
@@ -169,7 +169,7 @@ void    Request::parseHeaderLine(void) {
     std::string headerLine = _getNextLine();
 
     if (headerLine.size() > MAX_HEADER_LEN) {
-        THROW_STATUS("syntax error on request");
+        THROW_STATUS("syntax error on request: header line overflows");
     }
     std::string fieldName = headerLine.substr(0, headerLine.find(':'));
     std::string fieldValue = headerLine.substr(fieldName.size() + 1);
@@ -303,7 +303,7 @@ std::string Request::_getNextLine(void) {
     size_t      endLine = _buffer.find(CRLF, _index);
 
     if (endLine == std::string::npos) {
-        throw StatusLine(400, REASON_400, "syntax error found on request");
+        throw StatusLine(400, REASON_400, "syntax error found in request: expected CRLF");
     }
     line = _buffer.substr(_index, endLine - _index);
     _index += line.size() + CRLF_OCTET_SIZE;

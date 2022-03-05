@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
     if (argc == 2) {
         path = argv[1];
     }
-    std::fstream req_file(path);
+    std::fstream req_file(path.c_str());
 
     if (!req_file.is_open()) {
         std::cerr << "wrong file path\n";
