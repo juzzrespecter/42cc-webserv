@@ -15,6 +15,12 @@
 #include "parser.hpp"
 #include "server.hpp"
 
+#ifdef __APPLE__
+#ifndef st_mtime
+#define st_mtime st_mtimespec.tv_sec
+#endif
+#endif
+
 class Response
 {
 	private:
@@ -95,7 +101,7 @@ class Response
 
 		// Transforms URI using index and root settings
 		std::string reconstructFullURI(int method,
-				const std::pair<const std::string, const Location*>& loc, std::string uri);
+				const Location& loc, std::string uri);
 
 		// Replaces the location name that matched with root directive
 		void replaceLocInUri(std::string* uri, const std::string& root, const std::string& locName);
@@ -125,6 +131,15 @@ class Response
 
         	void execDelete(const std::string& realUri);
 
+            template<class T>
+            std::string convertNbToString(T nb) {
+                    std::string nbString;
+                    std::stringstream nbStream;
+
+                    nbStream << nb;
+                    nbString = nbStream.str();
+                    return nbString;
+            }
 
 	public:
 	
