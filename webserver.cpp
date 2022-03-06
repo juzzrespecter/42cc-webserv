@@ -20,8 +20,10 @@ void    Webserver::check_server_duplicates(const std::vector<Server>& srv_v) {
 std::string    Webserver::timestamp(void) const {
     std::time_t t = std::time(0);
     std::tm*    time = std::localtime(&t);
+    std::string format_time(asctime(time));
 
-    return asctime(time);
+    format_time.erase(format_time.size() - 1);
+    return format_time;
 }
 
 void    Webserver::log(const std::string& error) const {
@@ -82,7 +84,8 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
         req.recvBuffer(req_buff);
     } catch (StatusLine& sl) {
         log(sl.getReason() + ": " + sl.getAdditionalInfo());
-        conn_socket.set_response(Response(&req, sl /*, */));
+        conn_socket.set_response(Response(&req, sl));
+        conn_socket.get_response().fillBuffer(); /* tmp */
         return CONTINUE;
     }
     return STANDBY;

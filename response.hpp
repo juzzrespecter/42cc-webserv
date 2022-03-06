@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <fstream>
 #include <iostream>
+#include <dirent.h>
 
 #include "request.hpp"
 //#include "Cgi.hpp"
@@ -20,6 +21,20 @@
 #define st_mtime st_mtimespec.tv_sec
 #endif
 #endif
+
+class FileParser {
+	private:
+		std::string rawFile;
+		bool status;
+	public:
+		FileParser(void);
+		FileParser(const FileParser&);
+		FileParser(const std::string&, bool);
+		~FileParser();
+
+		std::string getRequestFile(void) const;
+		int getRequestFileSize(void) const;
+};
 
 class Response
 {
@@ -70,7 +85,7 @@ class Response
 
 		// Fill response buffer according to request object and status line previously set
 		void fillBuffer();
-		bool markedForClosing(); // tmp
+		bool markedForClosing() const; // tmp
 
 
 	private:
@@ -140,6 +155,12 @@ class Response
                     nbString = nbStream.str();
                     return nbString;
             }
+
+			std::vector<std::string> splitWithSep(const std::string&, char);
+
+			void autoIndexDisplayer(const std::string&, std::string&);
+
+			std::string* getCgiExecutableName(const std::string&, const Location&);
 
 	public:
 	

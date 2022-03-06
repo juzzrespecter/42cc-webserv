@@ -161,11 +161,13 @@ void    Request::parseHTTPVersion(const std::string& token) {
 }
 
 void    Request::parseHeaderLine(void) {
+    std::cout << "test: " << _buffer.substr(_index) << ", comp: " << _buffer.compare(_index, CRLF_OCTET_SIZE, CRLF) << "\n";
     if (!_buffer.compare(_index, CRLF_OCTET_SIZE, CRLF)) { /* esto da problemas */
         _index += CRLF_OCTET_SIZE;
         _stage = (_reqLine.getMethod() == POST) ? request_body_stage : request_is_ready;
         return ;
     }
+    std::cerr << "seguimos en headerLineLoop\n";
     std::string headerLine = _getNextLine();
 
     if (headerLine.size() > MAX_HEADER_LEN) {
@@ -302,6 +304,7 @@ std::string Request::_getNextLine(void) {
     std::string line;
     size_t      endLine = _buffer.find(CRLF, _index);
 
+    std::cout << "buscando en " << _buffer.substr(_index) << "\n";
     if (endLine == std::string::npos) {
         throw StatusLine(400, REASON_400, "syntax error found in request: expected CRLF");
     }

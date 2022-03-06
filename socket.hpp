@@ -19,7 +19,7 @@ class Socket {
         listen_directive_t _sock_addr; /* dirección y puerto en los qu e el socket escucha */
         std::vector<Server*> _vserv_v; /* vector de servidores que comparten el mismo socket */
         Request _req; /* se almacena la petición por si requiere varias lecturas el obtener la petición completa (chunked request) */
-       // Response _resp; /* respuesta generada a partir de la petición y la config. del servidor */
+        Response _resp; /* respuesta generada a partir de la petición y la config. del servidor */
 
     public:
         int fd;
@@ -34,10 +34,10 @@ class Socket {
 
         const listen_directive_t& get_socket_addr(void) const;
         
-       // void set_response(const Response&);
+       void set_response(const Response&);
 
         Request& get_request(void);
-       // Response& get_response(void);
+        Response& get_response(void);
 
         void add_server_ref(Server&);
 

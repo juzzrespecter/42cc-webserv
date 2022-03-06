@@ -40,7 +40,7 @@ Socket& Socket::operator=(const Socket& other) {
     _sock_addr = other._sock_addr;
     _vserv_v = other._vserv_v;
     _req = other._req;
-    //_resp = other._resp;
+    _resp = other._resp;
     return *this;
 }
 
@@ -48,17 +48,17 @@ const listen_directive_t& Socket::get_socket_addr(void) const {
     return _sock_addr;
 }
 
-//void Socket::set_response(const Response& resp) {
-//    _resp = resp;
-//}
+void Socket::set_response(const Response& resp) {
+    _resp = resp;
+}
 
 Request& Socket::get_request(void) {
     return _req;
 }
 
-//Response& Socket::get_response(void) {
-//    return _resp;
-//}
+Response& Socket::get_response(void) {
+    return _resp;
+}
 
 void  Socket::add_server_ref(Server& srv) {
     _vserv_v.push_back(&srv);

@@ -1,5 +1,30 @@
 #include "response.hpp"
 
+/* FileParser tmp definition */
+FileParser::FileParser(void) : rawFile(), status(false) { }
+
+FileParser::FileParser(const FileParser& other) : rawFile(other.rawFile), status(other.status) { }
+
+FileParser::FileParser(const std::string& filePath, bool _status) { 
+	status = _status;
+
+	std::ifstream file(filePath.c_str());
+	if (!file.is_open()) {
+		throw StatusLine(500, REASON_500, "FileParser: error trying to get body file");
+	}
+	rawFile = std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+	file.close();
+}
+
+FileParser::~FileParser() { }
+
+std::string FileParser::getRequestFile(void) const {
+	return rawFile;
+}
+
+int FileParser::getRequestFileSize(void) const {
+	return rawFile.size();
+}
 
 /* ------------------------ COPLIEN FORM ----------------------- */
 
@@ -267,6 +292,7 @@ std::string Response::reconstructFullURI(int method,
 
 
 	// zero location block match the URI so the URI isn't modified
+	/**
 	if (!loc)
 	{
         // Need to add a '.' for relative path access
@@ -281,7 +307,7 @@ std::string Response::reconstructFullURI(int method,
 					" location block in reconstructlFullURI method");
 
 		return uri;
-	}
+	}*/
 
 	// Replacing the part of the URI that matched with the root path if there is one existing
 	if (!loc.get_root().empty() && !(method == POST && !loc.get_upload_path().empty()))
@@ -406,7 +432,7 @@ void Response::execGet(const std::string& realUri)
     else
     {
         std::string autoIndexPage;
-        autoIndexDisplayer(realUri, &autoIndexPage);
+        autoIndexDisplayer(realUri, autoIndexPage);
 
         fillContentlengthHeader(convertNbToString(autoIndexPage.size()));
         _buffer += CRLF + autoIndexPage;
@@ -441,8 +467,62 @@ void Response::execDelete(const std::string& realUri)
     fillDateHeader();    
 }
 
-void autoIndexDisplayer(/*...*/) {
+void Response::autoIndexDisplayer(const std::string& realUri, std::string& autoIndexPage) {
+	autoIndexPage.append("<html>\n<head><title>Index of " + realUri + "</title></head>\n");
+	autoIndexPage.append("<body><h1>Index of " + realUri + "</h1><br><hr>");
 
+	DIR* 			dir_ptr;
+	struct dirent*	dir_s;
+
+	std::vector<std::string> file_list;
+	dir_ptr = opendir(realUri.c_str());
+	if (!dir_ptr) {
+		throw StatusLine(500, REASON_500, "autoindex: could not open directory");
+	}
+	while ((dir_s = readdir(dir_ptr)) != NULL) {
+		file_list.push_back(dir_s->d_name);
+	}
+	closedir(dir_ptr);
+
+	for (std::vector<std::string>::iterator it = file_list.begin(); it != file_list.end(); it++) {
+		struct stat info;
+		std::string filePath = realUri + *it;
+
+		if (stat(filePath.c_str(), &info) == -1) {
+			StatusLine(500, REASON_500, "autoindex: could not open file");
+		}
+		std::string timeStamp = asctime(localtime(&info.st_mtime));
+		autoIndexPage.append("<a href=\"" + *it + "/\">" + *it + "/</a>\t\t" + 
+			timeStamp + " " + convertNbToString(info.st_size) + "\n");
+	}
+	autoIndexPage.append("<br></body></html");
+}
+
+/* beware of new lines */
+std::vector<std::string> Response::splitWithSep(const std::string& str, char dlm) {
+	std::vector<std::string> tab;
+	std::stringstream strStream(str.c_str());
+	std::string token;
+
+	while (std::getline(strStream, token, dlm)) {
+		tab.push_back(token);
+	}
+	return tab;
+}
+
+std::string* Response::getCgiExecutableName(const std::string& tal, const Location& cual) {
+	(void) tal, (void) cual;
+
+	return NULL;
+}
+
+bool Response::markedForClosing(void) const {
+	std::map<std::string, std::string>::const_iterator it = _req->getHeaders().find("Connection");
+
+	if (it != _req->getHeaders().end() && !it->second.compare("close")) {
+		return true;
+	}
+	return false;
 }
 
 /* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */

@@ -10,6 +10,7 @@ SRC_TEST    = config_blocks.cpp \
 			  msg_format/StatusLine.cpp \
 			  request.cpp \
 			  response.cpp \
+			  webserver.cpp \
 			  test_request.cpp
 OBJ_TEST	= $(SRC_TEST:%.cpp=%.o)
 HEADER_TEST = config_blocks.hpp parser.hpp webserver.hpp server.hpp location.hpp
@@ -18,6 +19,8 @@ CXXFLAGS = -Wall -Werror -Wextra -std=c++98 -g3 -fstandalone-debug
 
 TEST = test
 
+all: $(TEST)
+
 $(TEST):		$(OBJ_TEST) $(HEADER_TEST) Makefile
 	@$(CXX) $(CXXFLAGS) -o $(TEST) $(OBJ_TEST)
 clean:
@@ -25,3 +28,5 @@ clean:
 
 fclean:		clean
 	rm -rf $(OBJ_PARSER) $(OBJ_TEST)
+
+re:	fclean all
