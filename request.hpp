@@ -34,7 +34,7 @@ class Request
 		std::string	_buffer;		// Store the request received
 		size_t		_index;			// Indicates which part of the buffer is left to treat
 
-		std::vector<const Server*>	_vservVec;	// Server blocks from config file that match the appropriate port
+		const std::vector<const Server*>	_vservVec;	// Server blocks from config file that match the appropriate port
         
 		size_t	_headerCount;
 

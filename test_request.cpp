@@ -42,7 +42,7 @@ int main(void) {
 
         websrv.run();
     } catch(std::runtime_error& e) {
-        std::cerr << e.what() << "\n";
+        std::cerr << "[ server fatal error ] " <<  e.what() << "\n";
         return EXIT_FAILURE;
     }
 

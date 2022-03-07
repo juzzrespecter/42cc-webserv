@@ -1,5 +1,12 @@
 #include "webserver.hpp"
 
+sig_atomic_t    quit_f = 0;
+void sighandl(int signal) {
+    (void) signal;
+
+    quit_f = 1;
+}
+
 bool    Webserver::addr_comp::operator()(const Socket& other) {
     return addr == other.get_socket_addr();
 }
@@ -85,6 +92,7 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
     } catch (StatusLine& sl) {
         log(sl.getReason() + ": " + sl.getAdditionalInfo());
         conn_socket.set_response(Response(&req, sl));
+        req.clear();
         conn_socket.get_response().fillBuffer(); /* tmp */
         return CONTINUE;
     }
@@ -182,12 +190,21 @@ Webserver::Webserver(const std::vector<server_block_t>& srv_blk_v) {
     }
 }
 
-Webserver::~Webserver() { }
+Webserver::~Webserver() { 
+    for (std::vector<Socket>::iterator it = read_v.begin(); it != read_v.end(); it++) {
+        it->close_socket();
+    }
+    for (std::vector<Socket>::iterator it = write_v.begin(); it != write_v.end(); it++) {
+        it->close_socket();
+    }
+}
 
 /* main loop */
 void Webserver::run(void) {
+    //signal(SIGINT, &sighandl);
+
     std::cout << "[servidor levantado]\n";
-    while (true) {
+    while (!quit_f) {
         FD_ZERO(&readfds);
         FD_ZERO(&writefds);
 

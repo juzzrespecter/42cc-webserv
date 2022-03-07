@@ -91,6 +91,9 @@ void    Request::recvBuffer(const std::string& newBuffer) {
             parseRequestBody();
         }
     }
+    if (_stage == request_is_ready) {
+        throw StatusLine(100, REASON_100, "request ready");
+    }
 }
 
 void    Request::parseRequestLine(void) {
@@ -165,6 +168,7 @@ void    Request::parseHeaderLine(void) {
     if (!_buffer.compare(_index, CRLF_OCTET_SIZE, CRLF)) { /* esto da problemas */
         _index += CRLF_OCTET_SIZE;
         _stage = (_reqLine.getMethod() == POST) ? request_body_stage : request_is_ready;
+        std::cout << "stage: " << _stage << "\n";
         return ;
     }
     std::cerr << "seguimos en headerLineLoop\n";
