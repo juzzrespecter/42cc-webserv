@@ -43,14 +43,13 @@ class Response
 		/* ------------------------- ATTRIBUTES ------------------------ */
 
 		//const std::vector<Server*>		_infoVirServs;	// Servers blocks from config file that match a specific port
-		Request*				_req;		// Request object when the request is fully received, used to create response
+		Request*	_req;		// Request object when the request is fully received, used to create response
+		Location	_loc;
 
 		StatusLine				_staLine;	// Fist line of http response
-	
 		std::string				_buffer;	// Buffer containing the response that will be send. Directly writing
 															// headers into it.
-
-        	bool                                	_autoIndex;     // Sets to true if request is GET or HEAD, the target (after rooting) 
+      	bool                                	_autoIndex;     // Sets to true if request is GET or HEAD, the target (after rooting) 
                                                             		// is a directory, and autoindex is on.
 
 	public:
@@ -58,7 +57,7 @@ class Response
 		/* ------------------------ COPLIEN FORM ----------------------- */
 
 		Response();
-		Response(Request* req, const StatusLine& staLine/*, const std::vector<Server>* infoVirServs*/); // tmp
+		//Response(Request* req, const StatusLine& staLine/*, const std::vector<Server>* infoVirServs*/); // tmp
 		Response(const Response& c);
 		~Response();
 		Response& operator=(Response a);
@@ -84,8 +83,7 @@ class Response
 		void clear();
 
 		// Fill response buffer according to request object and status line previously set
-		void fillBuffer();
-		bool markedForClosing() const; // tmp
+		void fillBuffer(Request*, const Location&, const StatusLine&);
 
 
 	private:
@@ -115,8 +113,7 @@ class Response
 		void fillStatusLine(const StatusLine& staLine);
 
 		// Transforms URI using index and root settings
-		std::string reconstructFullURI(int method,
-				const Location& loc, std::string uri);
+		std::string reconstructFullURI(int method, std::string uri);
 
 		// Replaces the location name that matched with root directive
 		void replaceLocInUri(std::string* uri, const std::string& root, const std::string& locName);
@@ -160,7 +157,7 @@ class Response
 
 			void autoIndexDisplayer(const std::string&, std::string&);
 
-			std::string* getCgiExecutableName(const std::string&, const Location&);
+			std::string* getCgiExecutableName(const std::string&);
 
 	public:
 	

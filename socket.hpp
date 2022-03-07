@@ -17,7 +17,7 @@ class Socket {
     private:
         socket_mode_f _type; /* tipo de socket: pasivo o activo */
         listen_directive_t _sock_addr; /* dirección y puerto en los qu e el socket escucha */
-        std::vector<const Server*> _vserv_v; /* vector de servidores que comparten el mismo socket */
+        std::vector<const Server*> _serv_v; /* vector de servidores que comparten el mismo socket */
         Request _req; /* se almacena la petición por si requiere varias lecturas el obtener la petición completa (chunked request) */
         Response _resp; /* respuesta generada a partir de la petición y la config. del servidor */
 
@@ -34,15 +34,25 @@ class Socket {
 
         const listen_directive_t& get_socket_addr(void) const;
         
-        void set_response(const Response&);
+        //void set_response(const Response&);
 
-        Request& get_request(void);
-        Response& get_response(void);
+        //Request& get_request(void);
+        //Response& get_response(void);
+
+        void build_request(const std::string&);
+        void build_response(const StatusLine&);
+
+//        const std::vector<Server*>& get_serv_lst(void) const;
+
+        std::string get_response_string(void) const;
 
         void add_server_ref(Server&);
 
         bool is_passv(void) const;
+        bool marked_for_closing(void) const;
+
         void close_socket(void) const;
+        void clear_response(void);
 };
 
 #endif //__SOCKET_HPP__

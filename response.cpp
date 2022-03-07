@@ -30,8 +30,8 @@ int FileParser::getRequestFileSize(void) const {
 
 Response::Response() {}
 
-Response::Response(Request* req, const StatusLine& staLine/*, const std::vector<Server*> infoVirServs*/) :
-	/*_infoVirServs(infoVirServs),*/ _req(req), _staLine(staLine), _autoIndex(false) {}
+//Response::Response(Request* req, const StatusLine& staLine/*, const std::vector<Server*> infoVirServs*/) :
+//	/*_infoVirServs(infoVirServs),*/ _req(req), _staLine(staLine), _autoIndex(false) {}
 
 Response::Response(const Response& c) : 
 	/*_infoVirServs(c._infoVirServs),*/ _req(c._req), _staLine(c._staLine), _buffer(c._buffer),
@@ -89,8 +89,13 @@ void Response::clear()
 	_buffer.clear();
 }
 
-void Response::fillBuffer()
+void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& sl)
 {
+	_req = req;
+	_loc = loc;
+	_staLine = sl;
+
+
 	// If an error occured during request parsing
 	if (_staLine.getCode() >= 400)
 		return fillError(_staLine);
@@ -103,36 +108,34 @@ void Response::fillBuffer()
 		
 		// Looking for the location block matching the URI. If returns NULL, then no appropriate block was found
 		// and no additionnal configuration (index, root...) will change the URI
-		const Location& loc = _req->getLocation();/*locationSearcher(_infoVirServs,
-				std::pair<std::string, std::string>(hostName, _req->getPath())); */
 		
 		/*#if DEBUG
-			if (loc)
-				loc.printLocation(loc.uri);
+			if (_loc)
+				_loc.printLocation(_loc.uri);
 			else
-				std::cout << "LOCATION: no match\n"; siempre hay un Loc por default
+				std::cout << "LOCATION: no match\n"; siempre hay un _Loc por default
 		#endif*/
 
         // Doing an HTTP redirection (301) if redirect field filled in matched location block
-        if (!loc.get_return_uri().empty())
+        if (!_loc.get_return_uri().empty())
         {
             // Replacing location name in the URI with the redirect string set in config file
             std::string redirectedUri = _req->getPath();
-            replaceLocInUri(&redirectedUri, loc./*get_redirect()*/get_return_uri(), loc.uri);
+            replaceLocInUri(&redirectedUri, _loc./*get_redirect()*/get_return_uri(), _loc.uri);
 
             // Replacing previous requested URI with redirected URI for next client request
             // (Location header in 301 response will be set with this URI)
-            _req->setPath(/*std::string("http://localhost:" + 
-                    convertNbToString(loc.getPort()) + */redirectedUri); /* no es necesario pasar host por path CREO */
+            _req->setPath(/*std::string("http://_localhost:" + 
+                    convertNbToString(_loc.getPort()) + */redirectedUri); /* no es necesario pasar host por path CREO */
 
             throw StatusLine(301, REASON_301, "http redirection");
         }
 
         // Modifying URI with root and index directive if any, checking for the allowed methods
-		std::string realUri = reconstructFullURI(_req->getMethod(), loc, _req->getPath());
+		std::string realUri = reconstructFullURI(_req->getMethod(), _req->getPath());
 
         // Checking if the targeted file is a CGI based on his extension
-		std::string *cgiName = getCgiExecutableName(realUri, loc);
+		std::string *cgiName = getCgiExecutableName(realUri);
 
         // Execute the appropriate method and fills the response buffer with status line + 
         // headers + body (if any). If an error occurs during this process, it will throw 
@@ -148,7 +151,7 @@ void Response::fillBuffer()
 
 		else
 			throw (StatusLine(400, REASON_400, "request method do not exist"));
-	}
+	} 
 
 	// If an error occured during the reponse creation
 	catch (const StatusLine& errorStaLine)
@@ -224,24 +227,24 @@ void Response::fillStatusLine(const StatusLine& staLine)
 	_buffer += CRLF;
 }
 
-void printLoc(const Location& loc)
+void print_Loc(const Location& _loc)
 {
-	std::cout << "root: " << loc.get_root() << "\n";
-	for (std::vector<std::string>::const_iterator it = loc.get_methods().begin(); it != loc.get_methods().end(); it++)
+	std::cout << "root: " << _loc.get_root() << "\n";
+	for (std::vector<std::string>::const_iterator it = _loc.get_methods().begin(); it != _loc.get_methods().end(); it++)
 		std::cout << "methods: " << *it << "\n";
 		
-	for (std::vector<std::string>::const_iterator it = loc.get_index().begin(); it != loc.get_index().end(); it++)
+	for (std::vector<std::string>::const_iterator it = _loc.get_index().begin(); it != _loc.get_index().end(); it++)
 		std::cout << "index: " << *it << "\n";
 }
 
-void Response::replaceLocInUri(std::string* uri, const std::string& root, const std::string& locName)
+void Response::replaceLocInUri(std::string* uri, const std::string& root, const std::string& _locName)
 {
 	// Creating an iterator pointing just after the part that matched the location
-	std::string::iterator it = uri->begin() + locName.size();
+	std::string::iterator it = uri->begin() + _locName.size();
 
 	// Going to the next '/' (for example, case "/authentificate/ok" matched location "/auth" with a root of "/test"
 	//						  >> we need to replace "/authentificate" with "/test" in order to get "/test/ok")
-	if (*it != '/' && locName.size() > 1)
+	if (*it != '/' && _locName.size() > 1)
 		while (*it && *it != '/')
 			++it;
 	
@@ -284,8 +287,7 @@ void Response::checkMethods(int method, const std::vector<std::string>& methodsA
 	throw StatusLine(405, REASON_405, "checkMethods method");
 }
 
-std::string Response::reconstructFullURI(int method,
-		const Location& loc, std::string uri)
+std::string Response::reconstructFullURI(int method, std::string uri)
 {
 	bool fileExist = true;
 	struct stat infFile;
@@ -293,7 +295,7 @@ std::string Response::reconstructFullURI(int method,
 
 	// zero location block match the URI so the URI isn't modified
 	/**
-	if (!loc)
+	if (!_loc)
 	{
         // Need to add a '.' for relative path access
         if (!uri.empty() && uri[0] == '/')
@@ -310,11 +312,11 @@ std::string Response::reconstructFullURI(int method,
 	}*/
 
 	// Replacing the part of the URI that matched with the root path if there is one existing
-	if (!loc.get_root().empty() && !(method == POST && !loc.get_upload_path().empty()))
-		replaceLocInUri(&uri, loc.get_root(), /*loc.uri*/_req->getPath());
+	if (!_loc.get_root().empty() && !(method == POST && !_loc.get_upload_path().empty()))
+		replaceLocInUri(&uri, _loc.get_root(), /*_loc.uri*/_req->getPath());
 
-	else if (method == POST && !loc.get_upload_path().empty())
-		replaceLocInUri(&uri, loc.get_upload_path(), _req->getPath());
+	else if (method == POST && !_loc.get_upload_path().empty())
+		replaceLocInUri(&uri, _loc.get_upload_path(), _req->getPath());
 	
 	// If no root in location block, or root doesn't start with a '.', need to add it to find the file using
 	// relative path
@@ -328,15 +330,15 @@ std::string Response::reconstructFullURI(int method,
 
     // Case we match a directory and an autoindex isn't set. We try all the possible indexs, if none
     // works addIndex throw a 403 error StatusLine object
-	if (fileExist && S_ISDIR(infFile.st_mode) && !((method == GET || method == HEAD) && loc.get_autoindex()))
-		uri = addIndex(uri, loc.get_index());
+	if (fileExist && S_ISDIR(infFile.st_mode) && !((method == GET || method == HEAD) && _loc.get_autoindex()))
+		uri = addIndex(uri, _loc.get_index());
 
-    else if (fileExist && S_ISDIR(infFile.st_mode) && ((method == GET || method == HEAD) && loc.get_autoindex()))
+    else if (fileExist && S_ISDIR(infFile.st_mode) && ((method == GET || method == HEAD) && _loc.get_autoindex()))
     {
 	    _autoIndex = true;
     }
 
-	checkMethods(method, loc.get_methods());
+	checkMethods(method, _loc.get_methods());
 
 	return uri;
 }
@@ -367,18 +369,17 @@ void Response::fillError(const StatusLine& sta)
 
 	// Looking in each virtual server names if one match host header field value, if
     // not using default server
-	
-    const Location& loc = _req->getLocation(); /* location getter implementado en req. */
+
 
 	std::string pathError;
 	std::string errorCodeHTML = "/" + convertNbToString(sta.getCode()) + ".html";
 
     // Custom error pages if set in config file
-	if (!loc.get_error_page().empty())
+	if (!_loc.get_error_page().empty())
 	{
         // Adding relative file access if not well filled in config file
-        pathError = (loc.get_error_page()[0] == '/') ? 
-                "." + loc.get_error_page() + errorCodeHTML: loc.get_error_page() + errorCodeHTML;
+        pathError = (_loc.get_error_page()[0] == '/') ? 
+                "." + _loc.get_error_page() + errorCodeHTML: _loc.get_error_page() + errorCodeHTML;
 
 		struct stat infFile;
 		if (stat(pathError.c_str(), &infFile) == -1)
@@ -389,7 +390,7 @@ void Response::fillError(const StatusLine& sta)
 		pathError = DEFAULT_PATH_ERROR_PAGES + errorCodeHTML;
 
     // Filling buffer
-	FileParser body(pathError.c_str(), true);
+	FileParser body(pathError.c_str(), true); /* punto de fallo */
 
 	fillContentlengthHeader(convertNbToString(body.getRequestFileSize()));
 	_buffer += CRLF + body.getRequestFile();
@@ -510,20 +511,17 @@ std::vector<std::string> Response::splitWithSep(const std::string& str, char dlm
 	return tab;
 }
 
-std::string* Response::getCgiExecutableName(const std::string& tal, const Location& cual) {
-	(void) tal, (void) cual;
-
+std::string* Response::getCgiExecutableName(const std::string& tal) {
+	(void) tal;
 	return NULL;
 }
 
-bool Response::markedForClosing(void) const {
-	std::map<std::string, std::string>::const_iterator it = _req->getHeaders().find("Connection");
-
-	if (it != _req->getHeaders().end() && !it->second.compare("close")) {
-		return true;
-	}
-	return false;
-}
+/* hardcoded pages ?? */
+//std::string Response::pages[3] = {
+//	"!DOCTYPE<html><head>Webserv 404</head><body><h1>Webserv 404</h1><hr><br>file not found.</body></html>",
+//	"!DOCTYPE<html><head>Webserv 403</head><body><h1>Webserv 403</h1><hr><br>foribidden.</body></html>",
+//	"!DOCTYPE<html><head>Webserv 500</head><body><h1>Webserv 500</h1><hr><br>internal server error.</body></html>"
+//};
 
 /* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */
 

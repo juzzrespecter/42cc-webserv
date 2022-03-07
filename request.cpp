@@ -1,10 +1,7 @@
 #include "request.hpp"
 
 Request::Request() : 
-    _buffer(), _index(0), _vservVec(NULL), _headerCount(0), _reqLine(), _headers(), _body(), _stage(request_line_stage) { }
-
-Request::Request(const std::vector<const Server*>* vservVec) :
-    _buffer(), _index(0), _vservVec(vservVec), _headerCount(0), _reqLine(), _headers(), _body(), _stage(request_line_stage) { }
+    _buffer(), _index(0), _headerCount(0), _reqLine(), _headers(), _body(), _stage(request_line_stage) { }
 
 Request::Request(const Request& c) { 
     *this = c;
@@ -42,10 +39,10 @@ const std::string& Request::getQuery() const {
     return _reqLine.getQuery();
 }
 
-const Location& Request::getLocation(void) const {
+const Location& Request::getLocation(const std::vector<const Server*>& vsrv_v) const {
     std::vector<const Server*>::const_iterator it = \
-        std::find_if(_vservVec->begin(), _vservVec->end(), find_server_by_host(host()));
-    const Server* server_host = (it == _vservVec->end()) ? _vservVec->front() : *it;
+        std::find_if(vsrv_v.begin(), vsrv_v.end(), find_server_by_host(host()));
+    const Server* server_host = (it == vsrv_v.end()) ? vsrv_v.front() : *it;
 
     return server_host->get_location_by_path(getPath());
 }
@@ -57,7 +54,7 @@ void Request::setPath(const std::string& path) {
 void swap(Request& a, Request& b) {
    swap(a._buffer, b._buffer);
    std::swap(a._index, b._index);
-   swap(a._vservVec, b._vservVec);
+   //swap(a._vservVec, b._vservVec);
    std::swap(a._headerCount, b._headerCount);
    swap(a._reqLine, b._reqLine);
    swap(a._headers, b._headers);
@@ -71,20 +68,20 @@ void swap(Request& a, Request& b) {
 //        CRLF
 //        [ message-body ]
 
-void    Request::recvBuffer(const std::string& newBuffer) {
+void    Request::recvBuffer(const std::vector<const Server*>& vsrv_v, const std::string& newBuffer) {
     _buffer.append(newBuffer);
 
     if (_stage == request_line_stage) {
         parseRequestLine();
     }
-    while (_stage == header_stage && _buffer[_index]) {
+    while (_stage == header_stage/* && _buffer[_index]*/) { /* ojo! */
         parseHeaderLine();
         if (_stage != header_stage) {
             headerMeetsRequirements();
         }
     }
     if (_stage == request_body_stage) {
-        setUpRequestBody();
+        setUpRequestBody(vsrv_v);
         if (transferEncodingIsChunked() == true) {
             parseChunkedRequestBody();
         } else {
@@ -214,11 +211,11 @@ void    Request::headerMeetsRequirements(void) const {
     }
 }
 
-void    Request::setUpRequestBody(void) {
+void    Request::setUpRequestBody(const std::vector<const Server*>& vsrv_v) {
     find_server_by_host comp(host());
     header_map::iterator cl = _headers.find("Content-Length");
 
-    _body.setMaxSize(getMaxSize());
+    _body.setMaxSize(getLocation(vsrv_v).get_body_size());
     if (cl != _headers.end()) {
         _body.setSize(std::atoi(cl->second.c_str()));
     }
@@ -261,10 +258,6 @@ void    Request::parseRequestBody(void) {
     if (_body.getBody().size() == contentLength()) {
      _stage = request_is_ready;
     }
-}
-
-long Request::getMaxSize(void) const {
-    return getLocation().get_body_size();
 }
 
 bool    Request::transferEncodingIsChunked(void) const {
@@ -320,12 +313,10 @@ std::string Request::_getNextLine(void) {
 void Request::clear(void) {
     _buffer.clear();
     _index = 0;
-    
     _headerCount = 0;
     _reqLine.clear();
     _headers.clear();
     _body.clear();
-
     _stage = request_line_stage;
 }
 

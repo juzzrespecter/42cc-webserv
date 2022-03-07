@@ -33,8 +33,6 @@ class Request
 
 		std::string	_buffer;		// Store the request received
 		size_t		_index;			// Indicates which part of the buffer is left to treat
-
-		const std::vector<const Server*>*	_vservVec;	// Server blocks from config file that match the appropriate port
         
 		size_t	_headerCount;
 
@@ -46,12 +44,11 @@ class Request
 	
 		static const std::string header_list[HEADER_LIST_SIZE];
 
-		Request();
 	public:
 
 		/* ------------------------ COPLIEN FORM ----------------------- */
 
-		Request(const std::vector<const Server*>* vservVec);
+		Request();
 		Request(const Request& c);
 		~Request();
 		Request& operator=(Request a);
@@ -66,7 +63,7 @@ class Request
 		int getMethod() const;
 		const std::string& getPath() const;
 		const std::string& getQuery() const;
-		const Location& getLocation() const;
+		const Location& getLocation(const std::vector<const Server*>&) const;
 
 
 		/* --------------------------- SETTERS ------------------------- */
@@ -78,7 +75,7 @@ class Request
 
 		// Add the buffer from receive to request object
 		//Request& operator+=(const char* charBuffer);
-		void recvBuffer(const std::string&);
+		void recvBuffer(const std::vector<const Server*>&, const std::string&);
 
 		// Check if the data received is correct. If an error occur or if a request was
 		// fully received, throws a status line with the appropriate code.
@@ -117,7 +114,7 @@ class Request
 		// Check that the header line received respect the RFC norme.
        	void parseHeaderLine(void);
 		void headerMeetsRequirements(void) const;
-		void setUpRequestBody(void);
+		void setUpRequestBody(const std::vector<const Server*>&);
 		
 		// Received the body until n octets (from content-length header) has been received. Then throw 
 		// a status line with the appropriate code.
@@ -129,7 +126,6 @@ class Request
 		// Search for the correct server block (matching host header field, if not using default server
 		// block) and returns an unsigned max_body_size if the field is existing in the config file, otherwise
 		// returns -1.
-		long getMaxSize(void) const;
 		bool transferEncodingIsChunked(void) const;
 
 		// Header accesses

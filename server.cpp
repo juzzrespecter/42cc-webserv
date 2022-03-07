@@ -76,7 +76,7 @@ const Location& Server::get_location_by_path(const std::string& abs_path) const 
             tracker[std::distance(routes.begin(), it)] = it->uri.size();
         }
     }
-    size_t  loc_id = std::distance(tracker.begin(), std::max(tracker.begin(), tracker.end()));
+    size_t  loc_id = std::distance(tracker.begin(), std::max_element(tracker.begin(), tracker.end()));
     
     return (routes.at(loc_id));
 }

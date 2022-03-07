@@ -34,7 +34,7 @@ std::string    Webserver::timestamp(void) const {
 }
 
 void    Webserver::log(const std::string& error) const {
-    std::cerr << "[ " << timestamp() << "]: " << error << "\n";
+    std::cerr << "[ " << timestamp() << "] " << error << "\n";
 }
 
 void    Webserver::nfds_up(int fd) {
@@ -65,7 +65,7 @@ void    Webserver::accept_new_connection(const Socket& passv) {
 }
 
 socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
-    Request& req = conn_socket.get_request();
+    //Request& req = conn_socket.get_request();
     char     req_buff[REQUEST_BUFFER_SIZE];
 
     memset(req_buff, 0, REQUEST_BUFFER_SIZE);
@@ -88,12 +88,10 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
     /* puede ser que una lectura del socket traiga más de una request ?? (std::vector<Request>) */
     /* (pipelining; sending multiple requests without waiting for an response) */
     try {
-        req.recvBuffer(req_buff);
+        conn_socket.build_request(req_buff);
     } catch (StatusLine& sl) {
         log(sl.getReason() + ": " + sl.getAdditionalInfo());
-        conn_socket.set_response(Response(&req, sl));
-        req.clear();
-        conn_socket.get_response().fillBuffer(); /* tmp */
+        conn_socket.build_response(sl);
         return CONTINUE;
     }
     return STANDBY;
@@ -102,9 +100,9 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
 
 socket_status_f    Webserver::write_to_socket(Socket& conn_socket) {
     /* llamada a write con el mensaje guardado en el Socket */
-    Response& resp = conn_socket.get_response();
+    const std::string& response = conn_socket.get_response_string();
 
-    int socket_wr_stat = write(conn_socket.fd, resp.getBuffer().c_str(), resp.getBuffer().size());
+    int socket_wr_stat = write(conn_socket.fd, response.c_str(), response.size());
     if (socket_wr_stat == -1) {
         /* supón error EAGAIN, el buffer de write está lleno y como trabajamos con sockets
          * no bloqueadores retorna con señal de error, la respuesta sigue siendo válida y el cliente espera */
@@ -112,11 +110,11 @@ socket_status_f    Webserver::write_to_socket(Socket& conn_socket) {
         return STANDBY;
     }
     //if (/* Cliente ha indicado en cabecera que hay que cerrar la conexión tras enviar la respuesta */) {
-    if (resp.markedForClosing()) {
+    if (conn_socket.marked_for_closing()) {
         conn_socket.close_socket();
         return CLOSED;
     }
-    resp.clear();
+    conn_socket.clear_response();
     return CONTINUE;
 }
 
