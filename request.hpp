@@ -34,7 +34,7 @@ class Request
 		std::string	_buffer;		// Store the request received
 		size_t		_index;			// Indicates which part of the buffer is left to treat
 
-		const std::vector<const Server*>	_vservVec;	// Server blocks from config file that match the appropriate port
+		const std::vector<const Server*>*	_vservVec;	// Server blocks from config file that match the appropriate port
         
 		size_t	_headerCount;
 
@@ -46,12 +46,12 @@ class Request
 	
 		static const std::string header_list[HEADER_LIST_SIZE];
 
+		Request();
 	public:
 
 		/* ------------------------ COPLIEN FORM ----------------------- */
 
-		Request();
-		Request(const std::vector<const Server*>& vservVec);
+		Request(const std::vector<const Server*>* vservVec);
 		Request(const Request& c);
 		~Request();
 		Request& operator=(Request a);

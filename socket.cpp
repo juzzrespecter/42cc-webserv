@@ -1,11 +1,14 @@
 #include "socket.hpp"
 
-Socket::Socket(void) { }
+Socket::Socket(void) :
+    _type(), _sock_addr(), _vserv_v(), _req(&_vserv_v), _resp(), fd() { }
 
 Socket::Socket(const Socket& other) : 
-    _type(other._type), _sock_addr(other._sock_addr), _vserv_v(other._vserv_v), fd(other.fd) { }
+    _type(other._type), _sock_addr(other._sock_addr), _vserv_v(other._vserv_v), 
+    _req(other._req), _resp(other._resp), fd(other.fd) { }
 
-Socket::Socket(const listen_directive_t& sock_addr) : _type(PASSV), _sock_addr(sock_addr) {
+Socket::Socket(const listen_directive_t& sock_addr) : 
+    _type(PASSV), _sock_addr(sock_addr),  _vserv_v(), _req(&_vserv_v), _resp(), fd() {
     struct in_addr addr = { .s_addr = inet_addr(_sock_addr.addr.c_str()) };
     struct sockaddr_in sockaddr_s = {
         .sin_family = AF_INET,
@@ -27,7 +30,7 @@ Socket::Socket(const listen_directive_t& sock_addr) : _type(PASSV), _sock_addr(s
 }
 
 Socket::Socket(int conn_fd, const Socket& passv_Socket) : 
-    _type(ACTV), _sock_addr(passv_Socket._sock_addr), _vserv_v(passv_Socket._vserv_v), fd(conn_fd) { }
+    _type(ACTV), _sock_addr(passv_Socket._sock_addr), _vserv_v(passv_Socket._vserv_v), _req(&_vserv_v), _resp(), fd(conn_fd) { }
 
 Socket::~Socket() { }
 

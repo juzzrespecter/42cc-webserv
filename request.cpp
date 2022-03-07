@@ -1,9 +1,9 @@
 #include "request.hpp"
 
 Request::Request() : 
-    _buffer(), _index(0), _vservVec(), _headerCount(0), _reqLine(), _headers(), _body(), _stage(request_line_stage) { }
+    _buffer(), _index(0), _vservVec(NULL), _headerCount(0), _reqLine(), _headers(), _body(), _stage(request_line_stage) { }
 
-Request::Request(const std::vector<const Server*>& vservVec) :
+Request::Request(const std::vector<const Server*>* vservVec) :
     _buffer(), _index(0), _vservVec(vservVec), _headerCount(0), _reqLine(), _headers(), _body(), _stage(request_line_stage) { }
 
 Request::Request(const Request& c) { 
@@ -44,8 +44,8 @@ const std::string& Request::getQuery() const {
 
 const Location& Request::getLocation(void) const {
     std::vector<const Server*>::const_iterator it = \
-        std::find_if(_vservVec.begin(), _vservVec.end(), find_server_by_host(host()));
-    const Server* server_host = (it == _vservVec.end()) ? _vservVec.front() : *it;
+        std::find_if(_vservVec->begin(), _vservVec->end(), find_server_by_host(host()));
+    const Server* server_host = (it == _vservVec->end()) ? _vservVec->front() : *it;
 
     return server_host->get_location_by_path(getPath());
 }
@@ -315,6 +315,18 @@ std::string Request::_getNextLine(void) {
     line = _buffer.substr(_index, endLine - _index);
     _index += line.size() + CRLF_OCTET_SIZE;
     return line;
+}
+
+void Request::clear(void) {
+    _buffer.clear();
+    _index = 0;
+    
+    _headerCount = 0;
+    _reqLine.clear();
+    _headers.clear();
+    _body.clear();
+
+    _stage = request_line_stage;
 }
 
 const std::string Request::header_list[HEADER_LIST_SIZE] = {
