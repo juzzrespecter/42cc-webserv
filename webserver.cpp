@@ -103,6 +103,7 @@ socket_status_f    Webserver::write_to_socket(Socket& conn_socket) {
     const std::string& response = conn_socket.get_response_string();
 
     int socket_wr_stat = write(conn_socket.fd, response.c_str(), response.size());
+    
     if (socket_wr_stat == -1) {
         /* supón error EAGAIN, el buffer de write está lleno y como trabajamos con sockets
          * no bloqueadores retorna con señal de error, la respuesta sigue siendo válida y el cliente espera */
@@ -110,6 +111,7 @@ socket_status_f    Webserver::write_to_socket(Socket& conn_socket) {
         return STANDBY;
     }
     //if (/* Cliente ha indicado en cabecera que hay que cerrar la conexión tras enviar la respuesta */) {
+    /* si la respuesta contiene un codigo de error, hay que chapar conexion */
     if (conn_socket.marked_for_closing()) {
         conn_socket.close_socket();
         return CLOSED;
@@ -195,16 +197,26 @@ Webserver::~Webserver() {
     for (std::vector<Socket>::iterator it = write_v.begin(); it != write_v.end(); it++) {
         it->close_socket();
     }
+    std::cout << "called ~Webserver\n";
+}
+
+void p(std::vector<Socket>& s) {
+    std::cout << "[ ";
+    for (std::vector<Socket>::iterator it = s.begin(); it != s.end(); it++) {
+        std::cout << it->fd << " ";
+    }
+    std::cout << "]\n";
 }
 
 /* main loop */
 void Webserver::run(void) {
-    //signal(SIGINT, &sighandl);
+    signal(SIGINT, &sighandl);
 
     std::cout << "[servidor levantado]\n";
     while (!quit_f) {
         FD_ZERO(&readfds);
         FD_ZERO(&writefds);
+        p(read_v), p(write_v);
 
         for (std::vector<Socket>::iterator it = read_v.begin(); it != read_v.end(); it++) {
             FD_SET(it->fd, &readfds);

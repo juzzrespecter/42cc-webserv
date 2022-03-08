@@ -22,8 +22,6 @@
 #endif
 #endif
 
-#define N_OF_PAGES 3
-
 class FileParser {
 	private:
 		std::string rawFile;
@@ -41,17 +39,19 @@ class FileParser {
 class Response
 {
 	private:
+	
 		/* ------------------------- ATTRIBUTES ------------------------ */
 
 		//const std::vector<Server*>		_infoVirServs;	// Servers blocks from config file that match a specific port
 		Request*	_req;		// Request object when the request is fully received, used to create response
 		Location	_loc;
 
-		StatusLine	_staLine;	// Fist line of http response
-		std::string	_buffer;	// Buffer containing the response that will be send. Directly writing
+		StatusLine				_staLine;	// Fist line of http response
+		std::string				_buffer;	// Buffer containing the response that will be send. Directly writing
 															// headers into it.
-      	bool        _autoIndex;     // Sets to true if request is GET or HEAD, the target (after rooting) 
-                    				// is a directory, and autoindex is on.
+      	bool                                	_autoIndex;     // Sets to true if request is GET or HEAD, the target (after rooting) 
+                                                            		// is a directory, and autoindex is on.
+
 	public:
 
 		/* ------------------------ COPLIEN FORM ----------------------- */
@@ -106,11 +106,8 @@ class Response
 		// Fills buffer with Last-Modified header (last modification of a file)
 		void fillLastModifiedHeader(const char* uri);
 
-        // Fills buffer with Location header (for HTTP redirection)
-        void fillLocationHeader(const std::string& redirectedUri);
-
-		void fillContentTypeHeader(void);
-		void fillContentTypeHeader(const std::string&);
+        	// Fills buffer with Location header (for HTTP redirection)
+        	void fillLocationHeader(const std::string& redirectedUri);
 
 		// Fills buffer with status line
 		void fillStatusLine(const StatusLine& staLine);
@@ -161,7 +158,7 @@ class Response
 			void autoIndexDisplayer(const std::string&, std::string&);
 
 			std::string* getCgiExecutableName(const std::string&);
-			std::string error_page(const StatusLine&);
+
 	public:
 	
 		/* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */

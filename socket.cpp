@@ -2,8 +2,9 @@
 
 Socket::Socket(void) { }
 
-Socket::Socket(const Socket& other) : 
-    _type(other._type), _sock_addr(other._sock_addr), _serv_v(other._serv_v), fd(other.fd) { }
+Socket::Socket(const Socket& other) {
+    *this = other;
+}
 
 Socket::Socket(const listen_directive_t& sock_addr) : _type(PASSV), _sock_addr(sock_addr) {
     struct in_addr addr = { .s_addr = inet_addr(_sock_addr.addr.c_str()) };

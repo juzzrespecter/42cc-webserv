@@ -3,9 +3,9 @@
 Request::Request() : 
     _buffer(), _index(0), _headerCount(0), _reqLine(), _headers(), _body(), _stage(request_line_stage) { }
 
-Request::Request(const Request& c) { 
-    *this = c;
-}
+Request::Request(const Request& c) :
+    _buffer(c._buffer), _index(c._index), _headerCount(c._headerCount), _reqLine(c._reqLine),
+    _headers(c._headers), _body(c._body), _stage(c._stage) { }
 
 Request::~Request() { }
 
@@ -161,14 +161,11 @@ void    Request::parseHTTPVersion(const std::string& token) {
 }
 
 void    Request::parseHeaderLine(void) {
-    std::cout << "test: " << _buffer.substr(_index) << ", comp: " << _buffer.compare(_index, CRLF_OCTET_SIZE, CRLF) << "\n";
     if (!_buffer.compare(_index, CRLF_OCTET_SIZE, CRLF)) { /* esto da problemas */
         _index += CRLF_OCTET_SIZE;
         _stage = (_reqLine.getMethod() == POST) ? request_body_stage : request_is_ready;
-        std::cout << "stage: " << _stage << "\n";
         return ;
     }
-    std::cerr << "seguimos en headerLineLoop\n";
     std::string headerLine = _getNextLine();
 
     if (headerLine.size() > MAX_HEADER_LEN) {
@@ -301,7 +298,6 @@ std::string Request::_getNextLine(void) {
     std::string line;
     size_t      endLine = _buffer.find(CRLF, _index);
 
-    std::cout << "buscando en " << _buffer.substr(_index) << "\n";
     if (endLine == std::string::npos) {
         throw StatusLine(400, REASON_400, "syntax error found in request: expected CRLF");
     }

@@ -1,10 +1,5 @@
 #include "response.hpp"
 
-/*A server which receives an entity-body with a transfer-coding it does
-   not understand SHOULD return 501 (Unimplemented), and close the
-   connection. A server MUST NOT send transfer-codings to an HTTP/1.0
-   client.*/
-
 /* FileParser tmp definition */
 FileParser::FileParser(void) : rawFile(), status(false) { }
 
@@ -100,18 +95,33 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 	_loc = loc;
 	_staLine = sl;
 
+
+	// If an error occured during request parsing
 	if (_staLine.getCode() >= 400)
 		return fillError(_staLine);
 
 	try
 	{
-		std::string hostName(_req->getHeaders().find("Host")->second); 		// Keeping only host name and removing port
+		// Keeping only host name and removing port
+		std::string hostName(_req->getHeaders().find("Host")->second);
 		hostName = hostName.substr(0, hostName.find(':')); // * tal vez no sea necesario *
+		
+		// Looking for the location block matching the URI. If returns NULL, then no appropriate block was found
+		// and no additionnal configuration (index, root...) will change the URI
+		
+		/*#if DEBUG
+			if (_loc)
+				_loc.printLocation(_loc.uri);
+			else
+				std::cout << "LOCATION: no match\n"; siempre hay un _Loc por default
+		#endif*/
 
-        if (!_loc.get_return_uri().empty())        // Doing an HTTP redirection (301) if redirect field filled in matched location block
+        // Doing an HTTP redirection (301) if redirect field filled in matched location block
+        if (!_loc.get_return_uri().empty())
         {
-            std::string redirectedUri = _req->getPath();            // Replacing location name in the URI with the redirect string set in config file
-            replaceLocInUri(&redirectedUri, _loc.get_return_uri(), _loc.uri);
+            // Replacing location name in the URI with the redirect string set in config file
+            std::string redirectedUri = _req->getPath();
+            replaceLocInUri(&redirectedUri, _loc./*get_redirect()*/get_return_uri(), _loc.uri);
 
             // Replacing previous requested URI with redirected URI for next client request
             // (Location header in 301 response will be set with this URI)
@@ -120,8 +130,12 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 
             throw StatusLine(301, REASON_301, "http redirection");
         }
-		std::string realUri = reconstructFullURI(_req->getMethod(), _req->getPath());    // Modifying URI with root and index directive if any, checking for the allowed methods
-		std::string *cgiName = getCgiExecutableName(realUri);     					    // Checking if the targeted file is a CGI based on his extension
+
+        // Modifying URI with root and index directive if any, checking for the allowed methods
+		std::string realUri = reconstructFullURI(_req->getMethod(), _req->getPath());
+
+        // Checking if the targeted file is a CGI based on his extension
+		std::string *cgiName = getCgiExecutableName(realUri);
 
         // Execute the appropriate method and fills the response buffer with status line + 
         // headers + body (if any). If an error occurs during this process, it will throw 
@@ -134,10 +148,13 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
             execPost(realUri);
 		else if (_req->getMethod() == DELETE)
             execDelete(realUri);
+
 		else
-			throw (StatusLine(400, REASON_400, "request method do not exist")); /* doble check de method */
-	}
-	catch (const StatusLine& errorStaLine)	// If an error occured during the reponse creation
+			throw (StatusLine(400, REASON_400, "request method do not exist"));
+	} 
+
+	// If an error occured during the reponse creation
+	catch (const StatusLine& errorStaLine)
 	{
 		fillError(errorStaLine);
 	}
@@ -164,12 +181,14 @@ void Response::fillServerHeader()
 
 void Response::fillDateHeader() 
 {
-	time_t now = time(0);			 // current date and time on the current system
+	// current date and time on the current system
+	time_t now = time(0);
 
-	char* date_time = ctime(&now); 	// convert now to string form
+	// convert now to string form
+	char* date_time = ctime(&now);
 
-	std::vector<std::string> date = splitWithSep(date_time, ' ');	// Splitting date line and removing '\n'
-
+	// Splitting date line and removing '\n'
+	std::vector<std::string> date = splitWithSep(date_time, ' ');
 	date.back().resize(4);
 
 	// Formating header date.
@@ -218,16 +237,14 @@ void print_Loc(const Location& _loc)
 		std::cout << "index: " << *it << "\n";
 }
 
-void Response::replaceLocInUri(std::string* uri, const std::string& root, const std::string& locName)
+void Response::replaceLocInUri(std::string* uri, const std::string& root, const std::string& _locName)
 {
 	// Creating an iterator pointing just after the part that matched the location
-	std::cout << "uri antes: " << *uri << "\n";
-	std::string::iterator it = uri->begin() + locName.size();
+	std::string::iterator it = uri->begin() + _locName.size();
 
 	// Going to the next '/' (for example, case "/authentificate/ok" matched location "/auth" with a root of "/test"
 	//						  >> we need to replace "/authentificate" with "/test" in order to get "/test/ok")
-	/* location uri no modifica el abs_path de la request, solo hay que añadir root al principio */
-	if (*it != '/' && locName.size() > 1)
+	if (*it != '/' && _locName.size() > 1)
 		while (*it && *it != '/')
 			++it;
 	
@@ -239,13 +256,12 @@ void Response::replaceLocInUri(std::string* uri, const std::string& root, const 
 		uri->insert(uri->begin(), '/');
 		
 	uri->insert(0, root);
-	std::cout << "uri despues: " << *uri << "\n";
 }
 
 std::string Response::addIndex(const std::string& uri, const std::vector<std::string>& indexs)
 {
 	struct stat infFile;
-	std::cout << "uri pre index: " << uri << "\n";
+	
 	for (std::vector<std::string>::const_iterator it = indexs.begin(); it != indexs.end(); ++it)
 	{
 		// Add each index to the uri
@@ -255,7 +271,6 @@ std::string Response::addIndex(const std::string& uri, const std::vector<std::st
 		if (!stat(uriWithIndex.c_str(), &infFile))
 			return uriWithIndex;
 	}
-	std::cout << "uri pos index: " << uri << "\n";
 	
 	throw StatusLine(403, REASON_403, "trying to access a directory addIndex method");
 }
@@ -277,9 +292,28 @@ std::string Response::reconstructFullURI(int method, std::string uri)
 	bool fileExist = true;
 	struct stat infFile;
 
+
+	// zero location block match the URI so the URI isn't modified
+	/**
+	if (!_loc)
+	{
+        // Need to add a '.' for relative path access
+        if (!uri.empty() && uri[0] == '/')
+            uri.insert(uri.begin(), '.');
+    
+		// Checking if the file exist or if it's a directory. Case POST method, no 404 because it can create the file.
+		if (stat(uri.c_str(), &infFile) == -1 && !(fileExist = false) && method != POST)
+			throw StatusLine(404, REASON_404, "case no match with location block in reconstructlFullURI method: " + uri);
+		if (fileExist && S_ISDIR(infFile.st_mode))
+			throw StatusLine(403, REASON_403, "trying to access a directory case no match with"
+					" location block in reconstructlFullURI method");
+
+		return uri;
+	}*/
+
 	// Replacing the part of the URI that matched with the root path if there is one existing
 	if (!_loc.get_root().empty() && !(method == POST && !_loc.get_upload_path().empty()))
-		replaceLocInUri(&uri, _loc.get_root(), /*_loc.uri*/_loc.uri);
+		replaceLocInUri(&uri, _loc.get_root(), /*_loc.uri*/_req->getPath());
 
 	else if (method == POST && !_loc.get_upload_path().empty())
 		replaceLocInUri(&uri, _loc.get_upload_path(), _req->getPath());
@@ -338,37 +372,28 @@ void Response::fillError(const StatusLine& sta)
 
 
 	std::string pathError;
-	std::string errorFile;
 	std::string errorCodeHTML = "/" + convertNbToString(sta.getCode()) + ".html";
 
     // Custom error pages if set in config file
-	if (_loc.get_error_page().empty()) {
-		errorFile = error_page(sta);
-		fillContentTypeHeader();
-	} 
-	else
+	if (!_loc.get_error_page().empty())
 	{
         // Adding relative file access if not well filled in config file
         pathError = (_loc.get_error_page()[0] == '/') ? 
                 "." + _loc.get_error_page() + errorCodeHTML: _loc.get_error_page() + errorCodeHTML;
 
 		struct stat infFile;
-		if (stat(pathError.c_str(), &infFile) == -1) /* check if pathError file is readable */{
-			errorFile = error_page(sta);
-			fillContentTypeHeader();
-		}
-		else {
-			FileParser body(pathError.c_str(), true);
-			errorFile = body.getRequestFile();
-			fillContentTypeHeader(pathError.substr(pathError.find('.'))); /* maybe needs a better syntax check ?? */
-		}
+		if (stat(pathError.c_str(), &infFile) == -1)
+			pathError = DEFAULT_PATH_ERROR_PAGES + errorCodeHTML;
 	}
+    
+	else
+		pathError = DEFAULT_PATH_ERROR_PAGES + errorCodeHTML;
 
     // Filling buffer
+	FileParser body(pathError.c_str(), true); /* punto de fallo */
 
-	//fillContentlengthHeader(convertNbToString(body.getRequestFileSize()));
-	fillContentlengthHeader(convertNbToString(errorFile.size()));
-	_buffer += CRLF + errorFile;
+	fillContentlengthHeader(convertNbToString(body.getRequestFileSize()));
+	_buffer += CRLF + body.getRequestFile();
 }
 
 void Response::postToFile(const std::string& uri)
@@ -405,7 +430,7 @@ void Response::execGet(const std::string& realUri)
     }
 
     // Filling autoindex
-    else /* aqui problema */
+    else
     {
         std::string autoIndexPage;
         autoIndexDisplayer(realUri, autoIndexPage);
@@ -451,7 +476,6 @@ void Response::autoIndexDisplayer(const std::string& realUri, std::string& autoI
 	struct dirent*	dir_s;
 
 	std::vector<std::string> file_list;
-	std::cout << "try to open dir: " << realUri << "\n";
 	dir_ptr = opendir(realUri.c_str());
 	if (!dir_ptr) {
 		throw StatusLine(500, REASON_500, "autoindex: could not open directory");
@@ -472,7 +496,7 @@ void Response::autoIndexDisplayer(const std::string& realUri, std::string& autoI
 		autoIndexPage.append("<a href=\"" + *it + "/\">" + *it + "/</a>\t\t" + 
 			timeStamp + " " + convertNbToString(info.st_size) + "\n");
 	}
-	autoIndexPage.append("<br></body></html>");
+	autoIndexPage.append("<br></body></html");
 }
 
 /* beware of new lines */
@@ -493,62 +517,11 @@ std::string* Response::getCgiExecutableName(const std::string& tal) {
 }
 
 /* hardcoded pages ?? */
-std::string Response::error_page(const StatusLine& sl) {
-	std::string error_page;
-
-	error_page.append("<!DOCTYPE><html><head><title>Webserv</title></head><body><br><h1>Webserv</h1><hr><br><h2>");
-	error_page.append(sl.getReason());
-	error_page.append("</h2></body></html>");
-	return error_page;
-}
-
-/* overload for webserver-generated pages */
-void Response::fillContentTypeHeader(void) {
-	_buffer.append("Content-Type: text/html");
-	_buffer.append(CRLF);
-}
-
-void Response::fillContentTypeHeader(const std::string& fileExt) {
-	std::string contentTypeValue = "application/octet-stream"; // default value for unrecognized file extesions
-
-	_buffer.append("Content-Type: ");
-	if (fileExt.empty()) {
-		_buffer.append(contentTypeValue + CRLF);
-		return ;		
-	}
-
-	/* content-type should be set according to accept header values; if
-	   accept header is present in request and does not allow response uri file format,
-	   server should send 406 code error, but this behaviour is optional */
-	std::string type[4] = {"audio", "image", "text", "video"};
-
-	std::string audio_subtype[1] = {"mpeg"};
-	std::string audio_fileext[1] = {"mp3"};
-
-	std::string image_subtype[5] = {"gif", "jpeg", "jpeg", "png", "tiff"};
-	std::string image_fileext[5] = {"gif", "jpg",  "jpeg", "png", "tiff"};
-
-	std::string text_subtype[5] = {"css", "csv", "html", "plain", "xml"};
-	std::string text_fileext[5] = {"css", "csv", "html", "txt",   "xml"};
-
-	std::string video_subtype[5] = {"mpeg", "mp4", "quicktime", "x-flv", "webm"};
-	std::string video_fileext[5] = {"mpeg", "mp4", "mov",       "flv",   "webm"};
-
-	std::string* subtype_arr[4] = {audio_subtype, image_subtype, text_subtype, video_subtype};
-	std::string* fileext_arr[4] = {audio_fileext, image_fileext, text_fileext, video_fileext};
-
-	int subtype_id[4] = {1, 5, 5, 5};
-
-	for (int i = 0; i < 4; i++) {
-		for (int j = 0; j < subtype_id[i]; j++) {
-			if (!fileext_arr[i][j].compare(fileExt)) {
-				contentTypeValue = type[i] + "/" + subtype_arr[i][j];
-				break ;
-			}
-		}
-	}
-	_buffer.append(contentTypeValue + CRLF);
-}
+//std::string Response::pages[3] = {
+//	"!DOCTYPE<html><head>Webserv 404</head><body><h1>Webserv 404</h1><hr><br>file not found.</body></html>",
+//	"!DOCTYPE<html><head>Webserv 403</head><body><h1>Webserv 403</h1><hr><br>foribidden.</body></html>",
+//	"!DOCTYPE<html><head>Webserv 500</head><body><h1>Webserv 500</h1><hr><br>internal server error.</body></html>"
+//};
 
 /* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */
 
