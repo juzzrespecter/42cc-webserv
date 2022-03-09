@@ -29,3 +29,12 @@ server {
     listen 8082;
     autoindex on;
 }
+
+server {
+    listen 8083;
+    accept_upload ./uploaded_files/;
+    accept_method GET POST;
+    location /index_test {
+        index index_test.html;
+    }
+}
