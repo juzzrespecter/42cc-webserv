@@ -28,7 +28,8 @@ Socket::Socket(const listen_directive_t& sock_addr) : _type(PASSV), _sock_addr(s
 }
 
 Socket::Socket(int conn_fd, const Socket& passv_Socket) : 
-    _type(ACTV), _sock_addr(passv_Socket._sock_addr), _serv_v(passv_Socket._serv_v), fd(conn_fd) { }
+    _type(ACTV), _sock_addr(passv_Socket._sock_addr), _serv_v(passv_Socket._serv_v), _req(_serv_v), fd(conn_fd) { 
+}
 
 Socket::~Socket() { }
 
@@ -50,25 +51,13 @@ const listen_directive_t& Socket::get_socket_addr(void) const {
 }
 
 void Socket::build_request(const std::string& buffer) {
-     _req.recvBuffer(_serv_v, buffer);    
+     _req.recvBuffer(buffer);    
 }
 
 void Socket::build_response(const StatusLine& sl) {
-     _resp.fillBuffer(&_req, _req.getLocation(_serv_v), sl);
+     _resp.fillBuffer(&_req, _req.getLocation(), sl);
      _req.clear();
 }
-
-//void Socket::set_response(const Response& resp) {
-//    _resp = resp;
-//}
-
-//Request& Socket::get_request(void) {
-//    return _req;
-//}
-
-//Response& Socket::get_response(void) {
-//    return _resp;
-//}
 
 std::string Socket::get_response_string(void) const {
     return _resp.getBuffer();
@@ -85,9 +74,14 @@ bool Socket::is_passv(void) const {
 bool Socket::marked_for_closing(void) const {
     std::map<std::string, std::string>::const_iterator it = _req.getHeaders().find("Connection");
 
+    /* case Connection header set to close */
 	if (it != _req.getHeaders().end() && !it->second.compare("close")) {
 		return true;
 	}
+    /* case error response (4xx / 5xx) */
+    if (_resp.getCode() >= 400) {
+        return true;
+    }
 	return false;
 }
 

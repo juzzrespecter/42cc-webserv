@@ -16,12 +16,12 @@
 
 #define HEADER_LIST_SIZE 37
 
-#define REQ_LINE 0
-#define HEADER 1
-#define REQ_BODY 2
-#define REQ_CHUNK_BODY 3
-#define REQ_TAB_SIZE 4
-#define READY 4
+enum request_stage_f { 
+	request_line_stage,
+	header_stage,
+	request_body_stage,
+	request_is_ready
+};
 
 #define THROW_STATUS(extraInfo)	throw StatusLine(400, REASON_400, extraInfo)
 
@@ -29,20 +29,18 @@ class Request
 {
 	private:
 		typedef std::map<std::string, std::string>	header_map;
-		typedef bool (Request::*req_options)(void);
 		/* ------------------------- ATTRIBUTES ------------------------ */
 
 		std::string	_buffer;		// Store the request received
 		size_t		_index;			// Indicates which part of the buffer is left to treat
         
-		std::vector<const Server*> _serv_v;
 		size_t	_headerCount;
 
 		RequestLine	_reqLine;	// Contains all the information from the request line
         header_map	_headers;	// Store the headers
         Body		_body;		// Store the body
 	
-		size_t	_stage;
+		request_stage_f	_stage;
 	
 		static const std::string header_list[HEADER_LIST_SIZE];
 
@@ -51,7 +49,6 @@ class Request
 		/* ------------------------ COPLIEN FORM ----------------------- */
 
 		Request();
-		Request(const std::vector<const Server*>&);
 		Request(const Request& c);
 		~Request();
 		Request& operator=(Request a);
@@ -66,21 +63,23 @@ class Request
 		int getMethod() const;
 		const std::string& getPath() const;
 		const std::string& getQuery() const;
-		const Location& getLocation(void) const;
+		const Location& getLocation(const std::vector<const Server*>&) const;
 
 
 		/* --------------------------- SETTERS ------------------------- */
 
         	void setPath(const std::string& path);
 
+
 		/* --------------------------- METHODS ------------------------- */
 
 		// Add the buffer from receive to request object
 		//Request& operator+=(const char* charBuffer);
-		void recvBuffer(const std::string&);
+		void recvBuffer(const std::vector<const Server*>&, const std::string&);
 
 		// Check if the data received is correct. If an error occur or if a request was
 		// fully received, throws a status line with the appropriate code.
+		// void parsingCheck();
 
 		// Reset the request object
 		void clear();
@@ -100,27 +99,29 @@ class Request
         //	bool newLineReceived(size_t posCRLF);
 
 		// Checks that the request line received respect the RFC norme.
-		bool parseRequestLine(void);
+		void parseRequestLine(void);
 
 		// Checks that the first word in a request line in a appropriate method.
-		void parseMethodToken(const std::string& token); // Checks that the first word in a request line in a appropriate method.
-		void parseURI(std::string& token);				// Check that the URI in the request line respect the RFC norme.
+		void parseMethodToken(const std::string& token);
+
+		// Check that the URI in the request line respect the RFC norme.
+		void parseURI(std::string& token);
 
 		// Check that the HTTP version in the request line is respecting the RFC norme and is equal 
 		// to 1.1.
 		void parseHTTPVersion(const std::string& token);
         
 		// Check that the header line received respect the RFC norme.
-       	bool parseHeaderLine(void);
+       	void parseHeaderLine(void);
 		void headerMeetsRequirements(void) const;
-		void setUpRequestBody(void);
+		void setUpRequestBody(const std::vector<const Server*>&);
 		
 		// Received the body until n octets (from content-length header) has been received. Then throw 
 		// a status line with the appropriate code.
-		bool parseReqBody(void);
+		void parseRequestBody(void);
 
 		size_t parseChunkSize(void);
-		bool parseChunkReqBody(void);
+		void parseChunkedRequestBody(void);
 		
 		// Search for the correct server block (matching host header field, if not using default server
 		// block) and returns an unsigned max_body_size if the field is existing in the config file, otherwise
@@ -131,7 +132,7 @@ class Request
 		std::string	host(void) const;
 		size_t 		contentLength(void) const;
 
-		size_t _getNextLine(std::string&);
+		std::string _getNextLine(void);
 
 		
 		/* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */

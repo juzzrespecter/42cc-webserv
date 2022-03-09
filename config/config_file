@@ -24,3 +24,8 @@ server {
 #        return /;
     }
 }
+
+server {
+    listen 8082;
+    autoindex on;
+}

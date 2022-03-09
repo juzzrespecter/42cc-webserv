@@ -160,6 +160,9 @@ class Response
 
 			void autoIndexDisplayer(const std::string&, std::string&);
 
+			bool isResourceAFile(const std::string&) const;
+			std::string getResourceExtension(const std::string&) const;
+
 			std::string* getCgiExecutableName(const std::string&);
 			std::string error_page(const StatusLine&);
 	public:

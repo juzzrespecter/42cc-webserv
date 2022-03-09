@@ -1,14 +1,11 @@
 #include "request.hpp"
 
 Request::Request() : 
-    _buffer(), _index(0), _serv_v(), _headerCount(0), _reqLine(), _headers(), _body(), _stage(REQ_LINE) { }
-
-Request::Request(const std::vector<const Server*>& serv_v) :
-    _buffer(), _index(0), _serv_v(serv_v), _headerCount(0), _reqLine(), _headers(), _body(), _stage(REQ_LINE) { }
+    _buffer(), _index(0), _headerCount(0), _reqLine(), _headers(), _body(), _stage(request_line_stage) { }
 
 Request::Request(const Request& c) :
-    _buffer(c._buffer), _index(c._index), _serv_v(c._serv_v), _headerCount(c._headerCount),
-     _reqLine(c._reqLine), _headers(c._headers), _body(c._body), _stage(c._stage) { }
+    _buffer(c._buffer), _index(c._index), _headerCount(c._headerCount), _reqLine(c._reqLine),
+    _headers(c._headers), _body(c._body), _stage(c._stage) { }
 
 Request::~Request() { }
 
@@ -42,10 +39,10 @@ const std::string& Request::getQuery() const {
     return _reqLine.getQuery();
 }
 
-const Location& Request::getLocation(void) const {
+const Location& Request::getLocation(const std::vector<const Server*>& vsrv_v) const {
     std::vector<const Server*>::const_iterator it = \
-        std::find_if(_serv_v.begin(), _serv_v.end(), find_server_by_host(host()));
-    const Server* server_host = (it == _serv_v.end()) ? _serv_v.front() : *it;
+        std::find_if(vsrv_v.begin(), vsrv_v.end(), find_server_by_host(host()));
+    const Server* server_host = (it == vsrv_v.end()) ? vsrv_v.front() : *it;
 
     return server_host->get_location_by_path(getPath());
 }
@@ -53,11 +50,11 @@ const Location& Request::getLocation(void) const {
 void Request::setPath(const std::string& path) {
     _reqLine.setPath(path);
 }
-
+		
 void swap(Request& a, Request& b) {
    swap(a._buffer, b._buffer);
    std::swap(a._index, b._index);
-   std::swap(a._serv_v, b._serv_v);
+   //swap(a._vservVec, b._vservVec);
    std::swap(a._headerCount, b._headerCount);
    swap(a._reqLine, b._reqLine);
    swap(a._headers, b._headers);
@@ -71,28 +68,53 @@ void swap(Request& a, Request& b) {
 //        CRLF
 //        [ message-body ]
 
-void    Request::recvBuffer(const std::string& newBuffer) {
-    static req_options req_table[REQ_TAB_SIZE] = {
-        &Request::parseRequestLine,
-        &Request::parseHeaderLine,
-        &Request::parseReqBody,
-        &Request::parseChunkReqBody
-    };
-    bool still_parsing = true; 
-
+void    Request::recvBuffer(const std::vector<const Server*>& vsrv_v, const std::string& newBuffer) {
     _buffer.append(newBuffer);
-    while (still_parsing == true) {
-        still_parsing = (this->*req_table[_stage])(); 
+
+    if (_stage == request_line_stage) {
+        parseRequestLine();
     }
-    if (_stage == READY) {
-        throw StatusLine(200, REASON_200, "");
+    while (_stage == header_stage/* && _buffer[_index]*/) { /* ojo! */
+        parseHeaderLine();
+        if (_stage != header_stage) {
+            headerMeetsRequirements();
+        }
+    }
+    if (_stage == request_body_stage) {
+        setUpRequestBody(vsrv_v); // ?? setup en cada lectura de body??
+        if (transferEncodingIsChunked() == true) {
+            parseChunkedRequestBody();
+        } else {
+            parseRequestBody();
+        }
+    }
+    if (_stage == request_is_ready) {
+        throw StatusLine(100, REASON_100, "request ready");
     }
 }
+// new recvBuffer 
 
-bool    Request::parseRequestLine(void) {
-    std::string requestLine;
+/*void newrecvBuffer(const std::vector<const Server*>& vsrv_v, const std::string& rawData) {
+    _buffer = rawData;
+    while (_getNextLine()) // rewrite gnl to return line status? (1 == OK, 0 == buffer done, throw when no CRLF at end)
+    {
+        if first_stage {
+            parsereqline;
+        }
+        if second_stage {
+            parseheader;
+            if (thisline == lastheaderline) {
+                check_headers;
+            }
+        }
+        if third_stage {}
+    }
+}*/
 
-    if (!_getNextLine(requestLine) || requestLine.empty() || requestLine.size() > MAX_URI_LEN) {
+void    Request::parseRequestLine(void) {
+    std::string requestLine = _getNextLine();
+
+    if (requestLine.empty() || requestLine.size() > MAX_URI_LEN) {
         THROW_STATUS("syntax error in request-line");
     }
     std::stringstream   lineBuffer(requestLine);
@@ -107,8 +129,7 @@ bool    Request::parseRequestLine(void) {
     parseMethodToken(token[0]);
     parseURI(token[1]);
     parseHTTPVersion(token[2]);
-    _stage = HEADER;
-    return true;
+    _stage = header_stage;
 }
 
 void    Request::parseMethodToken(const std::string& token) {
@@ -157,22 +178,14 @@ void    Request::parseHTTPVersion(const std::string& token) {
     }
 }
 
-bool    Request::parseHeaderLine(void) {
-    std::string headerLine;
+void    Request::parseHeaderLine(void) {
+    if (!_buffer.compare(_index, CRLF_OCTET_SIZE, CRLF)) { /* esto da problemas */
+        _index += CRLF_OCTET_SIZE;
+        _stage = (_reqLine.getMethod() == POST) ? request_body_stage : request_is_ready;
+        return ;
+    }
+    std::string headerLine = _getNextLine();
 
-    if (!_getNextLine(headerLine)) {
-        return false;
-    }
-    if (headerLine.empty()) {
-        headerMeetsRequirements();
-        if (_reqLine.getMethod() == POST) {
-            setUpRequestBody();
-            _stage = (transferEncodingIsChunked() == true) ? REQ_CHUNK_BODY : REQ_BODY;
-        } else {
-            _stage = READY;
-        }
-        return (_stage != READY);
-    }
     if (headerLine.size() > MAX_HEADER_LEN) {
         THROW_STATUS("syntax error on request: header line overflows");
     }
@@ -180,7 +193,7 @@ bool    Request::parseHeaderLine(void) {
     std::string fieldValue = headerLine.substr(fieldName.size() + 1);
 
     if (fieldValue.empty()) {
-        return true;
+        return ;
     }
     if (_headerCount++ > HEADER_LIMIT) {
         THROW_STATUS("too many headers on request");
@@ -188,10 +201,9 @@ bool    Request::parseHeaderLine(void) {
     for (int i = 0; i < HEADER_LIST_SIZE; i++) {
         if (!fieldName.compare(header_list[i])) {
             _headers.insert(std::pair<std::string, std::string>(fieldName, fieldValue));
-            break ;
+            return ;
         }
     }
-    return true;
 }
 
 void    Request::headerMeetsRequirements(void) const {
@@ -214,14 +226,11 @@ void    Request::headerMeetsRequirements(void) const {
     }
 }
 
-void    Request::setUpRequestBody(void) {
+void    Request::setUpRequestBody(const std::vector<const Server*>& vsrv_v) {
     find_server_by_host comp(host());
     header_map::iterator cl = _headers.find("Content-Length");
 
-    if (_serv_v.empty()) {
-        throw StatusLine(500, REASON_500, "no virtual server paired with socket");
-    }
-    _body.setMaxSize(getLocation().get_body_size());
+    _body.setMaxSize(getLocation(vsrv_v).get_body_size());
     if (cl != _headers.end()) {
         _body.setSize(std::atoi(cl->second.c_str()));
     }
@@ -229,12 +238,8 @@ void    Request::setUpRequestBody(void) {
 
 size_t Request::parseChunkSize(void) {
     char*       last;
-    std::string sizeToken;
-
-    if (!_getNextLine(sizeToken)) {
-        THROW_STATUS("bad chunked-request syntax");
-    }
-    int size = strtol(sizeToken.c_str(), &last, 0);
+    std::string sizeToken = _getNextLine();
+    int         size = strtol(sizeToken.c_str(), &last, 0);
 
     if (sizeToken.empty() || *last || size < 0) {
         THROW_STATUS("bad chunked-request syntax");
@@ -244,22 +249,20 @@ size_t Request::parseChunkSize(void) {
 
 // Sintaxis SIZE CRLF CHUNK CRLF
 // Para el último chunk, sintaxis 0 CRLF CRLF y marcamos Request como preparada para servir
-bool    Request::parseChunkReqBody(void) {
+void    Request::parseChunkedRequestBody(void) {
     size_t      size = parseChunkSize();
-    std::string chunk;
+    std::string chunk = _getNextLine();
 
-    if (!_getNextLine(chunk) && ((!size && !chunk.empty()) && (size != chunk.size()))) {
+    if ((!size && !chunk.empty()) && (size != chunk.size())) {
         THROW_STATUS("bad chunked-request syntax");
     }
     _body.recvBuffer(chunk);
     if (!size) {
-     _stage = READY;
-     return false;
+     _stage = request_is_ready;
     }
-    return true;
 }
 
-bool    Request::parseReqBody(void) {
+void    Request::parseRequestBody(void) {
     std::string bodyBuffer = _buffer.substr(_index);
 
     _index += bodyBuffer.size();
@@ -268,10 +271,8 @@ bool    Request::parseReqBody(void) {
         THROW_STATUS("request body overflows content-length limit");
     }
     if (_body.getBody().size() == contentLength()) {
-     _stage = READY;
-     return false;
+     _stage = request_is_ready;
     }
-    return true;
 }
 
 bool    Request::transferEncodingIsChunked(void) const {
@@ -311,10 +312,8 @@ void Request::print(void) const {
     std::cout << "* -------------------- *\n\n";
 }
 
-size_t Request::_getNextLine(std::string& line) {
-    if (_index == _buffer.size()) {
-        return 0; // end of read
-    }
+std::string Request::_getNextLine(void) {
+    std::string line;
     size_t      endLine = _buffer.find(CRLF, _index);
 
     if (endLine == std::string::npos) {
@@ -322,7 +321,7 @@ size_t Request::_getNextLine(std::string& line) {
     }
     line = _buffer.substr(_index, endLine - _index);
     _index += line.size() + CRLF_OCTET_SIZE;
-    return 1;
+    return line;
 }
 
 void Request::clear(void) {
@@ -332,7 +331,7 @@ void Request::clear(void) {
     _reqLine.clear();
     _headers.clear();
     _body.clear();
-    _stage = REQ_LINE;
+    _stage = request_line_stage;
 }
 
 const std::string Request::header_list[HEADER_LIST_SIZE] = {

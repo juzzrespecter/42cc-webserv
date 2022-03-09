@@ -272,6 +272,7 @@ void Response::checkMethods(int method, const std::vector<std::string>& methodsA
 	throw StatusLine(405, REASON_405, "checkMethods method");
 }
 
+/* CASO ENCUENTRA RECURSO COMO DIRECTORIO SIN / FINAL: 301 CON LOCATION A REALURI'/', INDEPENDIENTE DE INDEX/AUTOINDEX */
 std::string Response::reconstructFullURI(int method, std::string uri)
 {
 	bool fileExist = true;
@@ -279,7 +280,7 @@ std::string Response::reconstructFullURI(int method, std::string uri)
 
 	// Replacing the part of the URI that matched with the root path if there is one existing
 	if (!_loc.get_root().empty() && !(method == POST && !_loc.get_upload_path().empty()))
-		replaceLocInUri(&uri, _loc.get_root(), /*_loc.uri*/_loc.uri);
+		replaceLocInUri(&uri, _loc.get_root(), _loc.uri);
 
 	else if (method == POST && !_loc.get_upload_path().empty())
 		replaceLocInUri(&uri, _loc.get_upload_path(), _req->getPath());
@@ -360,7 +361,7 @@ void Response::fillError(const StatusLine& sta)
 		else {
 			FileParser body(pathError.c_str(), true);
 			errorFile = body.getRequestFile();
-			fillContentTypeHeader(pathError.substr(pathError.find('.'))); /* maybe needs a better syntax check ?? */
+			fillContentTypeHeader(getResourceExtension(pathError));
 		}
 	}
 
@@ -383,6 +384,10 @@ void Response::postToFile(const std::string& uri)
 	postFile << _req->getBody().getBody();
 }
 
+bool Response::isResourceAFile(const std::string& uri) const {
+	return (!uri.empty() && uri[uri.size() - 1] == '/');
+}
+
 void Response::execGet(const std::string& realUri)
 {
     // Storing status line and some headers in buffer
@@ -390,29 +395,32 @@ void Response::execGet(const std::string& realUri)
     fillServerHeader();
     fillDateHeader();
     
-    if (!_autoIndex)
-    {
-        FileParser body(realUri.c_str(), true); // CAHNGER
+	std::cout << "getting " << realUri << "\n";
+	if (!isResourceAFile(realUri)) {
+		FileParser body(realUri.c_str(), true); // CAHNGER
 
         // Setting size after storing the body in FileParser object, then setting Last-Modified header
         fillContentlengthHeader(convertNbToString(body.getRequestFileSize()));
         fillLastModifiedHeader(realUri.c_str());
-        _buffer += CRLF;
 
         // For GET, writing the body previously stored to the buffer
-        if (_req->getMethod() == GET)
-            _buffer += body.getRequestFile();
-    }
-
-    // Filling autoindex
-    else /* aqui problema */
-    {
-        std::string autoIndexPage;
+        if (_req->getMethod() == GET) {
+			fillContentTypeHeader(getResourceExtension(realUri));
+            _buffer += CRLF + body.getRequestFile();
+		}
+		std::cout << _buffer << "\n";
+		return ;
+	}
+	if (_autoIndex == false) { // may be redundant code
+		throw StatusLine(403, REASON_403, "requested a directory with autoindex set off");
+	}
+	if (_autoIndex == true)  {
+		std::string autoIndexPage;
         autoIndexDisplayer(realUri, autoIndexPage);
-
+		fillContentTypeHeader();
         fillContentlengthHeader(convertNbToString(autoIndexPage.size()));
         _buffer += CRLF + autoIndexPage;
-    }
+	}
 }
 
 void Response::execPost(const std::string& realUri)
@@ -445,7 +453,7 @@ void Response::execDelete(const std::string& realUri)
 
 void Response::autoIndexDisplayer(const std::string& realUri, std::string& autoIndexPage) {
 	autoIndexPage.append("<html>\n<head><title>Index of " + realUri + "</title></head>\n");
-	autoIndexPage.append("<body><h1>Index of " + realUri + "</h1><br><hr>");
+	autoIndexPage.append("<body><h1>Index of " + realUri + "</h1><br><hr><ul>");
 
 	DIR* 			dir_ptr;
 	struct dirent*	dir_s;
@@ -469,10 +477,12 @@ void Response::autoIndexDisplayer(const std::string& realUri, std::string& autoI
 			StatusLine(500, REASON_500, "autoindex: could not open file");
 		}
 		std::string timeStamp = asctime(localtime(&info.st_mtime));
-		autoIndexPage.append("<a href=\"" + *it + "/\">" + *it + "/</a>\t\t" + 
-			timeStamp + " " + convertNbToString(info.st_size) + "\n");
+
+		timeStamp.erase(--timeStamp.end());
+		autoIndexPage.append("<li><a href=\"" + *it + "/\">" + *it + "/</a></li>      " + 
+			convertNbToString(info.st_size) + " " + timeStamp + "\n");
 	}
-	autoIndexPage.append("<br></body></html>");
+	autoIndexPage.append("</ul><br></body></html>");
 }
 
 /* beware of new lines */
@@ -548,6 +558,24 @@ void Response::fillContentTypeHeader(const std::string& fileExt) {
 		}
 	}
 	_buffer.append(contentTypeValue + CRLF);
+}
+
+std::string Response::getResourceExtension(const std::string& uri) const {
+	std::string ext("");
+	size_t		slash_pos = uri.rfind('/');
+	std::cout << "in " << uri << "\n";
+
+	if (slash_pos == std::string::npos) {
+		return ext;
+	}
+	size_t		dot_pos = uri.find('.', slash_pos);
+
+	if (dot_pos == std::string::npos) {
+		return ext;
+	}
+	ext = uri.substr(dot_pos + 1);
+	std::cout << "out "<< uri << "\n";
+	return ext;
 }
 
 /* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */
