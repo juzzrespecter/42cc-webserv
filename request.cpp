@@ -124,6 +124,9 @@ void    Request::parseMethodToken(const std::string& token) {
 }
 
 void    Request::parseURI(std::string& token) {
+    if (token.size() > MAX_URI_LEN) {
+        throw StatusLine(414, REASON_414, "URI exceeded size limit in server configuration");
+    }
     std::string allowed_ptcl[2] = { "http://", "https://" };
     size_t queryPos = token.find('?');
 
@@ -157,6 +160,17 @@ void    Request::parseHTTPVersion(const std::string& token) {
     }
 }
 
+bool    Request::parseHeaderEnd(void) {
+    headerMeetsRequirements();
+    if (_reqLine.getMethod() == POST) {
+        setUpRequestBody();
+        _stage = (transferEncodingIsChunked() == true) ? REQ_CHUNK_BODY : REQ_BODY;
+    } else {
+        _stage = READY;
+    }
+    return (_stage != READY);
+}
+
 bool    Request::parseHeaderLine(void) {
     std::string headerLine;
 
@@ -164,24 +178,19 @@ bool    Request::parseHeaderLine(void) {
         return false;
     }
     if (headerLine.empty()) {
-        headerMeetsRequirements();
-        if (_reqLine.getMethod() == POST) {
-            setUpRequestBody();
-            _stage = (transferEncodingIsChunked() == true) ? REQ_CHUNK_BODY : REQ_BODY;
-        } else {
-            _stage = READY;
-        }
-        return (_stage != READY);
+        return parseHeaderEnd();
     }
     if (headerLine.size() > MAX_HEADER_LEN) {
         THROW_STATUS("syntax error on request: header line overflows");
     }
+    size_t  colon_pos = headerLine.find(':');
+
+    if (colon_pos == std::string::npos) {   // invalid syntax on header line
+        return true;
+    }
     std::string fieldName = headerLine.substr(0, headerLine.find(':'));
     std::string fieldValue = headerLine.substr(fieldName.size() + 1);
 
-    if (fieldValue.empty()) {
-        return true;
-    }
     if (_headerCount++ > HEADER_LIMIT) {
         THROW_STATUS("too many headers on request");
     }

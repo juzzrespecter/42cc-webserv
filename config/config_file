@@ -28,6 +28,11 @@ server {
 server {
     listen 8082;
     autoindex on;
+
+    location / {
+        accept_method POST GET ;
+        accept_upload ./uploaded_files ;
+    }
 }
 
 server {
@@ -36,5 +41,9 @@ server {
     accept_method GET POST;
     location /index_test {
         index index_test.html;
+    }
+    location /delete_test {
+        accept_method GET DELETE;
+        autoindex on;
     }
 }

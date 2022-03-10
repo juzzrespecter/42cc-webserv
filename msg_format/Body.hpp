@@ -2,6 +2,7 @@
 #define BODY_HPP
 
 #include "../webserv.hpp"
+#include "StatusLine.hpp"
 
 class Body
 {

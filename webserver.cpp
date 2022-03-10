@@ -1,12 +1,18 @@
 #include "webserver.hpp"
 
+const std::string webservHeader = "\n \033[32m\
+__  _  __ ____   _____ _______   ____     ____   ____ |  | |__| ____   ____  \n \
+\\ \\/ \\/ // __ \\  \\__  \\\\_  __ \\_/ __ \\   /  _ \\ /    \\|  | |  |/    \\_/ __ \\ \n\
+  \\     /\\  ___/   / __ \\|  | \\/\\  ___/  (  <_> )   |  \\  |_|  |   |  \\  ___/ \n\
+   \\/\\_/  \\___  > (____  /__|    \\___  >  \\____/|___|  /____/__|___|  /\\___  >\n\
+             \\/       \\/            \\/              \\/             \\/     \\/ \n\033[0m";
+
 sig_atomic_t    quit_f = 0;
 static void sighandl(int signal) {
 
     if (signal == SIGINT || signal == SIGQUIT) {
         quit_f = 1;
     }
-    std::cerr << "catched signal\n";
 }
 
 bool    Webserver::addr_comp::operator()(const Socket& other) {
@@ -103,8 +109,7 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
 socket_status_f    Webserver::write_to_socket(Socket& conn_socket) {
     /* llamada a write con el mensaje guardado en el Socket */
     const std::string& response = conn_socket.get_response_string();
-    std::cout << "en response: \n" << response << "\n";
-
+    std::cout << "[debug] response:\n" << response << "\n";
     int socket_wr_stat = write(conn_socket.fd, response.c_str(), response.size());
     
     if (socket_wr_stat == -1) {
@@ -200,7 +205,6 @@ Webserver::~Webserver() {
     for (std::vector<Socket>::iterator it = write_v.begin(); it != write_v.end(); it++) {
         it->close_socket();
     }
-    std::cout << "called ~Webserver\n";
 }
 
 void p(std::vector<Socket>& s) {
@@ -216,7 +220,7 @@ void Webserver::run(void) {
     signal(SIGINT, &sighandl);
     signal(SIGQUIT, &sighandl);
 
-    std::cout << "[servidor levantado]\n";
+    std::cout << webservHeader;
     while (!quit_f) {
         FD_ZERO(&readfds);
         FD_ZERO(&writefds);
@@ -234,5 +238,4 @@ void Webserver::run(void) {
         ready_to_read_loop();
         ready_to_write_loop();
     }
-    std::cerr << "clean exit\n";
 }

@@ -30,6 +30,18 @@ func testGet(c http.Client) {
 
 }
 
+func testPost(c http.Client) {
+
+}
+
+func main() {
+	testArgs := os.Args[1:]
+
+	if len(testArgs) != 1 {
+
+	
+		
+
 func main() {
 	client := http.Client{}
 

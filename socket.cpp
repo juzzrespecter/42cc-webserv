@@ -14,6 +14,7 @@ Socket::Socket(const listen_directive_t& sock_addr) : _type(PASSV), _sock_addr(s
         .sin_addr = addr,
         .sin_zero = { 0 }
     };
+    int opt_val = 1;
 
     fd = socket(PF_INET, SOCK_STREAM, 0);
     if (fd == -1) {
@@ -23,6 +24,11 @@ Socket::Socket(const listen_directive_t& sock_addr) : _type(PASSV), _sock_addr(s
         throw std::runtime_error(strerror(errno));
     }
     if ((listen(fd, FD_SETSIZE)) == -1) {/* fd_setsize?? */
+        throw std::runtime_error(strerror(errno));
+    }
+    // setsockopt to reuse addr & port
+    if ((setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt_val, sizeof(int)) == -1) ||
+        (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt_val, sizeof(int)) == -1)) {
         throw std::runtime_error(strerror(errno));
     }
 }
@@ -82,6 +88,7 @@ bool Socket::marked_for_closing(void) const {
     if (_resp.getCode() >= 400) {
         return true;
     }
+    std::cerr << "[debug] not marked for closing\n";
 	return false;
 }
 

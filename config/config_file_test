@@ -1,0 +1,123 @@
+# client_max_body_size
+server {
+    listen 8080 ;
+    server_name body_size ;
+
+    client_max_body_size 20 ;
+    location /test/ {
+        client_max_body_size 50 ;
+    }
+}
+
+# root
+server {
+    listen localhost:8081 ;
+    server_name root ;
+
+    root ./html/root_test/ ;
+    location /test/ {
+        root ./html/ ;
+    }
+    location /fail/ {
+        root ./keeponfailing ;
+    }
+}
+
+# autoindex
+server {
+    listen 8082 ;
+    server_name autoindex autoindex_2 ;
+
+    autoindex on ;
+    location /test/ {
+        autoindex off ;
+    }
+}
+
+# index test
+server {
+    listen 8080 ; # test also servers with same addr
+    server_name index ;
+
+    index index.html index.jpg ;
+    location /test/ {
+        index other_index.html ;
+    }
+}
+
+# accept_method
+server {
+    listen localhost:8083 ;
+    server_name accept_method ;
+
+    accept_method GET POST ;
+    location /get_test {
+        accept_method GET ;
+    }
+    location /post_test {
+        accept_upload upload_files/ ; # test how abs_path works (also in root)
+        accept_method POST ;
+    }
+    location /delete_test {
+        accept_method DELETE ;
+    }
+}
+
+# accept_upload
+server {
+    listen localhost:8084 ;
+    server_name accept_upload ;
+
+    location /post_test {
+        accept_upload upload_files ;
+        accept_method POST ;
+    }
+    location /delete_test {
+        accept_upload . ;
+    }
+}
+
+# return
+server {
+    listen localhost:8085 ;
+    server_name return ;
+
+    return https://www.42madrid.com/ ;
+    location /test {
+        return post_test ;
+    }
+    location /post_test {
+        autoindex on ;
+    }
+}
+
+# cgi_pass
+server {
+    listen 8086 ;
+    server_name cgi_pass ;
+
+    location /cgi_test {
+        accept_method POST ;
+        cgi_pass .tal ./cgi_bin/tal ;
+    }
+    location /test {
+        accept_method POST ;
+        cgi_pass .tal ./error ;
+    }
+}
+
+# error_page
+server {
+    listen localhost:8087 ;
+    server_name error_page ;
+
+    location /test {
+        error_page new_error_page.html ;
+    }
+    location /images {
+        error_page manzana.jpeg ;
+    }
+    location /post_test {
+        error_page nada ; # to show default error page with setting on
+    }
+}

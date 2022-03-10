@@ -37,7 +37,6 @@ int main(void) {
     Parser p;
 
     try {
-        std::cout << "first step\n";
         std::vector<server_block_t> srv_t = p.parse(parser_path);
         Webserver websrv(srv_t);
 

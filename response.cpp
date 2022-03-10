@@ -221,7 +221,7 @@ void print_Loc(const Location& _loc)
 void Response::replaceLocInUri(std::string* uri, const std::string& root, const std::string& locName)
 {
 	// Creating an iterator pointing just after the part that matched the location
-	std::cout << "uri antes: " << *uri << "\n";
+	std::cout << "[debug] uri antes: " << *uri << "\n";
 	std::string::iterator it = uri->begin() + locName.size();
 
 	// Going to the next '/' (for example, case "/authentificate/ok" matched location "/auth" with a root of "/test"
@@ -239,7 +239,7 @@ void Response::replaceLocInUri(std::string* uri, const std::string& root, const 
 		uri->insert(uri->begin(), '/');
 		
 	uri->insert(0, root);
-	std::cout << "uri despues: " << *uri << "\n";
+	std::cout << "[debug] uri despues: " << *uri << "\n";
 }
 
 std::string Response::addIndex(const std::string& uri, const std::vector<std::string>& indexs)
@@ -272,7 +272,6 @@ void Response::checkMethods(int method, const std::vector<std::string>& methodsA
 	throw StatusLine(405, REASON_405, "checkMethods method");
 }
 
-/* CASO ENCUENTRA RECURSO COMO DIRECTORIO SIN / FINAL: 301 CON LOCATION A REALURI'/', INDEPENDIENTE DE INDEX/AUTOINDEX */
 std::string Response::reconstructFullURI(int method, std::string uri)
 {
 	bool fileExist = true;
@@ -297,13 +296,31 @@ std::string Response::reconstructFullURI(int method, std::string uri)
 
     // Case we match a directory and an autoindex isn't set. We try all the possible indexs, if none
     // works addIndex throw a 403 error StatusLine object
+	/*if (fileExist && S_ISDIR(infFile.st_mode) && uri.at(uri.size() - 1) != '/') {
+		_req->setPath(_req->getPath() + "/");
+		throw StatusLine(301, REASON_301, "redirect " + uri + " to directory uri");
+	}
 	if (fileExist && S_ISDIR(infFile.st_mode) && !((method == GET || method == HEAD) && _loc.get_autoindex()))
 		uri = addIndex(uri, _loc.get_index());
 
     else if (fileExist && S_ISDIR(infFile.st_mode) && ((method == GET || method == HEAD) && _loc.get_autoindex()))
     {
 	    _autoIndex = true;
-    }
+    }*/
+	std::cout << "[debug] autoindex set to " << std::boolalpha << _autoIndex << "\n";
+	if (fileExist && S_ISDIR(infFile.st_mode))
+	{
+		if (!uri.empty() && uri.at(uri.size() - 1) != '/') // redirect directories not ended in '/'
+		{
+			_req->setPath(_req->getPath() + "/");
+			throw StatusLine(301, REASON_301, "redirect " + uri + " to complete directory uri");
+		}
+		if (!(method == GET || method == HEAD) && _loc.get_autoindex()) 
+			uri = addIndex(uri, _loc.get_index());
+		else if ((method == GET || method == HEAD) && _loc.get_autoindex())
+			_autoIndex = true;
+	}
+		std::cout << "[debug] autoindex set to " << std::boolalpha << _autoIndex << "\n";
 
 	checkMethods(method, _loc.get_methods());
 
@@ -479,8 +496,8 @@ void Response::autoIndexDisplayer(const std::string& realUri, std::string& autoI
 		std::string timeStamp = asctime(localtime(&info.st_mtime));
 
 		timeStamp.erase(--timeStamp.end());
-		autoIndexPage.append("<li><a href=\"" + *it + "/\">" + *it + "/</a></li>      " + 
-			convertNbToString(info.st_size) + " " + timeStamp + "\n");
+		autoIndexPage.append("<li><a href=\"" + *it + "/\">" + *it + "</a>\t\t\t" + 
+			convertNbToString(info.st_size) + " " + timeStamp + "</li>\n");
 	}
 	autoIndexPage.append("</ul><br></body></html>");
 }

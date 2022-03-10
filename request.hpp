@@ -114,6 +114,7 @@ class Request
        	bool parseHeaderLine(void);
 		void headerMeetsRequirements(void) const;
 		void setUpRequestBody(void);
+		bool parseHeaderEnd(void);
 		
 		// Received the body until n octets (from content-length header) has been received. Then throw 
 		// a status line with the appropriate code.
