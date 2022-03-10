@@ -5,6 +5,7 @@
 #include "parser.hpp"
 #include "request.hpp"
 #include <unistd.h>
+#include <signal.h>
 #include <fcntl.h>
 
 enum socket_status_f {
@@ -28,7 +29,7 @@ class Webserver {
         };
 
         std::string timestamp(void) const;
-        void log(const std::string&) const;
+        void log(const std::string&, const std::string&) const;
 
         /* parámetros para llamada a select() */
         int nfds;

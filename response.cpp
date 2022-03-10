@@ -530,22 +530,22 @@ void Response::fillContentTypeHeader(const std::string& fileExt) {
 	/* content-type should be set according to accept header values; if
 	   accept header is present in request and does not allow response uri file format,
 	   server should send 406 code error, but this behaviour is optional */
-	std::string type[4] = {"audio", "image", "text", "video"};
+	const std::string type[4] = {"audio", "image", "text", "video"};
 
-	std::string audio_subtype[1] = {"mpeg"};
-	std::string audio_fileext[1] = {"mp3"};
+	const std::string audio_subtype[1] = {"mpeg"};
+	const std::string audio_fileext[1] = {"mp3"};
 
-	std::string image_subtype[5] = {"gif", "jpeg", "jpeg", "png", "tiff"};
-	std::string image_fileext[5] = {"gif", "jpg",  "jpeg", "png", "tiff"};
+	const std::string image_subtype[5] = {"gif", "jpeg", "jpeg", "png", "tiff"};
+	const std::string image_fileext[5] = {"gif", "jpg",  "jpeg", "png", "tiff"};
 
-	std::string text_subtype[5] = {"css", "csv", "html", "plain", "xml"};
-	std::string text_fileext[5] = {"css", "csv", "html", "txt",   "xml"};
+	const std::string text_subtype[5] = {"css", "csv", "html", "plain", "xml"};
+	const std::string text_fileext[5] = {"css", "csv", "html", "txt",   "xml"};
 
-	std::string video_subtype[5] = {"mpeg", "mp4", "quicktime", "x-flv", "webm"};
-	std::string video_fileext[5] = {"mpeg", "mp4", "mov",       "flv",   "webm"};
+	const std::string video_subtype[5] = {"mpeg", "mp4", "quicktime", "x-flv", "webm"};
+	const std::string video_fileext[5] = {"mpeg", "mp4", "mov",       "flv",   "webm"};
 
-	std::string* subtype_arr[4] = {audio_subtype, image_subtype, text_subtype, video_subtype};
-	std::string* fileext_arr[4] = {audio_fileext, image_fileext, text_fileext, video_fileext};
+	const std::string* subtype_arr[4] = {audio_subtype, image_subtype, text_subtype, video_subtype};
+	const std::string* fileext_arr[4] = {audio_fileext, image_fileext, text_fileext, video_fileext};
 
 	int subtype_id[4] = {1, 5, 5, 5};
 

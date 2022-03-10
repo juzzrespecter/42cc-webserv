@@ -3,9 +3,10 @@
 sig_atomic_t    quit_f = 0;
 static void sighandl(int signal) {
 
-    if (signal == SIGINT) {
+    if (signal == SIGINT || signal == SIGQUIT) {
         quit_f = 1;
     }
+    std::cerr << "catched signal\n";
 }
 
 bool    Webserver::addr_comp::operator()(const Socket& other) {
@@ -34,8 +35,8 @@ std::string    Webserver::timestamp(void) const {
     return format_time;
 }
 
-void    Webserver::log(const std::string& error) const {
-    std::cerr << "[ " << timestamp() << "] " << error << "\n";
+void    Webserver::log(const std::string& action, const std::string& error) const {
+    std::cerr << "[ " << timestamp() << "] " << action << error << "\n";
 }
 
 void    Webserver::nfds_up(int fd) {
@@ -57,7 +58,7 @@ void    Webserver::accept_new_connection(const Socket& passv) {
 
     int new_conn = accept(passv.fd, reinterpret_cast<sa_t*>(&addr_in), &addr_len);
     if (new_conn == -1) {
-        log (strerror(errno));
+        log ("accept(): ", strerror(errno));
         return ;
     }
     fcntl(new_conn, F_SETFL, O_NONBLOCK);
@@ -76,7 +77,7 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
     if (socket_rd_stat == -1) {
         /* supón error EAGAIN, la conexión estaba marcada como activa pero ha bloqueado,
          * se guarda a la espera de que el cliente envíe información */
-        log(std::strerror(errno));
+        log("read(): ", std::strerror(errno));
         return STANDBY;
     }
     if (socket_rd_stat == 0) {
@@ -91,7 +92,7 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
     try {
         conn_socket.build_request(req_buff);
     } catch (StatusLine& sl) {
-        log(sl.getReason() + ": " + sl.getAdditionalInfo());
+        log("request: ", sl.getReason() + ": " + sl.getAdditionalInfo());
         conn_socket.build_response(sl);
         return CONTINUE;
     }
@@ -109,7 +110,7 @@ socket_status_f    Webserver::write_to_socket(Socket& conn_socket) {
     if (socket_wr_stat == -1) {
         /* supón error EAGAIN, el buffer de write está lleno y como trabajamos con sockets
          * no bloqueadores retorna con señal de error, la respuesta sigue siendo válida y el cliente espera */
-        log(strerror(errno));
+        log("write(): ", strerror(errno));
         return STANDBY;
     }
     //if (/* Cliente ha indicado en cabecera que hay que cerrar la conexión tras enviar la respuesta */) {
@@ -213,6 +214,7 @@ void p(std::vector<Socket>& s) {
 /* main loop */
 void Webserver::run(void) {
     signal(SIGINT, &sighandl);
+    signal(SIGQUIT, &sighandl);
 
     std::cout << "[servidor levantado]\n";
     while (!quit_f) {
@@ -232,4 +234,5 @@ void Webserver::run(void) {
         ready_to_read_loop();
         ready_to_write_loop();
     }
+    std::cerr << "clean exit\n";
 }
