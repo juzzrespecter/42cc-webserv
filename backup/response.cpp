@@ -165,8 +165,25 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 
 void Response::execCgi(const std::string& realUri, std::string* cgiName)
 {
-        (void) realUri, (void) cgiName;
- //TO DO//
+    struct stat st;
+    if (stat(realUri.c_str(), &st) == -1)
+	{
+        throw StatusLine(404, REASON_404, "fillCgi method: " + realUri);
+	}
+
+	Body cgiRep;
+	CGI cgi(&cgiRep, _req, realUri, *cgiName);
+	
+	cgi.executeCGI();
+	
+	fillStatusLine(_staLine);
+	fillServerHeader();
+	fillDateHeader();
+	fillContentlengthHeader(convertNbToString(cgiRep.getSize()));
+
+	_buffer += cgiRep.getBody();
+	
+	delete cgiName;	
 }
 
 void Response::fillContentlengthHeader(const std::string& size) 
