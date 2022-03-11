@@ -208,7 +208,7 @@ Webserver::~Webserver() {
 }
 
 void p(std::vector<Socket>& s) {
-    std::cout << "[ ";
+    std::cout << "[debug] [ ";
     for (std::vector<Socket>::iterator it = s.begin(); it != s.end(); it++) {
         std::cout << it->fd << " ";
     }
