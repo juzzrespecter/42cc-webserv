@@ -110,6 +110,7 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 
         if (!_loc.get_return_uri().empty())        // Doing an HTTP redirection (301) if redirect field filled in matched location block
         {
+			std::cout << "[debug] return uri: " << _loc.get_return_uri() << "\n";
             std::string redirectedUri = _req->getPath();            // Replacing location name in the URI with the redirect string set in config file
             replaceLocInUri(&redirectedUri, _loc.get_return_uri(), _loc.uri);
 
@@ -307,12 +308,15 @@ std::string Response::reconstructFullURI(int method, std::string uri)
     {
 	    _autoIndex = true;
     }*/
+	std::cout << "[debug] autoindex from _loc " << std::boolalpha << _loc.get_autoindex() << "\n";
 	std::cout << "[debug] autoindex set to " << std::boolalpha << _autoIndex << "\n";
 	if (fileExist && S_ISDIR(infFile.st_mode))
 	{
 		if (!uri.empty() && uri.at(uri.size() - 1) != '/') // redirect directories not ended in '/'
 		{
+			std::cout << "[debug] redirect from " << _req->getPath();
 			_req->setPath(_req->getPath() + "/");
+			std::cout << "to " << _req->getPath() << "\n";
 			throw StatusLine(301, REASON_301, "redirect " + uri + " to complete directory uri");
 		}
 		if (!(method == GET || method == HEAD) && _loc.get_autoindex()) 
@@ -412,7 +416,6 @@ void Response::execGet(const std::string& realUri)
     fillServerHeader();
     fillDateHeader();
     
-	std::cout << "getting " << realUri << "\n";
 	if (!isResourceAFile(realUri)) {
 		FileParser body(realUri.c_str(), true); // CAHNGER
 
@@ -470,13 +473,12 @@ void Response::execDelete(const std::string& realUri)
 
 void Response::autoIndexDisplayer(const std::string& realUri, std::string& autoIndexPage) {
 	autoIndexPage.append("<html>\n<head><title>Index of " + realUri + "</title></head>\n");
-	autoIndexPage.append("<body><h1>Index of " + realUri + "</h1><br><hr><ul>");
+	autoIndexPage.append("<body><h1>Index of " + realUri + "</h1><hr><br><pre><ul>");
 
 	DIR* 			dir_ptr;
 	struct dirent*	dir_s;
 
 	std::vector<std::string> file_list;
-	std::cout << "try to open dir: " << realUri << "\n";
 	dir_ptr = opendir(realUri.c_str());
 	if (!dir_ptr) {
 		throw StatusLine(500, REASON_500, "autoindex: could not open directory");
@@ -496,10 +498,15 @@ void Response::autoIndexDisplayer(const std::string& realUri, std::string& autoI
 		std::string timeStamp = asctime(localtime(&info.st_mtime));
 
 		timeStamp.erase(--timeStamp.end());
-		autoIndexPage.append("<li><a href=\"" + *it + "/\">" + *it + "</a>\t\t\t" + 
-			convertNbToString(info.st_size) + " " + timeStamp + "</li>\n");
+		std::string fileName = (it->size() > 10) ? it->substr(0, 15) + "." : *it;
+		std::string spaceFirst = std::string("                    ").substr(fileName.size());
+		std::string fileSize = convertNbToString(info.st_size);
+		std::string spaceSecond = std::string("          ").substr(fileSize.size());
+
+		autoIndexPage.append("<li><a href=\"" + *it + "\">" + fileName + "</a>" 
+			+ spaceFirst + fileSize + spaceSecond + timeStamp + "</li>\n");
 	}
-	autoIndexPage.append("</ul><br></body></html>");
+	autoIndexPage.append("</ul></pre><br></body></html>");
 }
 
 /* beware of new lines */
@@ -580,7 +587,6 @@ void Response::fillContentTypeHeader(const std::string& fileExt) {
 std::string Response::getResourceExtension(const std::string& uri) const {
 	std::string ext("");
 	size_t		slash_pos = uri.rfind('/');
-	std::cout << "in " << uri << "\n";
 
 	if (slash_pos == std::string::npos) {
 		return ext;
@@ -591,7 +597,6 @@ std::string Response::getResourceExtension(const std::string& uri) const {
 		return ext;
 	}
 	ext = uri.substr(dot_pos + 1);
-	std::cout << "out "<< uri << "\n";
 	return ext;
 }
 

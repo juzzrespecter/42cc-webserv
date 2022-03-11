@@ -15,10 +15,10 @@ server {
     server_name root ;
 
     root ./html/root_test/ ;
-    location /test/ {
+    location /root_test/ {
         root ./html/ ;
     }
-    location /fail/ {
+    location /root_fail/ {
         root ./keeponfailing ;
     }
 }

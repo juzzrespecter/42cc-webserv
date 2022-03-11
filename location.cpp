@@ -19,7 +19,7 @@ Location::Location(const location_block_t& loc_b) {
         this->return_uri = loc_b.dir[D_RETURN].front();
     }
     if (!loc_b.dir[D_UPLOAD].empty()) {
-        this->return_uri = loc_b.dir[D_UPLOAD].front();
+        this->upload_path = loc_b.dir[D_UPLOAD].front();
     }
     for (string_vector::const_iterator it = loc_b.dir[D_INDEX].begin(); it != loc_b.dir[D_INDEX].end(); it++) {
         if (std::find(this->index.begin(), this->index.end(), *it) == this->index.end()) {

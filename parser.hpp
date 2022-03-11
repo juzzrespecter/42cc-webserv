@@ -114,6 +114,7 @@ class Parser {
         void   read_config_file(const std::string& path);
         void   tokenize(void);
         
+        void debug_print(const std::vector<server_block_t>&) const; //tmp
     public:
         Parser(void);
         Parser(const Parser& other);

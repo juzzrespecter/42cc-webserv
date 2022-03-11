@@ -42,7 +42,7 @@ std::string    Webserver::timestamp(void) const {
 }
 
 void    Webserver::log(const std::string& action, const std::string& error) const {
-    std::cerr << "[ " << timestamp() << "] " << action << error << "\n";
+    std::cerr << "[ " << timestamp() << " ] " << action << error << "\n";
 }
 
 void    Webserver::nfds_up(int fd) {

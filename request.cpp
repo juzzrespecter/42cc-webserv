@@ -85,6 +85,7 @@ void    Request::recvBuffer(const std::string& newBuffer) {
         still_parsing = (this->*req_table[_stage])(); 
     }
     if (_stage == READY) {
+        print();
         throw StatusLine(200, REASON_200, "");
     }
 }
