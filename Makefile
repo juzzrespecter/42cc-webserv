@@ -10,6 +10,7 @@ SRC_TEST    = config_blocks.cpp \
 			  msg_format/StatusLine.cpp \
 			  request.cpp \
 			  response.cpp \
+			  Cgi.cpp \
 			  webserver.cpp \
 			  test_request.cpp
 OBJ_TEST	= $(SRC_TEST:%.cpp=%.o)

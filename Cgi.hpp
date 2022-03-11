@@ -3,7 +3,7 @@
 
 #include "msg_format/Body.hpp"
 #include "msg_format/StatusLine.hpp"
-#include "Request.hpp"
+#include "request.hpp"
 #include <iostream>
 #include <unistd.h>
 #include <fstream>
