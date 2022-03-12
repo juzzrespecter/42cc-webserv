@@ -119,7 +119,7 @@ class Response
 		std::string reconstructFullURI(int method, std::string uri);
 
 		// Replaces the location name that matched with root directive
-		void replaceLocInUri(std::string* uri, const std::string& root, const std::string& locName);
+		void replaceLocInUri(std::string& uri, const std::string& root);
 
 		// Try to add all the indexs until one path is correct. If none are correct, throws a StatusLine
 		// object with a 301 error code
@@ -164,7 +164,7 @@ class Response
 			std::string getResourceExtension(const std::string&) const;
 
 			std::string* getCgiExecutableName(const std::string&);
-			std::string error_page(const StatusLine&);
+			std::string errorPage(const StatusLine&);
 	public:
 	
 		/* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */

@@ -29,6 +29,9 @@ struct location_block_t {
     location_block_t(const std::string&);
     location_block_t(const location_block_t&);
     location_block_t& operator=(const location_block_t&);
+
+    friend bool operator==(const location_block_t&, const std::string&);
+    friend bool operator!=(const location_block_t&, const std::string&);
 };
 
 struct server_block_t {

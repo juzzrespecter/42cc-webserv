@@ -116,7 +116,7 @@ void Parser::tokenize(void) {
         token_flag_t token_id = tokenize_id(raw_input[i]);
 
         if (token_id == T_INVALID_CHAR) {
-            throw std::runtime_error("syntax error: found non valid character\n");
+            throw std::runtime_error("syntax error: found non valid character");
         }
         i += (this->*options[token_id])(i);
     }
@@ -126,7 +126,7 @@ void Parser::read_config_file(const std::string& path) {
     std::ifstream   config_file(path.c_str(), std::ios::in);
 
     if (!config_file.is_open()) {
-        throw std::runtime_error("could not open configuration file\n");
+        throw std::runtime_error("could not open configuration file");
     }
     std::stringstream buffer;
     buffer << config_file.rdbuf();
@@ -248,11 +248,11 @@ directive_flag_t Parser::syntax_directive(void) {
         }
     }
     if (id >= N_DIR_MAX) {
-        throw std::runtime_error("dir not recognized in token: \'" + current().token + "\'\n");
+        throw std::runtime_error("dir not recognized in token: \'" + current().token + "\'");
     }
     next();
     if (!(this->*dir_options[id])()) {
-        throw std::runtime_error("syntax error in dir: \'" + dir_name[id] + "\'\n");
+        throw std::runtime_error("syntax error in dir: \'" + dir_name[id] + "\'");
     }
     return directive_flag_t(id);
 }
@@ -265,14 +265,14 @@ location_block_t   Parser::syntax_location_block(const std::string& uri) {
     for (;!empty() && is_word(current()); next()) {
         directive_flag_t id = syntax_directive();
         if (id >= N_DIR_LOC) {
-            throw std::runtime_error("dir not allowed in this context \'" + dir_name[id] + "\'\n");
+            throw std::runtime_error("dir not allowed in this context \'" + dir_name[id] + "\'");
         }
         for (;!is_semicolon(current()); next()) {
             loc.dir[id].push_back(current().token);
         }
     }
     if (!is_cbc(current())) {
-        throw std::runtime_error("unexpected syntax near token \'" + current().token + "\'\n");            
+        throw std::runtime_error("unexpected syntax near token \'" + current().token + "\'");            
     }
     next();
     return loc;
@@ -286,14 +286,14 @@ server_block_t    Parser::syntax_server_block(void) {
         if (id == D_LOCATION) {
             std::string uri(current().token);
             for (std::vector<location_block_t>::iterator it = vsrv.loc.begin(); it != vsrv.loc.end(); it++) {
-                if (!uri.compare(it->uri)) throw std::runtime_error("duplicate dir declared in server \'" + dir_name[id] + "\'\n");
+                if (!uri.compare(it->uri)) throw std::runtime_error("duplicate dir declared in server \'" + dir_name[id] + "\'");
             }
             next();
             next();
             vsrv.loc.push_back(syntax_location_block(uri));
         } else {
             if (!vsrv.dir[id].empty()) {
-                throw std::runtime_error("duplicate dir declared in server \'" + dir_name[id] + "\'\n");
+                throw std::runtime_error("duplicate dir declared in server \'" + dir_name[id] + "\'");
             }
             for ( ; !is_semicolon(current()); next()) {
                 vsrv.dir[id].push_back(current().token);
@@ -302,7 +302,7 @@ server_block_t    Parser::syntax_server_block(void) {
         }
     }
     if (empty() || !is_cbc(current())) {
-        throw std::runtime_error("syntax error near unexpected token \'" + current().token + "\'\n");
+        throw std::runtime_error("syntax error near unexpected token \'" + current().token + "\'");
     }
     next();
     vsrv.setup_default_directives();
@@ -321,13 +321,13 @@ std::vector<server_block_t> Parser::parse(const std::string& config_path) {
     while (!empty() && is_word(current()) && !current().token.compare("server")) {
         next();
         if (!is_cbo(current())) {
-            throw std::runtime_error("syntax error near unexpected token \'" + current().token + "\'\n");
+            throw std::runtime_error("syntax error near unexpected token \'" + current().token + "\'");
         }
         next();
         vsrv_vector.push_back(syntax_server_block());
     }
     if (!empty()) {
-        throw std::runtime_error("syntax error near unexpected token \'" + current().token + "\'\n");
+        throw std::runtime_error("syntax error near unexpected token \'" + current().token + "\'");
     }
     debug_print(vsrv_vector);
     return vsrv_vector;

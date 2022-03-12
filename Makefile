@@ -1,33 +1,33 @@
 .PHONY:	all clean fclean
 
-SRC_TEST    = config_blocks.cpp \
-			  parser.cpp \
-			  server.cpp \
-			  location.cpp \
-			  socket.cpp \
-			  msg_format/Body.cpp \
-			  msg_format/RequestLine.cpp \
-			  msg_format/StatusLine.cpp \
-			  request.cpp \
-			  response.cpp \
-			  Cgi.cpp \
-			  webserver.cpp \
-			  test_request.cpp
-OBJ_TEST	= $(SRC_TEST:%.cpp=%.o)
-HEADER_TEST = config_blocks.hpp parser.hpp webserver.hpp server.hpp location.hpp
+SRC = config_blocks.cpp \
+		parser.cpp \
+		server.cpp \
+		location.cpp \
+		socket.cpp \
+		msg_format/Body.cpp \
+		msg_format/RequestLine.cpp \
+		msg_format/StatusLine.cpp \
+		request.cpp \
+		response.cpp \
+		Cgi.cpp \
+		webserver.cpp \
+		main.cpp
+OBJ	= $(SRC:%.cpp=%.o)
+HEADER = config_blocks.hpp parser.hpp webserver.hpp server.hpp location.hpp
 CXX	= clang++
 CXXFLAGS = -Wall -Werror -Wextra -std=c++98 -g3 -fstandalone-debug
 
-TEST = test
+NAME = webserver
 
-all: $(TEST)
+all: $(NAME)
 
-$(TEST):		$(OBJ_TEST) $(HEADER_TEST) Makefile
-	@$(CXX) $(CXXFLAGS) -o $(TEST) $(OBJ_TEST)
+$(NAME):		$(OBJ) $(HEADER) Makefile
+	@$(CXX) $(CXXFLAGS) -o $(NAME) $(OBJ)
 clean:
-	rm -rf $(PARSER) $(TEST)
+	rm -rf $(NAME)
 
 fclean:		clean
-	rm -rf $(OBJ_PARSER) $(OBJ_TEST)
+	rm -rf $(OBJ)
 
 re:	fclean all

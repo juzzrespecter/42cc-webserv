@@ -1,32 +1,23 @@
 server {
-    location / {
+    index index.html ;
+    location /post_test {
+        accept_upload . ;
+        #accept_method POST GET ;
 
     }
-    location /test {
-
-    }
-
-    root html;
-    listen localhost:8080;
-    accept_method GET DELETE;
 }
 
 server {
-    error_page err.html;
-    client_max_body_size 234;
-    root /var/www/html ;
-    autoindex off;
-    index index.html index.htm;
-    cgi_pass ./cgi_dir/ .php    ;
-    return www.google.com ;
-    accept_method DELETE;
-    accept_upload /var/www/html/savedfiles/ ;
-    listen 8081;
-    server_name name name2;
-    location / {
+    listen 8081 ;
+    root / ;
+    autoindex on;
+}
 
+server {
+    listen 8082 ;
+    location /cgi_test {
+        index index.py ;
+        cgi_pass py /Users/danrodri/.brew/bin/python3 ;
     }
-    location /2 {
-
-    }
+    autoindex on;
 }

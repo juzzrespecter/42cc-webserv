@@ -72,7 +72,7 @@ const Location& Server::get_location_by_path(const std::string& abs_path) const 
     std::vector<size_t> tracker(routes.size());
 
     for (std::vector<Location>::const_iterator it = routes.begin(); it != routes.end(); it++) {
-        if (!it->uri.compare(0, it->uri.size(), abs_path)) {
+        if (!it->uri.compare(abs_path.substr(0, it->uri.size()))) {
             tracker[std::distance(routes.begin(), it)] = it->uri.size();
         }
     }

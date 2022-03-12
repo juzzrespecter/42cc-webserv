@@ -1,0 +1,5 @@
+print("HTTP/1.1 200 OK")
+print("Content-Type: text/html")
+print("")
+print("<!DOCTYPE><html><head><title>hola</title></head>")
+print("<body>holap</body></html>")

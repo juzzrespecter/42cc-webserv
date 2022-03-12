@@ -78,7 +78,8 @@ void    Request::recvBuffer(const std::string& newBuffer) {
         &Request::parseReqBody,
         &Request::parseChunkReqBody
     };
-    bool still_parsing = true; 
+    bool still_parsing = true;
+    std::cout << "[raw req]\n" << newBuffer;
 
     _buffer.append(newBuffer);
     while (still_parsing == true) {

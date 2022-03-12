@@ -20,6 +20,14 @@ location_block_t& location_block_t::operator=(const location_block_t& other) {
     return *this;
 }
 
+bool operator==(const location_block_t& loc, const std::string& uri) {
+    return (!loc.uri.compare(uri));
+}
+
+bool operator!=(const location_block_t& loc, const std::string& uri) {
+    return !(loc == uri);
+}
+
 server_block_t::server_block_t(void) { }
 
 server_block_t::server_block_t(const server_block_t& other) { 
@@ -46,6 +54,13 @@ void    server_block_t::setup_default_directives(void) {
     }
     for (std::vector<location_block_t>::iterator it = loc.begin(); it != loc.end(); it++) {
         location_inherits_from_server(*it);
+    }
+    if (std::find(loc.begin(), loc.end(), "/") == loc.end()) {
+        loc.push_back(*this);
+    }
+    /* setup server default directives: listen and server_name */
+    if (dir[D_LISTEN].empty()) {
+        dir[D_LISTEN].push_back("localhost:8080");
     }
 }
 

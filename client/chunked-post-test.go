@@ -8,32 +8,33 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"iobuf"
 )
 
-func getPath(uri string) string {
-	slash := strings.LastIndex(uri, "/")
-	if slash == -1 {
-		log.Panic("no file to upload")
-	}
-	return uri[slash:]
-}
-
 func main() {
-	if len(os.Args[:1]) != 1 {
-		log.Panic("wrong number of args.")
-	}
-	postUri := os.Args[1]
-	filePath := getPath(postUri)
+
+	rdr := bufio.NewReader(os.Stdin)
+	fmt.Println("please introduce url")
+	getURL, _ := rdr.ReadString('\n')
+	getURL = strings.Replace(getURL, "\n", "", -1)
+	
+	fmt.Println("please introduce file path")
+	getPath := rdr.ReadString('\n')
+	getPath = strings.Replace(getPath, "\n", "", -1)	
+	
 	rd, wr := io.Pipe()
 
-	client := &http.Client{ /*Timeout:*/ }
+	client := &http.Client{Timeout: time.Duration(1) * time.Second}
 	req, err := http.NewRequest("POST", postUri, rd)
 
 	req.Header.Set("Content-Type", "image/jpeg")
 
 	go func() {
 		buf := make([]byte, 300)
-		f, _ := os.Open(filePath)
+		f, err := os.Open(filePath)
+		if err != nil {
+			log.Panic(err)
+		}
 		for {
 			n, _ := f.Read(buf)
 			if 0 == n {

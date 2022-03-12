@@ -47,3 +47,10 @@ server {
         autoindex on;
     }
 }
+
+server {
+    listen 8084;
+    server_name aassd;
+
+    autoindex off;
+}
