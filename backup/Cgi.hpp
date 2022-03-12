@@ -11,13 +11,6 @@
 #include <sstream>
 #include <sys/wait.h>
 
-// temp
-#ifndef TMP_def
-# define CGI_PATH "nil" 
-# define EXECVE_FAIL 0 
-# define CGI_PIPE_BUFFER_SIZE 0
-#endif
-
 class CGI
 {
 	private:

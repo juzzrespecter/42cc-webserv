@@ -2,18 +2,32 @@ package main
 
 import (
 	"fmt"
-	"http"
 	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
+	"strings"
 )
 
+func getPath(uri string) string {
+	slash := strings.LastIndex(uri, "/")
+	if slash == -1 {
+		log.Panic("no file to upload")
+	}
+	return uri[slash:]
+}
+
 func main() {
+	if len(os.Args[:1]) != 1 {
+		log.Panic("wrong number of args.")
+	}
+	postUri := os.Args[1]
+	filePath := getPath(postUri)
 	rd, wr := io.Pipe()
 
 	client := &http.Client{ /*Timeout:*/ }
-	req, err := client.NewRequest("POST", postUri, rd)
+	req, err := http.NewRequest("POST", postUri, rd)
 
 	req.Header.Set("Content-Type", "image/jpeg")
 

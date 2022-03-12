@@ -93,7 +93,7 @@ void    Request::recvBuffer(const std::string& newBuffer) {
 bool    Request::parseRequestLine(void) {
     std::string requestLine;
 
-    if (!_getNextLine(requestLine) || requestLine.empty() || requestLine.size() > MAX_URI_LEN) {
+    if (!_getNextLine(requestLine) || requestLine.empty()) {
         THROW_STATUS("syntax error in request-line");
     }
     std::stringstream   lineBuffer(requestLine);
