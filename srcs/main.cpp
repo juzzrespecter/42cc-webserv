@@ -1,13 +1,13 @@
 #include "webserv.hpp"
 #include "webserver.hpp"
-#define REQ_BUFFER_SIZE 4096
+//#define REQ_BUFFER_SIZE 4096
 
 int main(int argc, char *argv[]) {
     if (argc > 2) {
         std::cerr << "[ server ] wrong number of arguments\n";
         return EXIT_FAILURE;
     }
-    std::string parser_path("config_file");
+    std::string parser_path("test.conf");
     Parser p;
     if (argc == 2) {
         parser_path = argv[1];

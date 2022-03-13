@@ -1,4 +1,4 @@
-#include "Body.hpp"
+#include "msg_format/Body.hpp"
 
 Body::Body() : _recv(false), _size(), _maxSize(-1) {}
 

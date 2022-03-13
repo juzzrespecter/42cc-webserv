@@ -2,6 +2,7 @@
 #define __CONFIG_BLOCKS_HPP__
 #include <vector>
 #include <string>
+#include <algorithm>
 
 #define N_DIR_LOC 9
 #define N_DIR_SRV 11

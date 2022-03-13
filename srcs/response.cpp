@@ -35,11 +35,8 @@ int FileParser::getRequestFileSize(void) const {
 
 Response::Response() : _autoIndex(false) {}
 
-//Response::Response(Request* req, const StatusLine& staLine/*, const std::vector<Server*> infoVirServs*/) :
-//	/*_infoVirServs(infoVirServs),*/ _req(req), _staLine(staLine), _autoIndex(false) {}
-
 Response::Response(const Response& c) : 
-	/*_infoVirServs(c._infoVirServs),*/ _req(c._req), _staLine(c._staLine), _buffer(c._buffer),
+	_req(c._req), _staLine(c._staLine), _buffer(c._buffer),
     _autoIndex(c._autoIndex) {}
 
 Response::~Response() {}
@@ -61,12 +58,6 @@ void Response::setStatusLine(const StatusLine& staLine)
 {
 	_staLine = staLine;
 }
-/*
-void Response::setInfoVirtualServs(const std::vector<Server*> infoVirServs)
-{
-	_infoVirServs = infoVirServs;
-}*/
-
 
 /* --------------------------- GETTERS ------------------------- */
 
