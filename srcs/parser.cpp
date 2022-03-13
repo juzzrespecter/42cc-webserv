@@ -329,7 +329,7 @@ std::vector<server_block_t> Parser::parse(const std::string& config_path) {
     if (!empty()) {
         throw std::runtime_error("syntax error near unexpected token \'" + current().token + "\'");
     }
-    debug_print(vsrv_vector);
+    //debug_print(vsrv_vector);
     return vsrv_vector;
 }
 

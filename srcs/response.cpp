@@ -1,11 +1,5 @@
 #include "response.hpp"
 
-/*A server which receives an entity-body with a transfer-coding it does
-   not understand SHOULD return 501 (Unimplemented), and close the
-   connection. A server MUST NOT send transfer-codings to an HTTP/1.0
-   client.*/
-
-/* FileParser tmp definition */
 FileParser::FileParser(void) : rawFile(), status(false) { }
 
 FileParser::FileParser(const FileParser& other) : rawFile(other.rawFile), status(other.status) { }
@@ -33,13 +27,13 @@ int FileParser::getRequestFileSize(void) const {
 
 /* ------------------------ COPLIEN FORM ----------------------- */
 
-Response::Response() : _autoIndex(false) {}
+Response::Response() : _req(NULL), _autoIndex(false), _endConn(false) {}
 
 Response::Response(const Response& c) : 
 	_req(c._req), _staLine(c._staLine), _buffer(c._buffer),
-    _autoIndex(c._autoIndex) {}
+    _autoIndex(c._autoIndex), _endConn(c._endConn) {}
 
-Response::~Response() {}
+Response::~Response() { }
 
 Response& Response::operator=(Response a)
 {
@@ -59,6 +53,11 @@ void Response::setStatusLine(const StatusLine& staLine)
 	_staLine = staLine;
 }
 
+void Response::setLocation(const Location& loc)
+{
+	_loc = loc;
+}
+
 /* --------------------------- GETTERS ------------------------- */
 
 const StatusLine& Response::getStatusLine() const
@@ -76,12 +75,19 @@ const std::string& Response::getBuffer() const
 	return _buffer;
 }
 
+bool Response::getEndConn() const 
+{
+	return _endConn;
+}
 
 /* --------------------------- METHODS ------------------------- */
 
 void Response::clear()
 {
-	_req->clear();
+	if (_req != NULL) {
+		_req->clear();
+		_req = NULL;
+	}
 	_staLine.clear();
 	_buffer.clear();
 	_autoIndex = false;
@@ -89,9 +95,9 @@ void Response::clear()
 
 void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& sl)
 {
-	_req = req;
-	_loc = loc;
-	_staLine = sl;
+	setRequest(req);
+	setLocation(loc);
+	setStatusLine(sl);
 
 	if (_staLine.getCode() >= 400)
 		return fillError(_staLine);
@@ -99,7 +105,7 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 	try
 	{
 		std::string hostName(_req->getHeaders().find("Host")->second); 		// Keeping only host name and removing port
-		hostName = hostName.substr(0, hostName.find(':')); // * tal vez no sea necesario *
+		hostName = hostName.substr(0, hostName.find(':'));
 
         if (!_loc.get_return_uri().empty())        // Doing an HTTP redirection (301) if redirect field filled in matched location block
         {
@@ -116,6 +122,7 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 		std::string realUri = reconstructFullURI(_req->getMethod(), _req->getPath());    // Modifying URI with root and index directive if any, checking for the allowed methods
 		std::string *cgiName = getCgiExecutableName(realUri);     					    // Checking if the targeted file is a CGI based on his extension
 
+		_endConn = isMarkedForClosing();
         // Execute the appropriate method and fills the response buffer with status line + 
         // headers + body (if any). If an error occurs during this process, it will throw 
         // a StatusLine object with the appropriate error code.
@@ -134,6 +141,8 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 	{
 		fillError(errorStaLine);
 	}
+	_req->clear();
+	setRequest(NULL);
 }
 
 
@@ -348,7 +357,7 @@ void Response::fillError(const StatusLine& sta)
 
     // Custom error pages if set in config file
 	if (_staLine.getCode() != 404 || _loc.get_error_page().empty()) {
-		errorFile = errorPage(sta);
+		errorFile = getErrorPage(sta);
 		fillContentTypeHeader();
 	} 
 	else
@@ -360,7 +369,7 @@ void Response::fillError(const StatusLine& sta)
 		struct stat infFile;
 		if (stat(pathError.c_str(), &infFile) == -1) /* check if pathError file is readable */{
 			std::cerr << strerror(errno) << "\n";
-			errorFile = errorPage(sta);
+			errorFile = getErrorPage(sta);
 			fillContentTypeHeader();
 		}
 		else {
@@ -375,20 +384,6 @@ void Response::fillError(const StatusLine& sta)
 	//fillContentlengthHeader(convertNbToString(body.getRequestFileSize()));
 	fillContentlengthHeader(convertNbToString(errorFile.size()));
 	_buffer += CRLF + errorFile;
-}
-
-void Response::postToFile(const std::string& uri)
-{
-	std::fstream postFile;
-
-	postFile.open(uri.c_str(), std::ios_base::out | std::ios_base::trunc);
-
-	if (!postFile.is_open()) {
-		std::cerr << "[DEBUG] " <<  strerror(errno) << "\n";
-		std::cout << "[DEBUG] trying to create file in " << uri.c_str() << "\n";
-		throw (StatusLine(500, REASON_500, "failed to open file in post method"));
-	}
-	postFile << _req->getBody().getBody();
 }
 
 bool Response::isResourceAFile(const std::string& uri) const {
@@ -429,21 +424,38 @@ void Response::execGet(const std::string& realUri)
 	}
 }
 
+
+/* add Location header */
+/* 201 */
 void Response::execPost(const std::string& realUri)
 {
-    // Need to create file so changing code 200 ("OK") to 201 ("created")
-    struct stat infoFile;
-    if (stat(realUri.c_str(), &infoFile) == -1)
-        _staLine = StatusLine(201, REASON_201, "POST error");
-    
-    // Creating a new file or appending to existing file post request payload. If 
-    // opening failed, throws StatusLine object with error 500 (internal error)
-    postToFile(realUri);
-    
-    // Storing status line and some headers in buffer
-    fillStatusLine(_staLine);
+	struct stat infoFile;
+    int fileExists = stat(realUri.c_str(), &infoFile);
+	
+	if (!fileExists && (S_ISDIR(infoFile.st_mode)))
+		throw StatusLine(403, REASON_403, "POST: trying to upload a file when not allowed");
+	_staLine = (!fileExists) ?
+		StatusLine(204, REASON_204, "POST: file already exists") :
+		StatusLine(201, REASON_201, "POST: create new resource");
+
+	std::fstream postFile(realUri.c_str(), std::ios_base::out | std::ios_base::app);
+	if (!postFile.is_open())
+		throw StatusLine(500, REASON_500, "POST: failed to open/create new resource");
+	postFile << _req->getBody().getBody();
+	postFile.close();
+
+	fillStatusLine(_staLine);
     fillServerHeader();
     fillDateHeader();
+	if (_staLine.getCode() == 201) 
+	{
+		fillLocationHeader(realUri);
+		_buffer += CRLF + _req->getBody().getBody();
+	} 
+	else
+	{
+		_buffer += CRLF;
+	}
 }
 
 void Response::execDelete(const std::string& realUri)
@@ -452,6 +464,7 @@ void Response::execDelete(const std::string& realUri)
         throw (StatusLine(500, REASON_500, "remove function failed in DELETE method"));
 
     // Storing status line and some headers in buffer
+	_staLine = StatusLine(204, REASON_204, "resource deleted successfully");
     fillStatusLine(_staLine);
     fillServerHeader();
     fillDateHeader();    
@@ -518,7 +531,7 @@ std::string* Response::getCgiExecutableName(const std::string& uri) {
 	return NULL;
 }
 
-std::string Response::errorPage(const StatusLine& sl) {
+std::string Response::getErrorPage(const StatusLine& sl) {
 	std::string errorPage;
 
 	errorPage.append("<!DOCTYPE><html><head><title>Webserv</title></head><body><h1>Webserv</h1><hr><p>");
@@ -591,6 +604,15 @@ std::string Response::getResourceExtension(const std::string& uri) const {
 	return ext;
 }
 
+bool Response::isMarkedForClosing(void) const
+{
+	std::map<std::string, std::string>::const_iterator it = _req->getHeaders().find("Connection");
+	if (it != _req->getHeaders().end() && !it->second.compare("close")) {
+		return true;
+	}
+	return false;
+}
+
 /* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */
 
 void swap(Response& a, Response& b)
@@ -599,4 +621,5 @@ void swap(Response& a, Response& b)
 	swap(a._staLine, b._staLine);
 	std::swap(a._buffer, b._buffer);
     std::swap(a._autoIndex, b._autoIndex);
+	std::swap(a._endConn, b._endConn);
 }

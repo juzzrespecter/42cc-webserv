@@ -109,7 +109,6 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
 socket_status_f    Webserver::write_to_socket(Socket& conn_socket) {
     /* llamada a write con el mensaje guardado en el Socket */
     const std::string& response = conn_socket.get_response_string();
-    std::cout << "[debug] response:\n" << response << "\n";
     int socket_wr_stat = write(conn_socket.fd, response.c_str(), response.size());
     
     if (socket_wr_stat == -1) {
@@ -207,15 +206,6 @@ Webserver::~Webserver() {
     }
 }
 
-void p(std::vector<Socket>& s) {
-    std::cout << "[debug] [ ";
-    for (std::vector<Socket>::iterator it = s.begin(); it != s.end(); it++) {
-        std::cout << it->fd << " ";
-    }
-    std::cout << "]\n";
-}
-
-/* main loop */
 void Webserver::run(void) {
     signal(SIGINT, &sighandl);
     signal(SIGQUIT, &sighandl);
@@ -224,7 +214,6 @@ void Webserver::run(void) {
     while (!quit_f) {
         FD_ZERO(&readfds);
         FD_ZERO(&writefds);
-        p(read_v), p(write_v);
 
         for (std::vector<Socket>::iterator it = read_v.begin(); it != read_v.end(); it++) {
             FD_SET(it->fd, &readfds);

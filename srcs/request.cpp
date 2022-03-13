@@ -79,14 +79,12 @@ void    Request::recvBuffer(const std::string& newBuffer) {
         &Request::parseChunkReqBody
     };
     bool still_parsing = true;
-    std::cout << "[raw req]\n" << newBuffer;
 
     _buffer.append(newBuffer);
     while (still_parsing == true) {
         still_parsing = (this->*req_table[_stage])(); 
     }
     if (_stage == READY) {
-        print();
         throw StatusLine(200, REASON_200, "");
     }
 }
@@ -175,7 +173,6 @@ bool    Request::parseHeaderEnd(void) {
 
 bool    Request::parseHeaderLine(void) {
     std::string headerLine;
-
     if (!_getNextLine(headerLine)) {
         return false;
     }
@@ -185,14 +182,16 @@ bool    Request::parseHeaderLine(void) {
     if (headerLine.size() > MAX_HEADER_LEN) {
         THROW_STATUS("syntax error on request: header line overflows");
     }
-    size_t  colon_pos = headerLine.find(':');
-
-    if (colon_pos == std::string::npos) {   // invalid syntax on header line
+    size_t  colonPos = headerLine.find(':');
+    if (colonPos == std::string::npos) {   // invalid syntax on header line
         return true;
     }
     std::string fieldName = headerLine.substr(0, headerLine.find(':'));
-    std::string fieldValue = headerLine.substr(fieldName.size() + 1);
-
+    size_t valuePos = headerLine.find_first_not_of(" ", ++colonPos);
+    if (valuePos == std::string::npos) {   // no field value
+        return true;
+    }
+    std::string fieldValue = headerLine.substr(valuePos);
     if (_headerCount++ > HEADER_LIMIT) {
         THROW_STATUS("too many headers on request");
     }
@@ -264,8 +263,8 @@ bool    Request::parseChunkReqBody(void) {
     }
     _body.recvBuffer(chunk);
     if (!size) {
-     _stage = READY;
-     return false;
+        _stage = READY;
+        return false;
     }
     return true;
 }
@@ -275,12 +274,9 @@ bool    Request::parseReqBody(void) {
 
     _index += bodyBuffer.size();
     _body.recvBuffer(bodyBuffer);
-    if (_body.getBody().size() > contentLength()) {
-        THROW_STATUS("request body overflows content-length limit");
-    }
     if (_body.getBody().size() == contentLength()) {
-     _stage = READY;
-     return false;
+        _stage = READY;
+        return false;
     }
     return true;
 }

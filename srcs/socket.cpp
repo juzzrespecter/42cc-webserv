@@ -61,7 +61,7 @@ void Socket::build_request(const std::string& buffer) {
 
 void Socket::build_response(const StatusLine& sl) {
      _resp.fillBuffer(&_req, _req.getLocation(), sl);
-     _req.clear();
+     //_req.clear();
 }
 
 std::string Socket::get_response_string(void) const {
@@ -77,17 +77,14 @@ bool Socket::is_passv(void) const {
 }
 
 bool Socket::marked_for_closing(void) const {
-    std::map<std::string, std::string>::const_iterator it = _req.getHeaders().find("Connection");
-
     /* case Connection header set to close */
-	if (it != _req.getHeaders().end() && !it->second.compare("close")) {
-		return true;
-	}
+    if (_resp.getEndConn()) {
+        return true;
+    }
     /* case error response (4xx / 5xx) */
     if (_resp.getCode() >= 400) {
         return true;
     }
-    std::cerr << "[debug] not marked for closing\n";
 	return false;
 }
 

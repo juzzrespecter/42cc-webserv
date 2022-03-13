@@ -33,16 +33,9 @@ class Socket {
         Socket& operator=(const Socket&);
 
         const listen_directive_t& get_socket_addr(void) const;
-        
-        //void set_response(const Response&);
-
-        //Request& get_request(void);
-        //Response& get_response(void);
 
         void build_request(const std::string&);
         void build_response(const StatusLine&);
-
-//        const std::vector<Server*>& get_serv_lst(void) const;
 
         std::string get_response_string(void) const;
 
