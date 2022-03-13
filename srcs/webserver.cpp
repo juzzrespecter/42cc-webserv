@@ -60,7 +60,7 @@ void    Webserver::nfds_down(int fd) {
 /* acepta nuevas conexiones de los sockets pasivos; no trata fallos en accept como críticos */
 void    Webserver::accept_new_connection(const Socket& passv) {
     struct sockaddr_in addr_in;
-    socklen_t addr_len;
+    socklen_t addr_len = sizeof(addr_in);
 
     int new_conn = accept(passv.fd, reinterpret_cast<sa_t*>(&addr_in), &addr_len);
     if (new_conn == -1) {
