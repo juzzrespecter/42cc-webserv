@@ -102,6 +102,11 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 	if (_staLine.getCode() >= 400)
 		return fillError(_staLine);
 
+    if (_staLine.getCode() == 100) 
+    {
+            setUp100Continue();
+            return ;
+    }
 	try
 	{
 		std::string hostName(_req->getHeaders().find("Host")->second); 		// Keeping only host name and removing port
@@ -141,7 +146,7 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 	{
 		fillError(errorStaLine);
 	}
-	_req->clear();
+	_req->clear(); // aqui no llega cuando code == 4xx / 5xx
 	setRequest(NULL);
 }
 
@@ -206,10 +211,10 @@ void Response::fillLastModifiedHeader(const char* uri)
 
 	struct tm* lm = localtime(&infFile.st_mtime);
 
-	const std::string day[7] = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+	const std::string day[7] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"/*, "Sun"*/};
 	const std::string mon[12] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-	_buffer += "Last-Modified: " + day[lm->tm_wday - 1] + ", " + convertNbToString(lm->tm_mday) + " " + mon[lm->tm_mon] + " " 
+	_buffer += "Last-Modified: " + day[lm->tm_wday/* - 1*/] + ", " + convertNbToString(lm->tm_mday) + " " + mon[lm->tm_mon] + " " 
 			+ convertNbToString(lm->tm_year + 1900) + " " + convertNbToString(lm->tm_hour) + ":" + 
 			convertNbToString(lm->tm_min) + ":" + convertNbToString(lm->tm_sec) + " GMT" + CRLF;
 }
@@ -409,11 +414,7 @@ void Response::execGet(const std::string& realUri)
 			fillContentTypeHeader(getResourceExtension(realUri));
             _buffer += CRLF + body.getRequestFile();
 		}
-		std::cout << _buffer << "\n";
 		return ;
-	}
-	if (_autoIndex == false) { // may be redundant code
-		throw StatusLine(403, REASON_403, "requested a directory with autoindex set off");
 	}
 	if (_autoIndex == true)  {
 		std::string autoIndexPage;
@@ -421,7 +422,9 @@ void Response::execGet(const std::string& realUri)
 		fillContentTypeHeader();
         fillContentlengthHeader(convertNbToString(autoIndexPage.size()));
         _buffer += CRLF + autoIndexPage;
+        return ;
 	}
+    throw StatusLine(403, REASON_403, "GET: requested directory with autoindex set off");
 }
 
 
@@ -464,7 +467,7 @@ void Response::execDelete(const std::string& realUri)
     {
         throw (StatusLine(500, REASON_500, "remove function failed in DELETE method"));
     }
-	_staLine = StatusLine(204, REASON_204, "resource deleted successfully");
+	_staLine = StatusLine(204, REASON_204, "DELETE: resource removed successfully");
     fillStatusLine(_staLine);
     fillServerHeader();
     fillDateHeader();    
@@ -611,6 +614,15 @@ bool Response::isMarkedForClosing(void) const
 		return true;
 	}
 	return false;
+}
+
+void Response::setUp100Continue(void)
+{
+    fillStatusLine(_staLine);
+    fillServerHeader();
+    fillDateHeader();
+
+    _buffer += CRLF;
 }
 
 /* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */

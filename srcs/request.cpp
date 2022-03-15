@@ -162,12 +162,29 @@ void    Request::parseHTTPVersion(const std::string& token) {
 
 /* must return not ready && false when header Expect: Continue present */
 bool    Request::parseHeaderEnd(void) {
-    headerMeetsRequirements();
+    header_map::const_iterator cl = _headers.find("Content-Length");
+    header_map::const_iterator hs = _headers.find("Host");
+    header_map::const_iterator ex = _headers.find("Expect");
+
+    if (hs == _headers.end()) {
+        THROW_STATUS("no Host defined on request");
+    }
+    if (cl != _headers.end()) { // case expected 100-continue w/o c-l defined??
+        char *ptr;
+
+        int clFieldValue = strtol(cl->first.c_str(), &ptr, 0);
+        if (*ptr || clFieldValue < 0) {
+            THROW_STATUS("invalid Content-Length field value");
+        }
+    }
     if (_reqLine.getMethod() == POST) {
         setUpRequestBody();
         _stage = (transferEncodingIsChunked() == true) ? REQ_CHUNK_BODY : REQ_BODY;
     } else {
-        _stage = READY;
+        _stage = READY; // case expected 100-continue w/ GET req??
+    }
+    if (ex != _headers.end() && !ex->second.compare("100-continue")) {
+        throw StatusLine(100, REASON_100, "...");
     }
     return (_stage != READY);
 }
@@ -203,30 +220,6 @@ bool    Request::parseHeaderLine(void) {
         }
     }
     return true;
-}
-
-void    Request::headerMeetsRequirements(void) const {
-    header_map::const_iterator hd = _headers.find("Host");
-    header_map::const_iterator cl = _headers.find("Content-Length");
-    header_map::const_iterator ex = _headers.find("Expect");
-    
-    // Debe estar presente un Host definido en la request
-    if (hd == _headers.end()) {
-        THROW_STATUS("requested host not defined");
-    }
-
-    // Si existe un header Content-Length definido, su field-value ha de ser un numero positivo
-    if (cl != _headers.end()) {
-        char *ptr;
-
-        int contentLengthVal = strtol(cl->second.c_str(), &ptr, 0);
-        if (contentLengthVal < 0 || *ptr) {
-            THROW_STATUS("invalid value for header Content-Length");
-        }
-    }
-  //  if (ex != _headers.end() && !ex.second.compare("100-continue")) {
-  //          throw StatusLine(100, REASON_100, "");
-  //  }
 }
 
 void    Request::setUpRequestBody(void) {

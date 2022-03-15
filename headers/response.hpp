@@ -91,10 +91,6 @@ class Response
 
 		/* ----------------------- PRIVATE METHODS --------------------- */
 
-		typedef std::pair<const std::string, const Location* > location_pair;
-
-		//location_pair locationSearcher(const std::vector<Server*>& srv_vec) const;
-
 		// Fills buffer with Content-length header
 		void fillContentlengthHeader(const std::string& size);
 
@@ -163,6 +159,8 @@ class Response
 		std::string  getResourceExtension(const std::string&) const;
 		std::string* getCgiExecutableName(const std::string&);
 		std::string  getErrorPage(const StatusLine&);
+
+        void setUp100Continue(void);
 	public:
 	
 		/* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */

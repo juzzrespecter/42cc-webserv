@@ -24,7 +24,7 @@ OBJ_MAIN = $(OBJ_DIR)main.o
 
 HEADER = $(patsubst %.cpp, $(HEADER_DIR)%.hpp, $(SRC))
 CXX	= clang++
-CXXFLAGS = -Wall -Werror -Wextra -std=c++98 -g3 -fstandalone-debug
+CXXFLAGS = -Wall -Werror -Wextra -std=c++98 -g3 -fstandalone-debug -fsanitize=address
 
 NAME = webserver
 

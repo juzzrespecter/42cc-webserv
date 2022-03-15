@@ -73,7 +73,6 @@ void    Webserver::accept_new_connection(const Socket& passv) {
 }
 
 socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
-    //Request& req = conn_socket.get_request();
     char     req_buff[REQUEST_BUFFER_SIZE];
 
     memset(req_buff, 0, REQUEST_BUFFER_SIZE);
@@ -90,7 +89,6 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
         /* cliente ha cerrado conexión; cerramos socket y eliminamos de la lista */
         conn_socket.close_socket();
         nfds_down(conn_socket.fd);
-        //read_v.erase(read_v.begin() + i);
         return CLOSED;
     }
     /* puede ser que una lectura del socket traiga más de una request ?? (std::vector<Request>) */
@@ -103,7 +101,6 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
         return CONTINUE;
     }
     return STANDBY;
-    //return (req.getStage() == request_is_ready) ? CONTINUE : STANDBY;
 }
 
 socket_status_f    Webserver::write_to_socket(Socket& conn_socket) {
