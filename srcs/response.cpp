@@ -438,7 +438,7 @@ void Response::execPost(const std::string& realUri)
 		StatusLine(204, REASON_204, "POST: file already exists") :
 		StatusLine(201, REASON_201, "POST: create new resource");
 
-	std::fstream postFile(realUri.c_str(), std::ios_base::out | std::ios_base::app);
+	std::fstream postFile(realUri.c_str(), std::ios_base::out | std::ios_base::trunc);
 	if (!postFile.is_open())
 		throw StatusLine(500, REASON_500, "POST: failed to open/create new resource");
 	postFile << _req->getBody().getBody();
@@ -461,9 +461,9 @@ void Response::execPost(const std::string& realUri)
 void Response::execDelete(const std::string& realUri)
 {
     if (remove(realUri.c_str()))
+    {
         throw (StatusLine(500, REASON_500, "remove function failed in DELETE method"));
-
-    // Storing status line and some headers in buffer
+    }
 	_staLine = StatusLine(204, REASON_204, "resource deleted successfully");
     fillStatusLine(_staLine);
     fillServerHeader();

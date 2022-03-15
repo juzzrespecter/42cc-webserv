@@ -160,6 +160,7 @@ void    Request::parseHTTPVersion(const std::string& token) {
     }
 }
 
+/* must return not ready && false when header Expect: Continue present */
 bool    Request::parseHeaderEnd(void) {
     headerMeetsRequirements();
     if (_reqLine.getMethod() == POST) {
@@ -207,6 +208,7 @@ bool    Request::parseHeaderLine(void) {
 void    Request::headerMeetsRequirements(void) const {
     header_map::const_iterator hd = _headers.find("Host");
     header_map::const_iterator cl = _headers.find("Content-Length");
+    header_map::const_iterator ex = _headers.find("Expect");
     
     // Debe estar presente un Host definido en la request
     if (hd == _headers.end()) {
@@ -222,6 +224,9 @@ void    Request::headerMeetsRequirements(void) const {
             THROW_STATUS("invalid value for header Content-Length");
         }
     }
+  //  if (ex != _headers.end() && !ex.second.compare("100-continue")) {
+  //          throw StatusLine(100, REASON_100, "");
+  //  }
 }
 
 void    Request::setUpRequestBody(void) {
