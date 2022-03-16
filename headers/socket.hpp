@@ -39,7 +39,7 @@ class Socket {
 
         std::string get_response_string(void) const;
 
-        void add_server_ref(Server&);
+        void add_server_ref(const Server&);
 
         bool is_passv(void) const;
         bool marked_for_closing(void) const;

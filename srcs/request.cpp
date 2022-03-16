@@ -172,7 +172,7 @@ bool    Request::parseHeaderEnd(void) {
     if (cl != _headers.end()) { // case expected 100-continue w/o c-l defined??
         char *ptr;
 
-        int clFieldValue = strtol(cl->first.c_str(), &ptr, 0);
+        int clFieldValue = strtol(cl->second.c_str(), &ptr, 0);
         if (*ptr || clFieldValue < 0) {
             THROW_STATUS("invalid Content-Length field value");
         }

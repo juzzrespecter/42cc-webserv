@@ -24,8 +24,9 @@ class Webserver {
             public:
                 bool operator()(const Socket&);
                 addr_comp(const listen_directive_t&);
+                ~addr_comp();
             private:
-                const listen_directive_t& addr;
+                const listen_directive_t addr;
         };
 
         std::string timestamp(void) const;

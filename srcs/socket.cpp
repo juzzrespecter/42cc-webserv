@@ -68,7 +68,7 @@ std::string Socket::get_response_string(void) const {
     return _resp.getBuffer();
 }
 
-void  Socket::add_server_ref(Server& srv) {
+void  Socket::add_server_ref(const Server& srv) {
     _serv_v.push_back(&srv);
 }
 

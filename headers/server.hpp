@@ -11,6 +11,7 @@ struct listen_directive_t {
     listen_directive_t(void);
     listen_directive_t(const listen_directive_t&);
     listen_directive_t(const std::string&);
+    ~listen_directive_t();
     listen_directive_t& operator=(const listen_directive_t&);
 
     bool operator==(const listen_directive_t&) const;

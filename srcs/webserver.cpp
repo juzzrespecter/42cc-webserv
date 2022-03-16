@@ -19,7 +19,9 @@ bool    Webserver::addr_comp::operator()(const Socket& other) {
     return addr == other.get_socket_addr();
 }
 
-Webserver::addr_comp::addr_comp(const listen_directive_t& addr) : addr(addr) { }
+Webserver::addr_comp::addr_comp(const listen_directive_t& _addr) : addr(_addr) { }
+
+Webserver::addr_comp::~addr_comp() { }
 
 /* condición de server duplicado: comparten mismas directivas listen y server_name */
 void    Webserver::check_server_duplicates(const std::vector<Server>& srv_v) {
@@ -180,7 +182,7 @@ Webserver::Webserver(const std::vector<server_block_t>& srv_blk_v) {
         server_v.push_back(*it);
     }
     check_server_duplicates(server_v);
-    for (std::vector<Server>::iterator it = server_v.begin(); it != server_v.end(); it++) {
+    for (std::vector<Server>::const_iterator it = server_v.begin(); it != server_v.end(); it++) {
         Webserver::addr_comp comp(it->get_server_addr());
         std::vector<Socket>::iterator sock_it = std::find_if(read_v.begin(), read_v.end(), comp);
 

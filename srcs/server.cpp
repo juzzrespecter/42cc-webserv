@@ -38,6 +38,8 @@ bool listen_directive_t::operator!=(const listen_directive_t& rhs) const {
     return !(*this == rhs);
 }
 
+listen_directive_t::~listen_directive_t() { }
+
 Server::Server(void) : listen() { }
 
 Server::Server(const Server& other) : 
