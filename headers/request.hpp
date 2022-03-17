@@ -67,6 +67,7 @@ class Request
 		const std::string& getPath() const;
 		const std::string& getQuery() const;
 		const Location& getLocation(void) const;
+        size_t getStage(void) const;
 
 
 		/* --------------------------- SETTERS ------------------------- */

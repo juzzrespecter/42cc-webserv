@@ -84,10 +84,7 @@ bool Response::getEndConn() const
 
 void Response::clear()
 {
-	if (_req != NULL) {
-		_req->clear();
-		_req = NULL;
-	}
+	_req = NULL;
 	_staLine.clear();
 	_buffer.clear();
 	_autoIndex = false;
@@ -146,8 +143,6 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 	{
 		fillError(errorStaLine);
 	}
-	_req->clear(); // aqui no llega cuando code == 4xx / 5xx
-	setRequest(NULL);
 }
 
 
@@ -453,6 +448,7 @@ void Response::execPost(const std::string& realUri)
 	if (_staLine.getCode() == 201) 
 	{
 		fillLocationHeader(realUri);
+        fillContentlengthHeader(convertNbToString(_req->getBody().getBody().size()));
 		_buffer += CRLF + _req->getBody().getBody();
 	} 
 	else

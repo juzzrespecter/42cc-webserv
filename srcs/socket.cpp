@@ -94,4 +94,7 @@ void Socket::close_socket(void) const {
 
 void Socket::clear_response(void) {
     _resp.clear();
+    if (_req.getStage() == READY) {
+        _req.clear();
+    }
 }

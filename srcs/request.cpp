@@ -50,6 +50,10 @@ const Location& Request::getLocation(void) const {
     return server_host->get_location_by_path(getPath());
 }
 
+size_t Request::getStage(void) const {
+    return _stage;
+}
+
 void Request::setPath(const std::string& path) {
     _reqLine.setPath(path);
 }
@@ -184,7 +188,7 @@ bool    Request::parseHeaderEnd(void) {
         _stage = READY; // case expected 100-continue w/ GET req??
     }
     if (ex != _headers.end() && !ex->second.compare("100-continue")) {
-        throw StatusLine(100, REASON_100, "...");
+        throw StatusLine(100, REASON_100, "");
     }
     return (_stage != READY);
 }
