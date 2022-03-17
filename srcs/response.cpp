@@ -96,13 +96,13 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 	setLocation(loc);
 	setStatusLine(sl);
 
-	if (_staLine.getCode() >= 400)
-		return fillError(_staLine);
-
-    if (_staLine.getCode() == 100) 
+    if (_staLine.getCode() == 100)
     {
-            setUp100Continue();
-            return ;
+        return setUp100Continue();
+    }
+	if (_staLine.getCode() >= 400)
+    {
+		return fillError(_staLine);
     }
 	try
 	{

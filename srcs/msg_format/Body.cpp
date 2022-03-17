@@ -73,7 +73,7 @@ void Body::recvBuffer(const std::string& buffer/*, size_t index, size_t lenToRea
 		throw StatusLine(413, REASON_413, "request body exceeded location max body configuration");
 	}
 	if (_size > 0 && _buff.size() > _size) {
-		throw StatusLine(400, REASON_400, "request body ");
+		throw StatusLine(400, REASON_400, "request body exceeded content-length value");
 	}
 	// controla size -> content-lenght
 	// controla max_size -> client_max_body_size

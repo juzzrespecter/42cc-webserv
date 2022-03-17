@@ -96,7 +96,7 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
     /* puede ser que una lectura del socket traiga más de una request ?? (std::vector<Request>) */
     /* (pipelining; sending multiple requests without waiting for an response) */
     try {
-        conn_socket.build_request(req_buff);
+        conn_socket.build_request(req_buff, socket_rd_stat);
     } catch (StatusLine& sl) {
         log("request: ", sl.getReason() + " - " + sl.getAdditionalInfo());
         conn_socket.build_response(sl);
@@ -160,7 +160,7 @@ void Webserver::ready_to_write_loop(void) {
     }
 }
 
-Webserver::Webserver(void) { }
+Webserver::Webserver(void) : nfds(0) { }
 
 Webserver::Webserver(const Webserver& other) { 
     *this = other;
@@ -177,7 +177,7 @@ Webserver& Webserver::operator=(const Webserver& other) {
 }
 
 /* inicializa servidores y sockets pasivos en base a las estructuras generadas por el parser */
-Webserver::Webserver(const std::vector<server_block_t>& srv_blk_v) {
+Webserver::Webserver(const std::vector<server_block_t>& srv_blk_v) : nfds(0) {
     for (std::vector<server_block_t>::const_iterator it = srv_blk_v.begin(); it != srv_blk_v.end(); it++) {
         server_v.push_back(*it);
     }

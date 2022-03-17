@@ -34,7 +34,7 @@ class Socket {
 
         const listen_directive_t& get_socket_addr(void) const;
 
-        void build_request(const std::string&);
+        void build_request(const char[], int);
         void build_response(const StatusLine&);
 
         std::string get_response_string(void) const;

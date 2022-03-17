@@ -55,8 +55,8 @@ const listen_directive_t& Socket::get_socket_addr(void) const {
     return _sock_addr;
 }
 
-void Socket::build_request(const std::string& buffer) {
-     _req.recvBuffer(buffer);    
+void Socket::build_request(const char buffer[], int buffer_size) {
+     _req.recvBuffer(buffer, buffer_size);
 }
 
 void Socket::build_response(const StatusLine& sl) {

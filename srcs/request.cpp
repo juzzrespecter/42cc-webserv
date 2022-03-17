@@ -75,7 +75,7 @@ void swap(Request& a, Request& b) {
 //        CRLF
 //        [ message-body ]
 
-void    Request::recvBuffer(const std::string& newBuffer) {
+void    Request::recvBuffer(const char newBuffer[], int bufferSize) {
     static req_options req_table[REQ_TAB_SIZE] = {
         &Request::parseRequestLine,
         &Request::parseHeaderLine,
@@ -84,7 +84,7 @@ void    Request::recvBuffer(const std::string& newBuffer) {
     };
     bool still_parsing = true;
 
-    _buffer.append(newBuffer);
+    _buffer.append(newBuffer, bufferSize);
     while (still_parsing == true) {
         still_parsing = (this->*req_table[_stage])(); 
     }
@@ -266,9 +266,8 @@ bool    Request::parseChunkReqBody(void) {
     _body.recvBuffer(chunk);
     if (!size) {
         _stage = READY;
-        return false;
     }
-    return true;
+    return false;
 }
 
 bool    Request::parseReqBody(void) {
@@ -278,9 +277,8 @@ bool    Request::parseReqBody(void) {
     _body.recvBuffer(bodyBuffer);
     if (_body.getBody().size() == contentLength()) {
         _stage = READY;
-        return false;
     }
-    return true;
+    return false;
 }
 
 bool    Request::transferEncodingIsChunked(void) const {

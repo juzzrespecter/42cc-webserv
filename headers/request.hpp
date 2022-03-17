@@ -78,7 +78,7 @@ class Request
 
 		// Add the buffer from receive to request object
 		//Request& operator+=(const char* charBuffer);
-		void recvBuffer(const std::string&);
+		void recvBuffer(const char[], int);
 
 		// Check if the data received is correct. If an error occur or if a request was
 		// fully received, throws a status line with the appropriate code.
