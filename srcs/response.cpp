@@ -239,18 +239,15 @@ void print_Loc(const Location& _loc)
 
 void Response::replaceLocInUri(std::string& uri, const std::string& root)
 {
-	std::cout << "[debug] uri antes: " << uri << "\n";
 	if (root[root.size() - 1] == '/')
 		uri.erase(0, 1); // borra '/' sobrante
 		
 	uri.insert(0, root);
-	std::cout << "[debug] uri despues: " << uri << "\n";
 }
 
 std::string Response::addIndex(const std::string& uri, const std::vector<std::string>& indexs)
 {
 	struct stat infFile;
-	std::cout << "uri pre index: " << uri << "\n";
 	for (std::vector<std::string>::const_iterator it = indexs.begin(); it != indexs.end(); ++it)
 	{
 		// Add each index to the uri
@@ -260,7 +257,6 @@ std::string Response::addIndex(const std::string& uri, const std::vector<std::st
 		if (!stat(uriWithIndex.c_str(), &infFile))
 			return uriWithIndex;
 	}
-	std::cout << "uri pos index: " << uri << "\n";
 	if (_loc.get_autoindex()) {
 		_autoIndex = true;
 		return uri;

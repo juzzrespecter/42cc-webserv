@@ -89,7 +89,7 @@ void    Request::recvBuffer(const char newBuffer[], int bufferSize) {
         still_parsing = (this->*req_table[_stage])(); 
     }
     if (_stage == READY) {
-        throw StatusLine(200, REASON_200, "");
+        throw StatusLine(200, REASON_200, "request received successfully");
     }
 }
 

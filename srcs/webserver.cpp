@@ -1,12 +1,5 @@
 #include "webserver.hpp"
 
-const std::string webservHeader = "\n \033[32m\
-__  _  __ ____   _____ _______   ____     ____   ____ |  | |__| ____   ____  \n \
-\\ \\/ \\/ // __ \\  \\__  \\\\_  __ \\_/ __ \\   /  _ \\ /    \\|  | |  |/    \\_/ __ \\ \n\
-  \\     /\\  ___/   / __ \\|  | \\/\\  ___/  (  <_> )   |  \\  |_|  |   |  \\  ___/ \n\
-   \\/\\_/  \\___  > (____  /__|    \\___  >  \\____/|___|  /____/__|___|  /\\___  >\n\
-             \\/       \\/            \\/              \\/             \\/     \\/ \n\033[0m";
-
 sig_atomic_t    quit_f = 0;
 static void sighandl(int signal) {
 
@@ -209,7 +202,7 @@ void Webserver::run(void) {
     signal(SIGINT, &sighandl);
     signal(SIGQUIT, &sighandl);
 
-    std::cout << webservHeader;
+    log("\033[32m[ webserver is up and running.", " ~ /danrodri, /fgomez-s ]\033[0m");
     while (!quit_f) {
         FD_ZERO(&readfds);
         FD_ZERO(&writefds);
