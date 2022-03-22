@@ -7,6 +7,9 @@
 
 #define N_METHODS 3
 
+typedef std::pair<std::string, std::string>   cgi_pair;
+typedef std::vector<cgi_pair>::const_iterator cgi_iterator;
+
 class Location {
     private:
         std::string error_page;

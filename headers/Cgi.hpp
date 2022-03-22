@@ -14,7 +14,7 @@
 // temp
 #ifndef TMP_def
 # define CGI_PATH "nil" 
-# define EXECVE_FAIL 0 
+# define EXECVE_FAIL EXIT_FAILURE 
 # define CGI_PIPE_BUFFER_SIZE 0
 #endif
 
@@ -36,7 +36,7 @@ class CGI
 
 		/* ------------------------ COPLIEN FORM ----------------------- */
 
-		CGI(Body *, Request *, const std::string &, const std::string& exec = "");
+		CGI(Body *, Request *, const std::string &, const cgi_pair &);
 		CGI &operator=(CGI &);
 		~CGI();
 	

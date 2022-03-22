@@ -122,14 +122,14 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
             throw StatusLine(301, REASON_301, "http redirection");
         }
 		std::string realUri = reconstructFullURI(_req->getMethod(), _req->getPath());    // Modifying URI with root and index directive if any, checking for the allowed methods
-		std::string *cgiName = getCgiExecutableName(realUri);     					    // Checking if the targeted file is a CGI based on his extension
+		cgi_pair cgiConfig = getCgiExecutableName(realUri);     					    // Checking if the targeted file is a CGI based on his extension
 
 		_endConn = isMarkedForClosing();
         // Execute the appropriate method and fills the response buffer with status line + 
         // headers + body (if any). If an error occurs during this process, it will throw 
         // a StatusLine object with the appropriate error code.
-		if (cgiName && (_req->getMethod() == GET || _req->getMethod() == POST))
-			execCgi(realUri, cgiName);
+		if (!cgiConfig.first.empty())
+			execCgi(realUri, cgiConfig);
 		else if (_req->getMethod() == GET || _req->getMethod() == HEAD)
             execGet(realUri);
 		else if (_req->getMethod() == POST)
@@ -148,7 +148,7 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 
 /* ----------------------- PRIVATE METHODS --------------------- */
 
-void Response::execCgi(const std::string& realUri, std::string* cgiName)
+void Response::execCgi(const std::string& realUri, const cgi_pair& cgiConfig)
 {
     struct stat st;
     if (stat(realUri.c_str(), &st) == -1)
@@ -157,7 +157,7 @@ void Response::execCgi(const std::string& realUri, std::string* cgiName)
 	}
 
 	Body cgiRep;
-	CGI cgi(&cgiRep, _req, realUri, *cgiName);
+	CGI cgi(&cgiRep, _req, realUri, cgiConfig);
 	
 	cgi.executeCGI();
 	
@@ -167,8 +167,6 @@ void Response::execCgi(const std::string& realUri, std::string* cgiName)
 	fillContentlengthHeader(convertNbToString(cgiRep.getSize()));
 
 	_buffer += cgiRep.getBody();
-	
-	delete cgiName;	
 }
 
 void Response::fillContentlengthHeader(const std::string& size) 
@@ -514,16 +512,17 @@ std::vector<std::string> Response::splitWithSep(const std::string& str, char dlm
 	return tab;
 }
 
-std::string* Response::getCgiExecutableName(const std::string& uri) {
-	typedef std::vector<std::pair<std::string, std::string> >::const_iterator cgiIterator;
-	std::string fileExt(getResourceExtension(uri));
-
-	for (cgiIterator it = _loc.get_cgi_pass().begin(); it != _loc.get_cgi_pass().end(); it++) {
+cgi_pair Response::getCgiExecutableName(const std::string& uri) const {
+    std::string fileExt(getResourceExtension(uri)); 
+    if (!fileExt.compare("cgi")) {
+        return cgi_pair(".cgi", "");
+    }
+	for (cgi_iterator it = _loc.get_cgi_pass().begin(); it != _loc.get_cgi_pass().end(); it++) {
 		if (!fileExt.compare(it->first)) {
-			return new std::string(fileExt);
+            return *it;
 		}
 	}
-	return NULL;
+	return cgi_pair("","");
 }
 
 std::string Response::getErrorPage(const StatusLine& sl) {

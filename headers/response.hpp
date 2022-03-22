@@ -131,7 +131,7 @@ class Response
 		void fillError(const StatusLine& sta);
 
       	// Execute CGI and sets the buffer with status line / headers / cgi output as payload
-		void execCgi(const std::string& realUri, std::string* cgiName);
+		void execCgi(const std::string& realUri, const cgi_pair& cgiConfig);
 
         void execGet(const std::string& realUri);
 
@@ -156,8 +156,8 @@ class Response
 		bool isResourceAFile(const std::string&) const;
 		bool isMarkedForClosing(void) const;
 
+		cgi_pair     getCgiExecutableName(const std::string&) const;
 		std::string  getResourceExtension(const std::string&) const;
-		std::string* getCgiExecutableName(const std::string&);
 		std::string  getErrorPage(const StatusLine&);
 
         void setUp100Continue(void);
