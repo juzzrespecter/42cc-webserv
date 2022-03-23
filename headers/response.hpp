@@ -132,12 +132,10 @@ class Response
 
       	// Execute CGI and sets the buffer with status line / headers / cgi output as payload
 		void execCgi(const std::string& realUri, const cgi_pair& cgiConfig);
-
         void execGet(const std::string& realUri);
-
         void execPost(const std::string& realUri);
-
         void execDelete(const std::string& realUri);
+		void execPut(const std::string&);
 
         template<class T>
         std::string convertNbToString(T nb) 

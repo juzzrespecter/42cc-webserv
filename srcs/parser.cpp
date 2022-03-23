@@ -205,6 +205,7 @@ bool    Parser::syntax_directive_accept_method(void) const {
         if (peek(count).token.compare("GET") &&
             peek(count).token.compare("POST") &&
             peek(count).token.compare("DELETE") &&
+            peek(count).token.compare("PUT") &&
             peek(count).token.compare("HEAD")) {
             return false;
         }

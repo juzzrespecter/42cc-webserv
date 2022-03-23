@@ -132,8 +132,8 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 			execCgi(realUri, cgiConfig);
 		else if (_req->getMethod() == GET || _req->getMethod() == HEAD)
             execGet(realUri);
-		else if (_req->getMethod() == POST)
-            execPost(realUri);
+		else if (_req->getMethod() == PUT)
+            execPut(realUri);
 		else if (_req->getMethod() == DELETE)
             execDelete(realUri);
 		else
@@ -264,7 +264,7 @@ std::string Response::addIndex(const std::string& uri, const std::vector<std::st
 
 void Response::checkMethods(int method, const std::vector<std::string>& methodsAllowed) const
 {
-	std::string tab[NB_METHODS] = { "GET", "HEAD", "POST", "DELETE" };
+	std::string tab[NB_METHODS] = { "GET", "HEAD", "POST", "PUT", "DELETE" };
 
 	for (std::vector<std::string>::const_iterator it = methodsAllowed.begin();
 			it != methodsAllowed.end(); ++it)
@@ -280,10 +280,10 @@ std::string Response::reconstructFullURI(int method, std::string uri)
 	struct stat infFile;
 
 	// Replacing the part of the URI that matched with the root path if there is one existing
-	if (!_loc.get_root().empty() && !(method == POST && !_loc.get_upload_path().empty()))
+	if (!_loc.get_root().empty() && !(method == PUT && !_loc.get_upload_path().empty()))
 		replaceLocInUri(uri, _loc.get_root());
 
-	else if (method == POST && !_loc.get_upload_path().empty()){ /* before need to be checked CGI */
+	else if (method == PUT && !_loc.get_upload_path().empty()){ /* before need to be checked CGI */
 		std::string fullUploadPath(_loc.get_upload_path());
 		replaceLocInUri(fullUploadPath, _loc.get_root());
 		replaceLocInUri(uri, fullUploadPath);
@@ -295,7 +295,7 @@ std::string Response::reconstructFullURI(int method, std::string uri)
 
 	// Checking if the path after root substitution is correct, and if it's a directory trying
 	// to add indexs. Case POST method, no 404 because it can create the file.
-	if (stat(uri.c_str(), &infFile) == -1 && !(fileExist = false) && method != POST)
+	if (stat(uri.c_str(), &infFile) == -1 && !(fileExist = false) && method != PUT)
 		throw StatusLine(404, REASON_404, "reconstructFullURI method: " + uri);
 
     // Case we match a directory and an autoindex isn't set. We try all the possible indexs, if none
@@ -416,23 +416,22 @@ void Response::execGet(const std::string& realUri)
     throw StatusLine(403, REASON_403, "GET: requested directory with autoindex set off");
 }
 
-
-/* add Location header */
-/* 201 */
-void Response::execPost(const std::string& realUri)
+void Response::execPut(const std::string& realUri)
 {
+	if (_loc.get_upload_path().empty())
+		throw StatusLine(403, REASON_403, "PUT: method is accepted but upload_path is not set in config");
 	struct stat infoFile;
     int fileExists = stat(realUri.c_str(), &infoFile);
 	
 	if (!fileExists && (S_ISDIR(infoFile.st_mode)))
-		throw StatusLine(403, REASON_403, "POST: trying to upload a file when not allowed");
+		throw StatusLine(403, REASON_403, "PUT: trying to upload a file when not allowed");
 	_staLine = (!fileExists) ?
-		StatusLine(204, REASON_204, "POST: file already exists") :
-		StatusLine(201, REASON_201, "POST: create new resource");
+		StatusLine(204, REASON_204, "PUT: file already exists") :
+		StatusLine(201, REASON_201, "PUT: create new resource");
 
 	std::fstream postFile(realUri.c_str(), std::ios_base::out | std::ios_base::trunc);
 	if (!postFile.is_open())
-		throw StatusLine(500, REASON_500, "POST: failed to open/create new resource");
+		throw StatusLine(500, REASON_500, "PUT: failed to open/create new resource");
 	postFile << _req->getBody().getBody();
 	postFile.close();
 

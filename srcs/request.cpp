@@ -116,7 +116,7 @@ bool    Request::parseRequestLine(void) {
 }
 
 void    Request::parseMethodToken(const std::string& token) {
-    std::string method_opts[NB_METHODS] = {"GET", "HEAD", "POST", "DELETE"};
+    std::string method_opts[NB_METHODS] = {"GET", "HEAD", "POST", "PUT", "DELETE"};
 
     for (int method_id = 0; method_id < NB_METHODS; method_id++) {
         if (!token.compare(method_opts[method_id])) {

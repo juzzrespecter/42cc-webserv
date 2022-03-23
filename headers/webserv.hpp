@@ -6,10 +6,10 @@
 #include <string>
 #include <sstream>
 
-enum methods { GET, HEAD, POST, DELETE };
+enum methods { GET, HEAD, POST, DELETE, PUT };
 
 // Number of methods implemented in webserv
-#define NB_METHODS 4
+#define NB_METHODS 5
 
 // Max octets length of a status / request / header line
 #define MAX_URI_LEN 8000
