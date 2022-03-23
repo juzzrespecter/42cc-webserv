@@ -1,27 +1,56 @@
 #include "Cgi.hpp"
 
+// ruta absoluta al CGI
+// ruta absoluta al recurso
+
+std::string CGI::buildCGIPath(const std::string& relPath, const std::string& cwd, const Location& loc)
+{
+	std::string absPath(cwd);
+
+	if (relPath.empty())
+		return "";
+	if (relPath.at(0) != '/')
+	{
+		absPath.append(loc.get_root());
+		if (absPath.at(absPath.size() - 1) != '/')
+			absPath.push_back('/');
+	}
+	absPath.append(relPath);
+	return absPath;
+}
+
 CGI::CGI(Body *body, Request *req, const std::string &realUri, const cgi_pair& cgi_info) 
 			: _emptyBody(body), _req(req)
 {	
-	std::string tmpBuf;
-    std::string cgi_name = cgi_info.first;
-    std::string cgi_path = cgi_info.second;
-	
-	char* pwd = new char[PWD_BUFFER]; // needs to be freed
-	if (!(pwd = getcwd(pwd, PWD_BUFFER)))
-		throw std::runtime_error("Error in getcwd command in cgi constructor\n");
+	char pwd[PWD_BUFFER];
+	if (getcwd(pwd, PWD_BUFFER) == NULL) {
+		throw std::runtime_error("CGI: getcwd() call failure");
+	}
+	std::string resource_path = pwd + realUri;
 
-	_realUri = pwd + ("/" + realUri);
-    delete pwd;
-
-	if (!cgi_name.compare(".cgi"))
-		//_exec = "cgi";
-        _exec = _realUri;
-	else
-		_exec = cgi_name;
+	//std::string cgi_extension = cgi_info.first;
+	//std::string cgi = cgi_info.second;
+	//std::string resource_path = pwd + realUri;
+	//std::string cgi_path = (cgi.empty()) ? resource_path : pwd + cgi_info.second; // test this with null
+//
+	//std::cerr << "[ cgi_path: " << cgi_path << ", res_path: " << resource_path << "]\n";
+//
+	//std::string tmpBuf;
 	
-	if (cgi_name.compare(".cgi"))
-		_openArgfile.open(_realUri.c_str());
+	//_realUri = pwd + ("/" + realUri); // abs resource path
+	//if (!(cgi_path[0] == '/')) {
+	//	cgi_path.insert(0, 1, '/');
+	//}
+	//cgi_path.insert(0, pwd); // abs cgi path
+
+	//if (!cgi_extension.compare(".cgi"))
+	//	//_exec = "cgi";
+    //    _exec = _realUri;
+	//else
+	//	_exec = cgi_name;
+	
+	//if (cgi_extension.compare(".cgi"))
+	//	_openArgfile.open(_realUri.c_str());
 
 	// ** set environment variable for the CGI **
 	// GET : QUERY_STRING + PATH_INFO 
@@ -30,40 +59,43 @@ CGI::CGI(Body *body, Request *req, const std::string &realUri, const cgi_pair& c
 		throw std::runtime_error("Error on a cgi malloc\n");
 		
 	int i = 0;
-	_envvar[i++] = strdup(("PATH_INFO=" + _realUri).c_str());
+	_envvar[i++] = strdup(("PATH_INFO=" + resource_path).c_str());
 	_envvar[i++] = strdup("SERVER_PROTOCOL=HTTP/1.1");
 
     // used for php-cgi
 	_envvar[i++] = strdup("REDIRECT_STATUS=200");
 	
+	std::string tmpBuf;
 	if (_req->getMethod() == GET){
 
         // stupid bug in php-cgi
-        if (!_exec.compare("php-cgi"))
+        //if (!cgi_info.second.compare("php-cgi"))
+		if (!cgi_info.second.compare(".php"))
             _envvar[i++] = strdup("REQUEST_METHOD=GET");
 		
 		tmpBuf = "QUERY_STRING=" + _req->getQuery();
 		_envvar[i++] = strdup(tmpBuf.c_str());
 
-		if (cgi_path.compare(".cgi")) // ------------------------------------ !
-		{
-			while (std::getline(_openArgfile, tmpBuf))
-				_getBuffFile += tmpBuf;
-			
-			std::stringstream intToString;
-			intToString << _getBuffFile.size();
-			
-			tmpBuf = std::string("CONTENT_LENGTH=") + intToString.str();
-			_envvar[i++] = strdup(tmpBuf.c_str());
-            _openArgfile.close();
-		} // -------------------------------------- no entiendo este bloque - !
+		//if (cgi_path.compare(".cgi")) // ------------------------------------ !
+		//{
+		//	while (std::getline(_openArgfile, tmpBuf))
+		//		_getBuffFile += tmpBuf;
+		//	
+		//	std::stringstream intToString;
+		//	intToString << _getBuffFile.size();
+		//	
+		//	tmpBuf = std::string("CONTENT_LENGTH=") + intToString.str();
+		//	_envvar[i++] = strdup(tmpBuf.c_str());
+        //    _openArgfile.close();
+		//} // -------------------------------------- no entiendo este bloque - !
 
 	}
 	
 	else {
         
         // stupid bug in php-cgi
-        if (!_exec.compare("php-cgi"))
+        //if (!cgi_info.second.compare("php-cgi"))
+		if (!cgi_info.second.compare(".php"))
             _envvar[i++] = strdup("REQUEST_METHOD=POST");	
 		
 		std::stringstream intToString;
@@ -77,10 +109,18 @@ CGI::CGI(Body *body, Request *req, const std::string &realUri, const cgi_pair& c
 	// ** Set args for execve **
 	if ((_args = new char*[3]) == NULL)
 		throw StatusLine(500, REASON_500, "malloc failed in CGI constructor");
-		
-	_args[0] = strdup(_exec.c_str()); // ruta absoluta a cgi
-	_args[1] = (!cgi_name.compare(".cgi")) ? NULL : strdup(_realUri.c_str()); // ruta absoluta al script
+	
+
+	// if cgi_name == cgi; [0] = res_path; [1] = NULL
+	// if cgi_name != cgi; [0] = path + cgi_name; [1] = res_path
+	std::string cgi_path = buildCGIPath(cgi_info.second, pwd, _req->getLocation());
+
+	_args[0] = (cgi_info.second.empty()) ? strdup(resource_path.c_str()) : strdup(cgi_path.c_str());
+	_args[1] = (cgi_info.second.empty()) ? NULL : strdup(cgi_path.c_str());
 	_args[2] = NULL;
+//	_args[0] = cgi_path;//strdup(_exec.c_str()); // ruta absoluta a cgi
+//	_args[1] = (cgi.empty()) ? //(!cgi_name.compare(".cgi")) ? NULL : strdup(_realUri.c_str()); // ruta absoluta al script
+//	_args[2] = NULL;
 	
 }
 
@@ -185,6 +225,6 @@ void CGI::mySwap(CGI &a, CGI &b)
 	std::swap(a._envvar, b._envvar);
 	std::swap(a._emptyBody, b._emptyBody);
 	std::swap(a._req, b._req);
-	std::swap(a._exec, b._exec);
+	//std::swap(a._exec, b._exec);
 	std::swap(a._path_info, b._path_info);
 }

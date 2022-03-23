@@ -9,7 +9,7 @@
 #include <dirent.h>
 
 #include "request.hpp"
-//#include "Cgi.hpp"
+#include "Cgi.hpp"
 #include "msg_format/StatusLine.hpp"
 #include "msg_format/Body.hpp"
 

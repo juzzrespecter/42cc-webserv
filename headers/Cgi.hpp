@@ -11,6 +11,8 @@
 #include <sstream>
 #include <sys/wait.h>
 
+#define PWD_BUFFER 4095
+
 // temp
 #ifndef TMP_def
 # define CGI_PATH "nil" 
@@ -26,8 +28,8 @@ class CGI
 		Body *_emptyBody;
 		Request *_req;
 		std::fstream _openArgfile;
-		std::string _exec;
-		std::string _realUri;
+		//std::string _exec;
+		//std::string _realUri;
 		std::string _getBuffFile;
 		std::pair<std::string, std::string> _path_info;
 		
@@ -51,6 +53,7 @@ class CGI
 
 		/* ------------------------ PRIVATE METHODS ----------------------- */
 
+		std::string buildCGIPath(const std::string&, const std::string&, const Location&);
 		void mySwap(CGI &, CGI &);
 		CGI(CGI const &);
 

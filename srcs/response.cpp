@@ -128,7 +128,7 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
         // Execute the appropriate method and fills the response buffer with status line + 
         // headers + body (if any). If an error occurs during this process, it will throw 
         // a StatusLine object with the appropriate error code.
-		if (!cgiConfig.first.empty())
+		if (!cgiConfig.first.empty() && _req->getMethod() != DELETE) // ???
 			execCgi(realUri, cgiConfig);
 		else if (_req->getMethod() == GET || _req->getMethod() == HEAD)
             execGet(realUri);
