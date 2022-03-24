@@ -128,10 +128,13 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
         // Execute the appropriate method and fills the response buffer with status line + 
         // headers + body (if any). If an error occurs during this process, it will throw 
         // a StatusLine object with the appropriate error code.
-		if (!cgiConfig.first.empty() && _req->getMethod() != DELETE) // ???
-			execCgi(realUri, cgiConfig);
-		else if (_req->getMethod() == GET || _req->getMethod() == HEAD)
+		//if (!cgiConfig.first.empty() && _req->getMethod() != DELETE) // ???
+		//	execCgi(realUri, cgiConfig);
+		//else if (_req->getMethod() == GET || _req->getMethod() == HEAD)
+        if (_req->getMethod() == GET || _req->getMethod() == HEAD)
             execGet(realUri);
+        else if (_req->getMethod() == POST)
+            execPost(realUri);
 		else if (_req->getMethod() == PUT)
             execPut(realUri);
 		else if (_req->getMethod() == DELETE)
@@ -143,6 +146,7 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 	{
 		fillError(errorStaLine);
 	}
+    std::cerr << "[debug] response: " << _buffer << "\n";
 }
 
 
@@ -167,6 +171,21 @@ void Response::execCgi(const std::string& realUri, const cgi_pair& cgiConfig)
 	fillContentlengthHeader(convertNbToString(cgiRep.getSize()));
 
 	_buffer += cgiRep.getBody();
+}
+
+void Response::execPost(const std::string& realUri)
+{
+    // get file extension
+    // check if file is a valid CGI
+    cgi_pair cgi_info = getCgiExecutableName(realUri);
+    if (!cgi_info.first.empty())
+    {
+        execCgi(realUri, cgi_info);
+    }
+    else 
+    {
+        throw (StatusLine(403, REASON_403, "POST: posting to a static file"));
+    }
 }
 
 void Response::fillContentlengthHeader(const std::string& size) 
@@ -386,6 +405,9 @@ bool Response::isResourceAFile(const std::string& uri) const {
 
 void Response::execGet(const std::string& realUri)
 {
+    cgi_pair cgi_config = getCgiExecutableName(realUri);
+    if (!cgi_config.first.empty())
+        execCgi(realUri, cgi_config);
     // Storing status line and some headers in buffer
     fillStatusLine(_staLine);
     fillServerHeader();

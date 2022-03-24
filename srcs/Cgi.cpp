@@ -1,8 +1,6 @@
 #include "Cgi.hpp"
 
-// ruta absoluta al CGI
-// ruta absoluta al recurso
-
+/* test perl script! */
 std::string CGI::buildCGIPath(const std::string& relPath, const std::string& cwd, const Location& loc)
 {
 	std::string absPath(cwd);
@@ -26,7 +24,9 @@ CGI::CGI(Body *body, Request *req, const std::string &realUri, const cgi_pair& c
 	if (getcwd(pwd, PWD_BUFFER) == NULL) {
 		throw std::runtime_error("CGI: getcwd() call failure");
 	}
-	std::string resource_path = pwd + realUri;
+	std::string resource_path(pwd);
+    resource_path.push_back('/');
+    resource_path.append(realUri);
 
 	//std::string cgi_extension = cgi_info.first;
 	//std::string cgi = cgi_info.second;
@@ -116,7 +116,7 @@ CGI::CGI(Body *body, Request *req, const std::string &realUri, const cgi_pair& c
 	std::string cgi_path = buildCGIPath(cgi_info.second, pwd, _req->getLocation());
 
 	_args[0] = (cgi_info.second.empty()) ? strdup(resource_path.c_str()) : strdup(cgi_path.c_str());
-	_args[1] = (cgi_info.second.empty()) ? NULL : strdup(cgi_path.c_str());
+	_args[1] = (cgi_info.second.empty()) ? NULL : strdup(resource_path.c_str());
 	_args[2] = NULL;
 //	_args[0] = cgi_path;//strdup(_exec.c_str()); // ruta absoluta a cgi
 //	_args[1] = (cgi.empty()) ? //(!cgi_name.compare(".cgi")) ? NULL : strdup(_realUri.c_str()); // ruta absoluta al script
@@ -172,7 +172,6 @@ void CGI::executeCGI()
 	
 		if (execve(_args[0], _args, _envvar) < 0){
             std::cerr << strerror(errno) << "\n";
-            std::cerr << _args[0] << "\n";
 			exit(EXECVE_FAIL);
 		}
 	
