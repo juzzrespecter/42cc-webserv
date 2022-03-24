@@ -146,7 +146,6 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 	{
 		fillError(errorStaLine);
 	}
-    std::cerr << "[debug] response: " << _buffer << "\n";
 }
 
 
@@ -160,17 +159,35 @@ void Response::execCgi(const std::string& realUri, const cgi_pair& cgiConfig)
         throw StatusLine(404, REASON_404, "fillCgi method: " + realUri);
 	}
 
-	Body cgiRep;
-	CGI cgi(&cgiRep, _req, realUri, cgiConfig);
+//	Body cgiRep;
+	CGI cgi(_req, realUri, cgiConfig);
 	
-	cgi.executeCGI();
-	
-	fillStatusLine(_staLine);
-	fillServerHeader();
-	fillDateHeader();
-	fillContentlengthHeader(convertNbToString(cgiRep.getSize()));
+	/* deberían gestionarse de alguna manera las redirecciones locales */
 
-	_buffer += cgiRep.getBody();
+	//_staLine = cgi.getStatusLine(); montar nuevo status line segun la respuesta
+	fillStatusLine(_staLine);
+
+	if (cgi.isHeaderDefined("Server") == false) {
+		fillServerHeader();
+	}
+	if (cgi.isHeaderDefined("Date") == false) {
+		fillDateHeader();
+	}
+	if (cgi.isHeaderDefined("Content-Length") == false) {
+		fillContentlengthHeader(convertNbToString(cgi.getBody().size()));
+	}
+	_buffer += cgi.getHeaders();
+
+	if (_req->getMethod() != HEAD) {
+		_buffer += cgi.getBody();
+	}
+	
+	//fillStatusLine(_staLine);
+	//fillServerHeader();
+	//fillDateHeader();
+	//fillContentlengthHeader(convertNbToString(cgiRep.getSize()));
+//
+	//_buffer += cgiRep.getBody();
 }
 
 void Response::execPost(const std::string& realUri)
@@ -283,7 +300,7 @@ std::string Response::addIndex(const std::string& uri, const std::vector<std::st
 
 void Response::checkMethods(int method, const std::vector<std::string>& methodsAllowed) const
 {
-	std::string tab[NB_METHODS] = { "GET", "HEAD", "POST", "PUT", "DELETE" };
+	std::string tab[NB_METHODS] = { "GET", "HEAD", "POST", "DELETE", "PUT" };
 
 	for (std::vector<std::string>::const_iterator it = methodsAllowed.begin();
 			it != methodsAllowed.end(); ++it)

@@ -166,6 +166,8 @@ class Response
 		// Swap two Response object
 		friend void swap(Response& a, Response& b);
 	
-}; 
+};
+
+void print_Loc(const Location&);
 
 #endif

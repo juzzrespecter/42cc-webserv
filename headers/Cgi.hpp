@@ -17,7 +17,7 @@
 #ifndef TMP_def
 # define CGI_PATH "nil" 
 # define EXECVE_FAIL EXIT_FAILURE 
-# define CGI_PIPE_BUFFER_SIZE 0
+# define CGI_PIPE_BUFFER_SIZE 4000
 #endif
 
 class CGI
@@ -25,7 +25,7 @@ class CGI
 	private:
 		char **_envvar;
 		char **_args;
-		Body *_emptyBody;
+		//Body *_emptyBody;
 		Request *_req;
 		std::fstream _openArgfile;
 		//std::string _exec;
@@ -33,28 +33,48 @@ class CGI
 		std::string _getBuffFile;
 		std::pair<std::string, std::string> _path_info;
 		
+		std::string _raw_response;
+
+		//int _status_code;
+		StatusLine _status_line;
+		std::map<std::string, std::string> _header_map;
+		std::string _body_string;
+
 		
 	public:
 
 		/* ------------------------ COPLIEN FORM ----------------------- */
 
-		CGI(Body *, Request *, const std::string &, const cgi_pair &);
+		CGI(/*Body *,*/ Request *, const std::string &, const cgi_pair &);
 		CGI &operator=(CGI &);
 		~CGI();
 	
-	
-
 		/* ------------------------ PUBLIC METHODS ----------------------- */
 
-		void executeCGI();
-		
+//		void executeCGI();
+
+		std::string getHeaders(void) const;
+		std::string getBody(void) const;
+		StatusLine getStatusLine(void) const;
+
+		bool isHeaderDefined(const std::string&) const;
 	private:
 	
 
 		/* ------------------------ PRIVATE METHODS ----------------------- */
 
+		void setup_env_variables(const std::string&, const std::string&);
+		void setup_args(const std::string&, const std::string&);
+		void executeCGI();
+
+		void parse_response_headers(const std::string&);
+		void parse_response_body(const std::string&);
+		void parse_status_line(void);
+		void parse_response(void);
+
 		std::string buildCGIPath(const std::string&, const std::string&, const Location&);
 		void mySwap(CGI &, CGI &);
+		CGI(void); // needs to be defined
 		CGI(CGI const &);
 
 };

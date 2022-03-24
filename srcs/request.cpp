@@ -116,7 +116,7 @@ bool    Request::parseRequestLine(void) {
 }
 
 void    Request::parseMethodToken(const std::string& token) {
-    std::string method_opts[NB_METHODS] = {"GET", "HEAD", "POST", "PUT", "DELETE"};
+    std::string method_opts[NB_METHODS] = {"GET", "HEAD", "POST", "DELETE", "PUT"};
 
     for (int method_id = 0; method_id < NB_METHODS; method_id++) {
         if (!token.compare(method_opts[method_id])) {
@@ -181,11 +181,11 @@ bool    Request::parseHeaderEnd(void) {
             THROW_STATUS("invalid Content-Length field value");
         }
     }
-    if (_reqLine.getMethod() == POST) {
+    if (_reqLine.getMethod() == PUT || _reqLine.getMethod() == POST ) { //method waiting for body
         setUpRequestBody();
         _stage = (transferEncodingIsChunked() == true) ? REQ_CHUNK_BODY : REQ_BODY;
     } else {
-        _stage = READY; // case expected 100-continue w/ GET req??
+        _stage = READY;
     }
     if (ex != _headers.end() && !ex->second.compare("100-continue")) {
         throw StatusLine(100, REASON_100, "");
@@ -208,7 +208,7 @@ bool    Request::parseHeaderLine(void) {
     if (colonPos == std::string::npos) {   // invalid syntax on header line
         return true;
     }
-    std::string fieldName = headerLine.substr(0, headerLine.find(':'));
+    std::string fieldName = headerLine.substr(0, colonPos);
     size_t valuePos = headerLine.find_first_not_of(" ", ++colonPos);
     if (valuePos == std::string::npos) {   // no field value
         return true;

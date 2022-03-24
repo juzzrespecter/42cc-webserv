@@ -92,7 +92,7 @@ bool Server::operator==(const Server& rhs) const {
             return true;
         }
     }
-    return false;
+    return (server_name.empty() && rhs.server_name.empty());
 }
 
 bool Server::operator!=(const Server& rhs) const {

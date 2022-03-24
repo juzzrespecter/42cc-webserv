@@ -1,5 +1,16 @@
 #include "Cgi.hpp"
 
+// setup env variables
+// execute cgi
+// parse response
+
+// headers:
+// 		content-type -> OBLIGATORIO
+//		location -> status == 302
+//		status -> status == lo que diga el header
+// 
+// 		si no hay ninguno -> 500 internal server error
+
 /* test perl script! */
 std::string CGI::buildCGIPath(const std::string& relPath, const std::string& cwd, const Location& loc)
 {
@@ -17,85 +28,25 @@ std::string CGI::buildCGIPath(const std::string& relPath, const std::string& cwd
 	return absPath;
 }
 
-CGI::CGI(Body *body, Request *req, const std::string &realUri, const cgi_pair& cgi_info) 
-			: _emptyBody(body), _req(req)
-{	
-	char pwd[PWD_BUFFER];
-	if (getcwd(pwd, PWD_BUFFER) == NULL) {
-		throw std::runtime_error("CGI: getcwd() call failure");
-	}
-	std::string resource_path(pwd);
-    resource_path.push_back('/');
-    resource_path.append(realUri);
-
-	//std::string cgi_extension = cgi_info.first;
-	//std::string cgi = cgi_info.second;
-	//std::string resource_path = pwd + realUri;
-	//std::string cgi_path = (cgi.empty()) ? resource_path : pwd + cgi_info.second; // test this with null
-//
-	//std::cerr << "[ cgi_path: " << cgi_path << ", res_path: " << resource_path << "]\n";
-//
-	//std::string tmpBuf;
-	
-	//_realUri = pwd + ("/" + realUri); // abs resource path
-	//if (!(cgi_path[0] == '/')) {
-	//	cgi_path.insert(0, 1, '/');
-	//}
-	//cgi_path.insert(0, pwd); // abs cgi path
-
-	//if (!cgi_extension.compare(".cgi"))
-	//	//_exec = "cgi";
-    //    _exec = _realUri;
-	//else
-	//	_exec = cgi_name;
-	
-	//if (cgi_extension.compare(".cgi"))
-	//	_openArgfile.open(_realUri.c_str());
-
-	// ** set environment variable for the CGI **
-	// GET : QUERY_STRING + PATH_INFO 
-	// POST : PATH_INFO + CONTENT_length 
-	if ((_envvar = new char*[7]) == NULL)
-		throw std::runtime_error("Error on a cgi malloc\n");
-		
+void CGI::setup_env_variables(const std::string& uri, const std::string& file_ext) {
+	std::string tmpBuf;
 	int i = 0;
-	_envvar[i++] = strdup(("PATH_INFO=" + resource_path).c_str());
-	_envvar[i++] = strdup("SERVER_PROTOCOL=HTTP/1.1");
 
+	_envvar[i++] = strdup(("PATH_INFO=" + uri).c_str());
+	_envvar[i++] = strdup("SERVER_PROTOCOL=HTTP/1.1");
     // used for php-cgi
 	_envvar[i++] = strdup("REDIRECT_STATUS=200");
-	
-	std::string tmpBuf;
 	if (_req->getMethod() == GET){
 
         // stupid bug in php-cgi
-        //if (!cgi_info.second.compare("php-cgi"))
-		if (!cgi_info.second.compare(".php"))
+		if (!file_ext.compare(".php"))
             _envvar[i++] = strdup("REQUEST_METHOD=GET");
 		
 		tmpBuf = "QUERY_STRING=" + _req->getQuery();
 		_envvar[i++] = strdup(tmpBuf.c_str());
-
-		//if (cgi_path.compare(".cgi")) // ------------------------------------ !
-		//{
-		//	while (std::getline(_openArgfile, tmpBuf))
-		//		_getBuffFile += tmpBuf;
-		//	
-		//	std::stringstream intToString;
-		//	intToString << _getBuffFile.size();
-		//	
-		//	tmpBuf = std::string("CONTENT_LENGTH=") + intToString.str();
-		//	_envvar[i++] = strdup(tmpBuf.c_str());
-        //    _openArgfile.close();
-		//} // -------------------------------------- no entiendo este bloque - !
-
-	}
-	
-	else {
-        
+	} else {
         // stupid bug in php-cgi
-        //if (!cgi_info.second.compare("php-cgi"))
-		if (!cgi_info.second.compare(".php"))
+		if (!file_ext.compare(".php"))
             _envvar[i++] = strdup("REQUEST_METHOD=POST");	
 		
 		std::stringstream intToString;
@@ -103,25 +54,158 @@ CGI::CGI(Body *body, Request *req, const std::string &realUri, const cgi_pair& c
 		tmpBuf = std::string("CONTENT_LENGTH=") + intToString.str();
 		_envvar[i++] = strdup(tmpBuf.c_str());
 	}
-	
-	_envvar[i++] = NULL;
+}
 
-	// ** Set args for execve **
-	if ((_args = new char*[3]) == NULL)
-		throw StatusLine(500, REASON_500, "malloc failed in CGI constructor");
-	
-
-	// if cgi_name == cgi; [0] = res_path; [1] = NULL
-	// if cgi_name != cgi; [0] = path + cgi_name; [1] = res_path
-	std::string cgi_path = buildCGIPath(cgi_info.second, pwd, _req->getLocation());
-
-	_args[0] = (cgi_info.second.empty()) ? strdup(resource_path.c_str()) : strdup(cgi_path.c_str());
-	_args[1] = (cgi_info.second.empty()) ? NULL : strdup(resource_path.c_str());
+void CGI::setup_args(const std::string& uri, const std::string& cgi_path) {
+	_args[0] = (cgi_path.empty()) ? strdup(uri.c_str()) : strdup(cgi_path.c_str());
+	_args[1] = (cgi_path.empty()) ? NULL : strdup(uri.c_str());
 	_args[2] = NULL;
-//	_args[0] = cgi_path;//strdup(_exec.c_str()); // ruta absoluta a cgi
-//	_args[1] = (cgi.empty()) ? //(!cgi_name.compare(".cgi")) ? NULL : strdup(_realUri.c_str()); // ruta absoluta al script
-//	_args[2] = NULL;
-	
+}
+
+// evitar headers redundantes (no imprimir en Response headers ya definidos en CGI)
+// Location -> server redirection
+// Content-Length policing??
+
+/*  Da formato a la respuesta recibida por el CGI y comprueba posibles errores sintácticos:
+	* Una respuesta proveniente de un CGI ha de tener al menos un CGI-Header; si
+	  no está presente el servidoro se repiten lanza respuesta 500 (internal server error)
+	* CGI-Header: Content-Type / Location / Status
+	* Content-Type DEBE estar presente si existe un cuerpo
+	* La presencia de un header Location genera una respuesta 302 (Found)
+	* Location puede ser una redirección por parte del servidor o del cliente
+	* La presencia de un header Status sobreescribe el estado anterior de la respuesta
+	* El código de estado por defecto es 200 OK
+*/
+void CGI::parse_response_headers(const std::string& headers) {
+	static const std::string cgi_header[3] = { "Content-Type", "Location", "Status"};
+
+	std::stringstream headers_ss(headers);
+	std::string header_line;
+
+	while (std::getline(headers_ss, header_line)) {
+		size_t separator = header_line.find(':');
+
+		if (separator == std::string::npos) {
+			continue ;
+		}
+		std::string header_field(header_line.substr(0, separator++));
+		std::string header_value(header_line.substr(separator, header_line.find_first_not_of(' ', separator)));
+
+		if (header_value.empty()) {
+			continue ;
+		}
+		for (int i = 0; i < 3; i++) {
+			if (!header_field.compare(cgi_header[i])) {
+				if (_header_map.find(header_field) != _header_map.end()) {
+					throw (StatusLine(500, REASON_500, "CGI: parse(), duplicate CGI-header in CGI response"));
+				}
+				break ;
+			}
+		}
+		_header_map.insert(std::pair<std::string, std::string>(header_field, header_value));
+	}
+	if (_header_map.find(cgi_header[0]) == _header_map.end() &&
+		_header_map.find(cgi_header[1]) == _header_map.end() &&
+		_header_map.find(cgi_header[2]) == _header_map.end()) {
+		throw (StatusLine(500, REASON_500, "CGI: parse(), missing necessary CGI-Header in response"));
+	}
+}
+
+void CGI::parse_response_body(const std::string& body) {
+	if (!body.empty() && _header_map.find("Content-Type") == _header_map.end()) {
+		throw (StatusLine(500, REASON_500, "CGI: parse(), missing body in response with Content-Type header defined"));
+	}
+	std::map<std::string, std::string>::const_iterator cl = _header_map.find("Content-Length");
+	if (cl != _header_map.end()) {
+		char *ptr;
+
+		long length = strtol(cl->second.c_str(), &ptr, 0);
+		if (length < 0 || *ptr || length != static_cast<long>(body.size())) {
+			throw (StatusLine(500, REASON_500, "CGI: parse(), bad content-length definition in CGI response"));
+		}
+	}
+	_body_string = body;
+}
+
+/* Status = "Status:" status-code SP reason-phrase NL */
+
+void CGI::parse_status_line(void) {
+	enum status_f {code, reason, size};
+	std::map<std::string, std::string>::const_iterator lc(_header_map.find("Location"));
+	std::map<std::string, std::string>::const_iterator st(_header_map.find("Status"));
+
+	if (lc != _header_map.end()) {
+		_status_line = StatusLine(302, REASON_302, "CGI: redirection");
+		return ;
+	}
+	if (st != _header_map.end()) {
+		std::stringstream status_ss(st->second);
+		std::string status_token[size];
+		char *ptr;
+
+		for (int i = 0; i < 2; i++) {
+			status_ss >> status_token[i];
+		}
+		long status_code = strtol(status_token[code].c_str(), &ptr, 0);
+
+		if (status_ss.rdbuf()->in_avail() || !(status_code >= 100 && status_code < 600) || *ptr) {
+			throw StatusLine(500, REASON_500, "CGI: parse(), malformed Status-Header");
+		}
+		_status_line = StatusLine(static_cast<int>(code), status_token[reason].c_str(), "CGI-defined Status line");
+		_header_map.erase(st);
+	}
+}
+
+void CGI::parse_response(void) {
+	// encuentra separador headers & body
+	// substr headers / body
+	//		headers: while (field ':' value NL)
+	//				 comprueba sintaxis de la respuesta {al menos un CGIHeader, no repetidos}
+	// 		body: si !body.empty() && !content-type -> 500
+	//			  si content-length && !(body.size() == content-length) -> 500
+
+	size_t separator = _raw_response.find("\n\n");
+
+	if (separator == std::string::npos) {
+		throw (StatusLine(500, REASON_500, "CGI: parse(), bad syntax in CGI repsonse"));
+	}
+	std::string headers = _raw_response.substr(0, separator);
+	std::string body = _raw_response.substr(++separator);
+
+	parse_response_headers(headers);
+	parse_response_body(body);
+	parse_status_line();
+}
+
+CGI::CGI(Request *req, const std::string& uri, const cgi_pair& cgi_info) :
+	_req(req), _status_line(200, REASON_200, "CGI-generated response") {
+	/* inicializa atributos de CGI (variables de entorno, argumentos) */
+
+	// GET : QUERY_STRING + PATH_INFO 
+	// POST : PATH_INFO + CONTENT_length 
+	if ((_envvar = new char*[7]) == NULL) {
+		throw std::runtime_error("Error on a cgi malloc\n");
+	}
+	// ** Set args for execve **
+	if ((_args = new char*[3]) == NULL) {
+		throw StatusLine(500, REASON_500, "malloc failed in CGI constructor");
+	}
+
+	/* llamada a getcwd: cambio de malloc a reservar memoria en stack por problemas de fugas de memoria */
+	char cwd[PWD_BUFFER];
+	if (getcwd(cwd, PWD_BUFFER) == NULL) {
+		throw std::runtime_error("CGI: getcwd() call failure");
+	}
+
+	std::string resource_path(std::string(cwd) + "/" + uri); /* ruta absoluta al recurso */
+	std::string cgi_path = buildCGIPath(cgi_info.second, cwd, _req->getLocation()); /* ruta absoluta al ejecutable */
+
+	setup_env_variables(resource_path, cgi_info.first);
+	setup_args(resource_path, cgi_path);
+
+	executeCGI(); /* execve(CGI, uri, args), almacena la respuesta en atributo _buffer */
+
+	parse_response(); /* comprueba que la respuesta sea válida; lanza excepción si la sintaxis es incorrecta */
 }
 
 CGI::~CGI()
@@ -137,7 +221,6 @@ CGI::~CGI()
 	delete[] _args;
 }
 
-
 void CGI::executeCGI()
 {
 	int fdOut[2];
@@ -150,10 +233,10 @@ void CGI::executeCGI()
     if (pid == -1) {
         close(fdOut[0]);
         close(fdOut[1]);
-        if (_req->getMethod() == POST) {
+       // if (_req->getMethod() == POST) {
             close(fdIN[0]);
             close(fdIN[1]);
-        }
+       // }
         throw StatusLine(500, REASON_500, "CGI: fork() call error");
     }
 	if (!pid){
@@ -182,10 +265,10 @@ void CGI::executeCGI()
 			throw StatusLine(500, REASON_500, "write failed in executeCGI method");
 	}
 	
-	else{
-		if (write(fdIN[1], _getBuffFile.c_str(), _getBuffFile.size()) < 0)
-			throw StatusLine(500, REASON_500, "write failed in executeCGI method");
-	}
+	//else{
+	//	if (write(fdIN[1], _getBuffFile.c_str(), _getBuffFile.size()) < 0)
+	//		throw StatusLine(500, REASON_500, "write failed in executeCGI method");
+	//}
 	
 	close(fdIN[1]);
 	close(fdIN[0]);
@@ -200,30 +283,58 @@ void CGI::executeCGI()
     }
         
     char buf[CGI_PIPE_BUFFER_SIZE + 1] = {0};
-	std::string msgbody;	
     int rd_out;
 	while ((rd_out = read(fdOut[0], buf, CGI_PIPE_BUFFER_SIZE)) > 0) // check if -1
 	{
-		msgbody += buf;
+		_raw_response.append(buf, rd_out);
 		memset(buf, 0, CGI_PIPE_BUFFER_SIZE + 1);
 	}
     if (rd_out == -1) {
         std::cerr << strerror(errno) << "\n";
     }
-	msgbody += buf;
+	_raw_response.append(buf, rd_out);
 	close(fdOut[0]);
-	_emptyBody->setBuff(msgbody);
+	//_emptyBody->setBuff(msgbody);
 		
 		// remove the header part of the cgi output
-	_emptyBody->setSize(msgbody.size() - (msgbody.find("\r\n\r\n") + 4)); 
+	//_emptyBody->setSize(msgbody.size() - (msgbody.find("\r\n\r\n") + 4)); 
 }
 
+std::string CGI::getHeaders(void) const {
+	std::string header_string;
+
+	for (std::map<std::string, std::string>::const_iterator h = _header_map.begin(); h != _header_map.end(); h++) {
+		header_string.append(h->first + ": " + h->second + "\n");
+	}
+	/* si escribimos el doble salto de línea aquí, llamamos a esta función después de escribir los
+	 * headers de la respuesta en execCGI */
+	header_string.append("\n");
+	return header_string;
+}
+
+std::string CGI::getBody(void) const {
+	return _body_string;
+}
+
+StatusLine CGI::getStatusLine(void) const {
+	return _status_line;
+}
+
+bool CGI::isHeaderDefined(const std::string& header_field) const {
+	return (_header_map.find(header_field) != _header_map.end());
+}
  
 void CGI::mySwap(CGI &a, CGI &b)
 {
 	std::swap(a._envvar, b._envvar);
-	std::swap(a._emptyBody, b._emptyBody);
+	//std::swap(a._emptyBody, b._emptyBody);
 	std::swap(a._req, b._req);
 	//std::swap(a._exec, b._exec);
 	std::swap(a._path_info, b._path_info);
+}
+
+CGI::CGI(void) : _status_line(200, REASON_200, "CGI-generated response") { }
+
+CGI::CGI(const CGI& other) : _req(other._req){ 
+	// paciencia con este
 }
