@@ -304,7 +304,7 @@ void CGI::executeCGI()
         memset(buf, 0, CGI_PIPE_BUFFER_SIZE + 1);
     }
     if (rd_out == -1) {
-        throw StatusLine(500, REASON_500, "CGI: read() - " + strerror(errno));
+        throw StatusLine(500, REASON_500, std::string("CGI: read() - ") + strerror(errno));
     }
     close_fdOut();
 
