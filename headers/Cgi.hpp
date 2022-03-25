@@ -10,6 +10,7 @@
 #include <cstring>
 #include <sstream>
 #include <sys/wait.h>
+#include <errno.h>
 
 #define PWD_BUFFER 4095
 
@@ -69,7 +70,7 @@ class CGI
         void close_fdIN(void);
         void close_fdOut(void);
 
-		void set_env_variables(const std::string&, const std::string&);
+		void set_env_variables(const std::string&/*, const std::string&*/);
 		void set_args(const std::string&, const std::string&);
         void set_path_info(const std::string&);
 //		void executeCGI();

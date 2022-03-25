@@ -11,7 +11,7 @@ foreach $pair (@pairs) {
         ($name, $value) = split(/=/, $pair);
         $value =~ tr/+/ /;
         $value =~ s/%(..)/pack("C", hex($1))/eg; # ???
-        $FROM{$name} = $value;
+        $FORM{$name} = $value;
 }
 
 $input_one = $FORM{input_one};
@@ -25,8 +25,11 @@ Content-Type: text/html
   <BODY>
     <H1>CGI generated page.</H1>
     <HR>
-    <P>Input received from first text input: $input_one</P><BR/>
-    <P>Input received from second text input: $input_two</P><BR/>
+    <LI><B>Input received from first text input: </B>$input_one
+    <LI><B>Input received from second text input: </B>$input_two
+    <LI><B>Buffer read from Webserver: </B>$buffer
+    <HR/>
+    <BR/>
     <A href="./index.html">Go back to index.</A>
   </BODY>
 </HTML>

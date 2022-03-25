@@ -122,15 +122,12 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
             throw StatusLine(301, REASON_301, "http redirection");
         }
 		std::string realUri = reconstructFullURI(_req->getMethod(), _req->getPath());    // Modifying URI with root and index directive if any, checking for the allowed methods
-		cgi_pair cgiConfig = getCgiExecutableName(realUri);     					    // Checking if the targeted file is a CGI based on his extension
+		//cgi_pair cgiConfig = getCgiExecutableName(realUri);     					    // Checking if the targeted file is a CGI based on his extension
 
 		_endConn = isMarkedForClosing();
         // Execute the appropriate method and fills the response buffer with status line + 
         // headers + body (if any). If an error occurs during this process, it will throw 
         // a StatusLine object with the appropriate error code.
-		//if (!cgiConfig.first.empty() && _req->getMethod() != DELETE) // ???
-		//	execCgi(realUri, cgiConfig);
-		//else if (_req->getMethod() == GET || _req->getMethod() == HEAD)
         if (_req->getMethod() == GET || _req->getMethod() == HEAD)
             execGet(realUri);
         else if (_req->getMethod() == POST)
@@ -153,22 +150,19 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 
 void Response::execCgi(const std::string& realUri, const cgi_pair& cgiConfig)
 {
+	std::cerr << "[echo]\n";
     struct stat st;
     if (stat(realUri.c_str(), &st) == -1)
 	{
         throw StatusLine(404, REASON_404, "fillCgi method: " + realUri);
 	}
 
-//	Body cgiRep;
 	CGI cgi(_req, realUri, cgiConfig);
     cgi.executeCGI();
     cgi.parse_response();
 	
 	/* deberían gestionarse de alguna manera las redirecciones locales */
-
-	//_staLine = cgi.getStatusLine(); montar nuevo status line segun la respuesta
 	fillStatusLine(_staLine);
-
 	if (cgi.isHeaderDefined("Server") == false) {
 		fillServerHeader();
 	}
@@ -179,23 +173,14 @@ void Response::execCgi(const std::string& realUri, const cgi_pair& cgiConfig)
 		fillContentlengthHeader(convertNbToString(cgi.getBody().size()));
 	}
 	_buffer += cgi.getHeaders();
-
 	if (_req->getMethod() != HEAD) {
 		_buffer += cgi.getBody();
 	}
-	
-	//fillStatusLine(_staLine);
-	//fillServerHeader();
-	//fillDateHeader();
-	//fillContentlengthHeader(convertNbToString(cgiRep.getSize()));
-//
-	//_buffer += cgiRep.getBody();
 }
 
+/* POST sólo trabaja a través de CGIs */
 void Response::execPost(const std::string& realUri)
 {
-    // get file extension
-    // check if file is a valid CGI
     cgi_pair cgi_info = getCgiExecutableName(realUri);
     if (!cgi_info.first.empty())
     {
@@ -232,7 +217,6 @@ void Response::fillDateHeader()
 	_buffer += "Date: " + date[0] + ", " + date[2] + " " + date[1] + " " + date[4] + " " + date[3] + " GMT" + CRLF;
 }
 
-/* st_mtimespec no portable (#define st_mtime st_mtimespec.tv_sec) */
 void Response::fillLastModifiedHeader(const char* uri)
 {
 	struct stat infFile;
@@ -242,10 +226,10 @@ void Response::fillLastModifiedHeader(const char* uri)
 
 	struct tm* lm = localtime(&infFile.st_mtime);
 
-	const std::string day[7] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"/*, "Sun"*/};
+	const std::string day[7] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 	const std::string mon[12] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-	_buffer += "Last-Modified: " + day[lm->tm_wday/* - 1*/] + ", " + convertNbToString(lm->tm_mday) + " " + mon[lm->tm_mon] + " " 
+	_buffer += "Last-Modified: " + day[lm->tm_wday] + ", " + convertNbToString(lm->tm_mday) + " " + mon[lm->tm_mon] + " " 
 			+ convertNbToString(lm->tm_year + 1900) + " " + convertNbToString(lm->tm_hour) + ":" + 
 			convertNbToString(lm->tm_min) + ":" + convertNbToString(lm->tm_sec) + " GMT" + CRLF;
 }
@@ -275,9 +259,9 @@ void print_Loc(const Location& _loc)
 
 void Response::replaceLocInUri(std::string& uri, const std::string& root)
 {
-	if (root[root.size() - 1] == '/')
-		uri.erase(0, 1); // borra '/' sobrante
-		
+	if (root[root.size() - 1] == '/') {
+		uri.erase(0, 1);
+	}	
 	uri.insert(0, root);
 }
 
@@ -351,7 +335,6 @@ std::string Response::reconstructFullURI(int method, std::string uri)
 		}
 	}
 	checkMethods(method, _loc.get_methods());
-
 	return uri;
 }
 
@@ -410,10 +393,6 @@ void Response::fillError(const StatusLine& sta)
 			fillContentTypeHeader(getResourceExtension(pathError));
 		}
 	}
-
-    // Filling buffer
-
-	//fillContentlengthHeader(convertNbToString(body.getRequestFileSize()));
 	fillContentlengthHeader(convertNbToString(errorFile.size()));
 	_buffer += CRLF + errorFile;
 }
@@ -424,9 +403,12 @@ bool Response::isResourceAFile(const std::string& uri) const {
 
 void Response::execGet(const std::string& realUri)
 {
-    cgi_pair cgi_config = getCgiExecutableName(realUri);
-    if (!cgi_config.first.empty())
-        execCgi(realUri, cgi_config);
+    cgi_pair cgi_info = getCgiExecutableName(realUri);
+
+    if (!cgi_info.first.empty()) {
+        execCgi(realUri, cgi_info);
+		return ;
+	}
     // Storing status line and some headers in buffer
     fillStatusLine(_staLine);
     fillServerHeader();
@@ -500,7 +482,8 @@ void Response::execDelete(const std::string& realUri)
 	_staLine = StatusLine(204, REASON_204, "DELETE: resource removed successfully");
     fillStatusLine(_staLine);
     fillServerHeader();
-    fillDateHeader();    
+    fillDateHeader();
+	_buffer += CRLF;
 }
 
 void Response::autoIndexDisplayer(const std::string& realUri, std::string& autoIndexPage) {

@@ -1,25 +1,31 @@
 FROM debian:buster
 
-ENV SERVER_PATH="/etc/webserv/"
+ENV SERVER_PATH="/var/www/webserv/"
 
-ADD [".", "/etc/webserv/"]
-
-WORKDIR ["/tmp"]
+ADD [".", "/var/www/webserv/"]
 
 COPY ["./config/setup.sh", "/tmp"]
 COPY ["./config/setup_mysql.sql", "/tmp"]
 
-RUN apt update; \
-    apt install wget \
-                mysql-client \
-                mysql-server \
-                php \
-                php-mysql \
-            &&  wget -c https://www.wordpress.org/latest.tar.gz \
-            &&  tar -xfv latest.tar.gz \
-            &&  mv wordpress/* /var/www/html/
-            &&  mysql -u root -p < /etc/setup_mysql.sql
+RUN apt update \
+    && apt install wget \
+                   make \
+                   clang \
+                   default-mysql-server \
+                   php \
+                   php-cgi \
+                   php-mysql -y \
+    &&  cd /tmp \               
+    &&  wget -c https://www.wordpress.org/latest.tar.gz \
+    &&  tar -xvf latest.tar.gz \
+    &&  mkdir /var/www/html \
+    &&  mv wordpress/* /var/www/html/ \
+    && service mysql start \
+    &&  mysql -u root -p < /tmp/setup_mysql.sql \
+    &&  chmod +x ./setup.sh
 
 EXPOSE 80
 
-ENTRYPOINT [ "./setup.sh" ]
+WORKDIR "/var/www"
+
+ENTRYPOINT [ "/tmp/setup.sh" ]

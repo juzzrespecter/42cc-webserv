@@ -2,5 +2,6 @@
 
 service php7-fpm start
 service mysql start
-make -c ${SERVER_PATH}
+cd ${SERVER_PATH}
+make
 ./webserver

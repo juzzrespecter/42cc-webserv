@@ -25,8 +25,6 @@ enum methods { GET, HEAD, POST, DELETE, PUT };
 
 #define SEND_BUFFER_SIZE 65536
 
-#define DEFAULT_PATH_ERROR_PAGES "./www/errors/"
-
 // The reason for each status line cose
 #define REASON_100 "Continue"
 #define REASON_101 "Switching Protocols"

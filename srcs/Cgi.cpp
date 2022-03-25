@@ -40,7 +40,7 @@ void CGI::close_fdOut(void) {
     }
 }
 
-void CGI::set_env_variables(const std::string& uri, const std::string& file_ext) {
+void CGI::set_env_variables(const std::string& uri/*, const std::string& file_ext*/) {
     std::string tmpBuf;
     int i = 0;
 
@@ -51,14 +51,14 @@ void CGI::set_env_variables(const std::string& uri, const std::string& file_ext)
     if (_req->getMethod() == GET){
 
         // stupid bug in php-cgi
-        if (!file_ext.compare(".php"))
+        //if (!file_ext.compare(".php"))
             _envvar[i++] = strdup("REQUEST_METHOD=GET");
 
         tmpBuf = "QUERY_STRING=" + _req->getQuery();
         _envvar[i++] = strdup(tmpBuf.c_str());
     } else {
         // stupid bug in php-cgi
-        if (!file_ext.compare(".php"))
+        //if (!file_ext.compare(".php"))
             _envvar[i++] = strdup("REQUEST_METHOD=POST");	
 
         std::stringstream intToString;
@@ -84,10 +84,6 @@ void CGI::set_path_info(const std::string& resource_path) {
     }
     _path_info = resource_path.substr(0, path_separator);
 }
-
-// evitar headers redundantes (no imprimir en Response headers ya definidos en CGI)
-// Location -> server redirection
-// Content-Length policing??
 
 /*  Da formato a la respuesta recibida por el CGI y comprueba posibles errores sintácticos:
  * Una respuesta proveniente de un CGI ha de tener al menos un CGI-Header; si
@@ -195,7 +191,7 @@ void CGI::parse_response(void) {
         throw (StatusLine(500, REASON_500, "CGI: parse(), bad syntax in CGI repsonse"));
     }
     std::string headers = _raw_response.substr(0, separator);
-    std::string body = _raw_response.substr(++separator);
+    std::string body = _raw_response.substr(separator + 2);
 
     parse_response_headers(headers);
     parse_response_body(body);
@@ -212,7 +208,6 @@ CGI::CGI(Request *req, const std::string& uri, const cgi_pair& cgi_info) :
 
         // GET : QUERY_STRING + PATH_INFO 
         // POST : PATH_INFO + CONTENT_length 
-        std::cerr << "[test] " << _fdIN[0] << ", " << _fdIN[1] << "\n";
         if ((_envvar = new char*[7]) == NULL) {
             throw std::runtime_error("Error on a cgi malloc\n");
         }
@@ -230,7 +225,7 @@ CGI::CGI(Request *req, const std::string& uri, const cgi_pair& cgi_info) :
         std::string resource_path(std::string(cwd) + "/" + uri); /* ruta absoluta al recurso */
         std::string cgi_path = buildCGIPath(cgi_info.second, cwd, _req->getLocation()); /* ruta absoluta al ejecutable */
 
-        set_env_variables(resource_path, cgi_info.first);
+        set_env_variables(resource_path/*, cgi_info.first*/);
         set_args(resource_path, cgi_path);
         set_path_info(resource_path);
     }
@@ -251,6 +246,10 @@ CGI::~CGI()
     close_fdOut();
 }
 
+// void CGI::executeCGI_read(void) {
+
+//}
+
 void CGI::executeCGI()
 {
     int fdOut[2];
@@ -267,12 +266,10 @@ void CGI::executeCGI()
 
         // stdout is now a copy of fdOut[1] and in case post method, stdin is a copy of fdIn[0]
         dup2(fdOut[1], STDOUT_FILENO);
-        close(fdOut[0]);
-        close(fdOut[1]);
+        close_fdOut();
 
         dup2(fdIN[0], STDIN_FILENO);
-        close(fdIN[0]);
-        close(fdIN[1]);
+        close_fdIN();
 
         // change the repo into where the program is
         if (chdir(_path_info.c_str()) == -1) {
@@ -281,15 +278,14 @@ void CGI::executeCGI()
         }
 
         if (execve(_args[0], _args, _envvar) < 0){
-            std::cerr << "[debug]\n" << strerror(errno) << "\n";
-            std::cerr << _args[0] << "\n";
-            std::cerr << _args[1] << "\n";
-            std::cerr << _args[2] << "\n";
+            std::cerr << "[CGI error] execve(): \n" << strerror(errno) << "\n";
             exit(EXECVE_FAIL);
         }
 
     }
     close(fdOut[1]);
+    fdOut[1] = -1;
+
     if (_req->getMethod() == POST){
         if (write(fdIN[1], _req->getBody().getBody().c_str(), _req->getBody().getBody().size()) < 0)
             throw StatusLine(500, REASON_500, "write failed in executeCGI method");
@@ -307,6 +303,7 @@ void CGI::executeCGI()
         throw StatusLine(500, REASON_500, std::string("CGI: read() - ") + strerror(errno));
     }
     close_fdOut();
+    std::cerr << "[resp] " << _raw_response << "\n";
 
     // Checking if execve correctly worked
     int status = 0;

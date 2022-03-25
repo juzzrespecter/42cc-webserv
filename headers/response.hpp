@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <dirent.h>
+#include <errno.h>
 
 #include "request.hpp"
 #include "Cgi.hpp"
