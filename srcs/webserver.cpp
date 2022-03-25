@@ -98,8 +98,8 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
     return STANDBY;
 }
 
+/* llamada a write con el mensaje guardado en el Socket */
 socket_status_f    Webserver::write_to_socket(Socket& conn_socket) {
-    /* llamada a write con el mensaje guardado en el Socket */
     const std::string& response = conn_socket.get_response_string();
     int socket_wr_stat = write(conn_socket.fd, response.c_str(), response.size());
     

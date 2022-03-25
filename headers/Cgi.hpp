@@ -27,11 +27,13 @@ class CGI
 		char **_args;
 		//Body *_emptyBody;
 		Request *_req;
-		std::fstream _openArgfile;
+		//std::fstream _openArgfile;
 		//std::string _exec;
 		//std::string _realUri;
-		std::string _getBuffFile;
-		std::pair<std::string, std::string> _path_info;
+		//std::string _getBuffFile;
+		std::string _path_info;
+        int _fdIN[2];
+        int _fdOut[2];
 		
 		std::string _raw_response;
 
@@ -51,26 +53,30 @@ class CGI
 	
 		/* ------------------------ PUBLIC METHODS ----------------------- */
 
-//		void executeCGI();
+		void executeCGI();
+		void parse_response(void);
 
 		std::string getHeaders(void) const;
 		std::string getBody(void) const;
-		StatusLine getStatusLine(void) const;
+
+		const StatusLine& getStatusLine(void) const;
 
 		bool isHeaderDefined(const std::string&) const;
 	private:
 	
 
 		/* ------------------------ PRIVATE METHODS ----------------------- */
+        void close_fdIN(void);
+        void close_fdOut(void);
 
-		void setup_env_variables(const std::string&, const std::string&);
-		void setup_args(const std::string&, const std::string&);
-		void executeCGI();
+		void set_env_variables(const std::string&, const std::string&);
+		void set_args(const std::string&, const std::string&);
+        void set_path_info(const std::string&);
+//		void executeCGI();
 
 		void parse_response_headers(const std::string&);
 		void parse_response_body(const std::string&);
 		void parse_status_line(void);
-		void parse_response(void);
 
 		std::string buildCGIPath(const std::string&, const std::string&, const Location&);
 		void mySwap(CGI &, CGI &);

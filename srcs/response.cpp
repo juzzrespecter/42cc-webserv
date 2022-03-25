@@ -161,6 +161,8 @@ void Response::execCgi(const std::string& realUri, const cgi_pair& cgiConfig)
 
 //	Body cgiRep;
 	CGI cgi(_req, realUri, cgiConfig);
+    cgi.executeCGI();
+    cgi.parse_response();
 	
 	/* deberían gestionarse de alguna manera las redirecciones locales */
 

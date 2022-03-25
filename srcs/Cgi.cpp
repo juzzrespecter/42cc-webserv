@@ -1,17 +1,7 @@
 #include "Cgi.hpp"
 
-// setup env variables
-// execute cgi
-// parse response
-
-// headers:
-// 		content-type -> OBLIGATORIO
-//		location -> status == 302
-//		status -> status == lo que diga el header
-// 
-// 		si no hay ninguno -> 500 internal server error
-
 /* test perl script! */
+
 std::string CGI::buildCGIPath(const std::string& relPath, const std::string& cwd, const Location& loc)
 {
 	std::string absPath(cwd);
@@ -28,7 +18,29 @@ std::string CGI::buildCGIPath(const std::string& relPath, const std::string& cwd
 	return absPath;
 }
 
-void CGI::setup_env_variables(const std::string& uri, const std::string& file_ext) {
+void CGI::close_fdIN(void) {
+    if (_fdIN[0] != -1) {
+        close(_fdIN[0]);
+        _fdIN[0] = -1;
+    }
+    if (_fdIN[1] != -1) {
+        close(_fdIN[1]);
+        _fdIN[1] = -1;
+    }
+}
+
+void CGI::close_fdOut(void) {
+    if (_fdOut[0] != -1) {
+        close(_fdOut[0]);
+        _fdOut[0] = -1;
+    }
+    if (_fdOut[1] != -1) {
+        close(_fdOut[1]);
+        _fdOut[1] = -1;
+    }
+}
+
+void CGI::set_env_variables(const std::string& uri, const std::string& file_ext) {
 	std::string tmpBuf;
 	int i = 0;
 
@@ -54,12 +66,23 @@ void CGI::setup_env_variables(const std::string& uri, const std::string& file_ex
 		tmpBuf = std::string("CONTENT_LENGTH=") + intToString.str();
 		_envvar[i++] = strdup(tmpBuf.c_str());
 	}
+    _envvar[i] = NULL;
 }
 
-void CGI::setup_args(const std::string& uri, const std::string& cgi_path) {
+void CGI::set_args(const std::string& uri, const std::string& cgi_path) {
 	_args[0] = (cgi_path.empty()) ? strdup(uri.c_str()) : strdup(cgi_path.c_str());
 	_args[1] = (cgi_path.empty()) ? NULL : strdup(uri.c_str());
 	_args[2] = NULL;
+}
+
+void CGI::set_path_info(const std::string& resource_path) {
+    size_t path_separator = resource_path.rfind('/');
+
+    if (path_separator == std::string::npos) {
+        _path_info = "/";
+        return ;
+    }
+    _path_info = resource_path.substr(0, path_separator);
 }
 
 // evitar headers redundantes (no imprimir en Response headers ya definidos en CGI)
@@ -132,7 +155,7 @@ void CGI::parse_response_body(const std::string& body) {
 void CGI::parse_status_line(void) {
 	enum status_f {code, reason, size};
 	std::map<std::string, std::string>::const_iterator lc(_header_map.find("Location"));
-	std::map<std::string, std::string>::const_iterator st(_header_map.find("Status"));
+	std::map<std::string, std::string>::iterator st(_header_map.find("Status"));
 
 	if (lc != _header_map.end()) {
 		_status_line = StatusLine(302, REASON_302, "CGI: redirection");
@@ -156,13 +179,15 @@ void CGI::parse_status_line(void) {
 	}
 }
 
+/*
+ * encuentra separador headers & body
+ * substr headers / body
+ *  	headers: while (field ':' value NL)
+ *	             comprueba sintaxis de la respuesta {al menos un CGIHeader, no repetidos}
+ * 		body: si !body.empty() && !content-type -> 500
+ *		      si content-length && !(body.size() == content-length) -> 500
+ */
 void CGI::parse_response(void) {
-	// encuentra separador headers & body
-	// substr headers / body
-	//		headers: while (field ':' value NL)
-	//				 comprueba sintaxis de la respuesta {al menos un CGIHeader, no repetidos}
-	// 		body: si !body.empty() && !content-type -> 500
-	//			  si content-length && !(body.size() == content-length) -> 500
 
 	size_t separator = _raw_response.find("\n\n");
 
@@ -180,9 +205,14 @@ void CGI::parse_response(void) {
 CGI::CGI(Request *req, const std::string& uri, const cgi_pair& cgi_info) :
 	_req(req), _status_line(200, REASON_200, "CGI-generated response") {
 	/* inicializa atributos de CGI (variables de entorno, argumentos) */
+    for (int i = 0; i < 2; i++) {
+        _fdIN[i] = -1;
+        _fdOut[i] = -1;
+    }
 
 	// GET : QUERY_STRING + PATH_INFO 
 	// POST : PATH_INFO + CONTENT_length 
+    std::cerr << "[test] " << _fdIN[0] << ", " << _fdIN[1] << "\n";
 	if ((_envvar = new char*[7]) == NULL) {
 		throw std::runtime_error("Error on a cgi malloc\n");
 	}
@@ -200,12 +230,9 @@ CGI::CGI(Request *req, const std::string& uri, const cgi_pair& cgi_info) :
 	std::string resource_path(std::string(cwd) + "/" + uri); /* ruta absoluta al recurso */
 	std::string cgi_path = buildCGIPath(cgi_info.second, cwd, _req->getLocation()); /* ruta absoluta al ejecutable */
 
-	setup_env_variables(resource_path, cgi_info.first);
-	setup_args(resource_path, cgi_path);
-
-	executeCGI(); /* execve(CGI, uri, args), almacena la respuesta en atributo _buffer */
-
-	parse_response(); /* comprueba que la respuesta sea válida; lanza excepción si la sintaxis es incorrecta */
+	set_env_variables(resource_path, cgi_info.first);
+	set_args(resource_path, cgi_path);
+    set_path_info(resource_path);
 }
 
 CGI::~CGI()
@@ -219,6 +246,9 @@ CGI::~CGI()
 	while (_args[++i]){
 		free(_args[i]); _args[i] = NULL;}
 	delete[] _args;
+
+    close_fdIN();
+    close_fdOut();
 }
 
 void CGI::executeCGI()
@@ -231,12 +261,6 @@ void CGI::executeCGI()
 	
 	pid_t pid = fork();
     if (pid == -1) {
-        close(fdOut[0]);
-        close(fdOut[1]);
-       // if (_req->getMethod() == POST) {
-            close(fdIN[0]);
-            close(fdIN[1]);
-       // }
         throw StatusLine(500, REASON_500, "CGI: fork() call error");
     }
 	if (!pid){
@@ -251,10 +275,16 @@ void CGI::executeCGI()
 		close(fdIN[1]);
 
 		// change the repo into where the program is
-		chdir(_path_info.first.c_str());
+		if (chdir(_path_info.c_str()) == -1) {
+            std::cerr << "[CGI error] chdir(): " << strerror(errno) << "\n";
+            exit(EXECVE_FAIL);
+        }
 	
 		if (execve(_args[0], _args, _envvar) < 0){
-            std::cerr << strerror(errno) << "\n";
+            std::cerr << "[debug]\n" << strerror(errno) << "\n";
+            std::cerr << _args[0] << "\n";
+            std::cerr << _args[1] << "\n";
+            std::cerr << _args[2] << "\n";
 			exit(EXECVE_FAIL);
 		}
 	
@@ -264,40 +294,28 @@ void CGI::executeCGI()
 		if (write(fdIN[1], _req->getBody().getBody().c_str(), _req->getBody().getBody().size()) < 0)
 			throw StatusLine(500, REASON_500, "write failed in executeCGI method");
 	}
-	
-	//else{
-	//	if (write(fdIN[1], _getBuffFile.c_str(), _getBuffFile.size()) < 0)
-	//		throw StatusLine(500, REASON_500, "write failed in executeCGI method");
-	//}
-	
-	close(fdIN[1]);
-	close(fdIN[0]);
-	
-       // Checking if execve correctly worked
-    int status = 0;
-    waitpid(pid, &status, 0);
-    if (WIFEXITED(status) && WEXITSTATUS(status) == EXECVE_FAIL)
-    {
-        std::cerr << WIFEXITED(status) << ", " << WEXITSTATUS(status) << ", " << EXECVE_FAIL << "\n";
-       throw StatusLine(500, REASON_500, "execve failed in executeCGI method");
-    }
-        
+	close_fdIN();
     char buf[CGI_PIPE_BUFFER_SIZE + 1] = {0};
     int rd_out;
-	while ((rd_out = read(fdOut[0], buf, CGI_PIPE_BUFFER_SIZE)) > 0) // check if -1
+
+	while ((rd_out = read(fdOut[0], buf, CGI_PIPE_BUFFER_SIZE)) > 0)
 	{
 		_raw_response.append(buf, rd_out);
 		memset(buf, 0, CGI_PIPE_BUFFER_SIZE + 1);
 	}
     if (rd_out == -1) {
-        std::cerr << strerror(errno) << "\n";
+        throw StatusLine(500, REASON_500, "CGI: read() - " + strerror(errno));
+    }
+    close_fdOut();
+
+    // Checking if execve correctly worked
+    int status = 0;
+    waitpid(pid, &status, 0);
+    if (WIFEXITED(status) && WEXITSTATUS(status) == EXECVE_FAIL)
+    {
+       throw StatusLine(500, REASON_500, "execve failed in executeCGI method");
     }
 	_raw_response.append(buf, rd_out);
-	close(fdOut[0]);
-	//_emptyBody->setBuff(msgbody);
-		
-		// remove the header part of the cgi output
-	//_emptyBody->setSize(msgbody.size() - (msgbody.find("\r\n\r\n") + 4)); 
 }
 
 std::string CGI::getHeaders(void) const {
@@ -316,7 +334,7 @@ std::string CGI::getBody(void) const {
 	return _body_string;
 }
 
-StatusLine CGI::getStatusLine(void) const {
+const StatusLine& CGI::getStatusLine(void) const {
 	return _status_line;
 }
 
@@ -333,7 +351,13 @@ void CGI::mySwap(CGI &a, CGI &b)
 	std::swap(a._path_info, b._path_info);
 }
 
-CGI::CGI(void) : _status_line(200, REASON_200, "CGI-generated response") { }
+CGI::CGI(void) :  _status_line(200, REASON_200, "CGI-generated response") {
+    _fdIN[0] = -1;
+    _fdIN[1] = -1;
+
+    _fdOut[0] = -1;
+    _fdOut[1] = -1;
+}
 
 CGI::CGI(const CGI& other) : _req(other._req){ 
 	// paciencia con este

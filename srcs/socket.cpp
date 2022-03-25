@@ -61,7 +61,6 @@ void Socket::build_request(const char buffer[], int buffer_size) {
 
 void Socket::build_response(const StatusLine& sl) {
      _resp.fillBuffer(&_req, _req.getLocation(), sl);
-     //_req.clear();
 }
 
 std::string Socket::get_response_string(void) const {
