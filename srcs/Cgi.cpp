@@ -1,7 +1,5 @@
 #include "Cgi.hpp"
 
-/* test perl script! */
-
 std::string CGI::buildCGIPath(const std::string& relPath, const std::string& cwd, const Location& loc)
 {
     std::string absPath(cwd);
@@ -51,15 +49,13 @@ void CGI::set_env_variables(const std::string& uri/*, const std::string& file_ex
     if (_req->getMethod() == GET){
 
         // stupid bug in php-cgi
-        //if (!file_ext.compare(".php"))
-            _envvar[i++] = strdup("REQUEST_METHOD=GET");
+        _envvar[i++] = strdup("REQUEST_METHOD=GET");
 
         tmpBuf = "QUERY_STRING=" + _req->getQuery();
         _envvar[i++] = strdup(tmpBuf.c_str());
     } else {
         // stupid bug in php-cgi
-        //if (!file_ext.compare(".php"))
-            _envvar[i++] = strdup("REQUEST_METHOD=POST");	
+        _envvar[i++] = strdup("REQUEST_METHOD=POST");	
 
         std::stringstream intToString;
         intToString << _req->getBody().getBody().size();
@@ -200,35 +196,35 @@ void CGI::parse_response(void) {
 
 CGI::CGI(Request *req, const std::string& uri, const cgi_pair& cgi_info) :
     _req(req), _status_line(200, REASON_200, "CGI-generated response") {
-        /* inicializa atributos de CGI (variables de entorno, argumentos) */
-        for (int i = 0; i < 2; i++) {
-            _fdIN[i] = -1;
-            _fdOut[i] = -1;
-        }
-
-        // GET : QUERY_STRING + PATH_INFO 
-        // POST : PATH_INFO + CONTENT_length 
-        if ((_envvar = new char*[7]) == NULL) {
-            throw std::runtime_error("Error on a cgi malloc\n");
-        }
-        // ** Set args for execve **
-        if ((_args = new char*[3]) == NULL) {
-            throw StatusLine(500, REASON_500, "malloc failed in CGI constructor");
-        }
-
-        /* llamada a getcwd: cambio de malloc a reservar memoria en stack por problemas de fugas de memoria */
-        char cwd[PWD_BUFFER];
-        if (getcwd(cwd, PWD_BUFFER) == NULL) {
-            throw std::runtime_error("CGI: getcwd() call failure");
-        }
-
-        std::string resource_path(std::string(cwd) + "/" + uri); /* ruta absoluta al recurso */
-        std::string cgi_path = buildCGIPath(cgi_info.second, cwd, _req->getLocation()); /* ruta absoluta al ejecutable */
-
-        set_env_variables(resource_path/*, cgi_info.first*/);
-        set_args(resource_path, cgi_path);
-        set_path_info(resource_path);
+    /* inicializa atributos de CGI (variables de entorno, argumentos) */
+    for (int i = 0; i < 2; i++) {
+        _fdIN[i] = -1;
+        _fdOut[i] = -1;
     }
+
+    // GET : QUERY_STRING + PATH_INFO 
+    // POST : PATH_INFO + CONTENT_length 
+    if ((_envvar = new char*[7]) == NULL) {
+        throw std::runtime_error("Error on a cgi malloc\n");
+    }
+    // ** Set args for execve **
+    if ((_args = new char*[3]) == NULL) {
+        throw std::runtime_error("CGI: " + std::string(strerror(errno)) + "\n");
+    }
+
+    /* llamada a getcwd: cambio de malloc a reservar memoria en stack por problemas de fugas de memoria */
+    char cwd[PWD_BUFFER];
+    if (getcwd(cwd, PWD_BUFFER) == NULL) {
+        throw std::runtime_error("CGI: getcwd() call failure");
+    }
+
+    std::string resource_path(std::string(cwd) + "/" + uri); /* ruta absoluta al recurso */
+    std::string cgi_path = buildCGIPath(cgi_info.second, cwd, _req->getLocation()); /* ruta absoluta al ejecutable */
+
+    set_env_variables(resource_path/*, cgi_info.first*/);
+    set_args(resource_path, cgi_path);
+    set_path_info(resource_path);
+}
 
 CGI::~CGI()
 {
@@ -245,10 +241,6 @@ CGI::~CGI()
     close_fdIN();
     close_fdOut();
 }
-
-// void CGI::executeCGI_read(void) {
-
-//}
 
 void CGI::executeCGI()
 {
@@ -303,7 +295,6 @@ void CGI::executeCGI()
         throw StatusLine(500, REASON_500, std::string("CGI: read() - ") + strerror(errno));
     }
     close_fdOut();
-    std::cerr << "[resp] " << _raw_response << "\n";
 
     // Checking if execve correctly worked
     int status = 0;
@@ -342,20 +333,38 @@ bool CGI::isHeaderDefined(const std::string& header_field) const {
 void CGI::mySwap(CGI &a, CGI &b)
 {
     std::swap(a._envvar, b._envvar);
-    //std::swap(a._emptyBody, b._emptyBody);
     std::swap(a._req, b._req);
-    //std::swap(a._exec, b._exec);
     std::swap(a._path_info, b._path_info);
+    std::swap(a._raw_response, b._raw_response);
+    std::swap(a._status_line, b._status_line);
+    std::swap(a._header_map, b._header_map);
+    std::swap(a._body_string, b._body_string);
 }
 
 CGI::CGI(void) :  _status_line(200, REASON_200, "CGI-generated response") {
-    _fdIN[0] = -1;
-    _fdIN[1] = -1;
-
-    _fdOut[0] = -1;
-    _fdOut[1] = -1;
+    for (int i = 0; i < 2; i++) {
+        _fdIN[i] = -1;
+        _fdOut[i] = -1;
+    }
 }
 
-CGI::CGI(const CGI& other) : _req(other._req){ 
-    // paciencia con este
+CGI::CGI(const CGI& other) : 
+    _req(other._req), _path_info(other._path_info), _raw_response(other._raw_response),
+    _status_line(other._status_line), _header_map(other._header_map), _body_string(other._body_string) {
+    _envvar = new char*[7];
+    _args = new char*[3];
+    if (_args == NULL || _envvar == NULL) {
+        throw std::runtime_error("CGI: " + std::string(strerror(errno)) + "\n");
+    }
+    int i = 0;
+
+    for (; other._envvar[i] != NULL; i++) {
+        _envvar[i] = strdup(other._envvar[i]);
+    }
+    _envvar[i] = NULL;
+    for (i = 0; other._args[i] != NULL; i++ ) {
+        _args[i] = strdup(other._args[i]);
+    }
+    if (i == 1) _args[i] = NULL;
+    _args[2] = NULL;
 }

@@ -111,7 +111,6 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 
         if (!_loc.get_return_uri().empty())        // Doing an HTTP redirection (301) if redirect field filled in matched location block
         {
-			std::cout << "[debug] return uri: " << _loc.get_return_uri() << "\n";
             std::string redirectedUri = _req->getPath();            // Replacing location name in the URI with the redirect string set in config file
             replaceLocInUri(redirectedUri, _loc.get_return_uri());
 
@@ -380,10 +379,8 @@ void Response::fillError(const StatusLine& sta)
         // Adding relative file access if not well filled in config file
 		std::string pathError = _req->getPath().substr(0, _req->getPath().rfind('/')) + "/" + _loc.get_error_page();
 		replaceLocInUri(pathError, _loc.get_root());
-		std::cerr << "[debug] path error: " << pathError << "\n";
 		struct stat infFile;
-		if (stat(pathError.c_str(), &infFile) == -1) /* check if pathError file is readable */{
-			std::cerr << strerror(errno) << "\n";
+		if (stat(pathError.c_str(), &infFile) == -1) {
 			errorFile = getErrorPage(sta);
 			fillContentTypeHeader();
 		}

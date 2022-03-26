@@ -61,24 +61,13 @@ void Body::clear()
 
 void Body::recvBuffer(const std::string& buffer/*, size_t index, size_t lenToRead*/)
 {
-	// maxSize will be evaluated only if previously set using setMaxSize before, because 
-	// default constructor initilized it to -1
-	//if (_maxSize >= 0 && (_maxSize -= lenToRead) < 0)
-	//	return -1;
-
 	_buff.append(buffer);
-	std::cout << "[ buffer: " << buffer << " ]\n";
-	std::cout << "[ in body: limit " << _size << ", current " << _buff.size() << ", max " << _maxSize << "]\n";
 	if (_maxSize > 0 && _buff.size() > static_cast<size_t>(_maxSize)) {
 		throw StatusLine(413, REASON_413, "request body exceeded location max body configuration");
 	}
 	if (_size > 0 && _buff.size() > _size) {
 		throw StatusLine(400, REASON_400, "request body exceeded content-length value");
 	}
-	// controla size -> content-lenght
-	// controla max_size -> client_max_body_size
-	//_size -= lenToRead;
-	//return 0;
 }
 
 void swap(Body& a, Body& b)

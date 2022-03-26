@@ -69,12 +69,6 @@ void swap(Request& a, Request& b) {
    std::swap(a._stage, b._stage);
 }
 
-// Sintaxis:
-//        request-line
-//        *((header-line) CRLF)
-//        CRLF
-//        [ message-body ]
-
 void    Request::recvBuffer(const char newBuffer[], int bufferSize) {
     static req_options req_table[REQ_TAB_SIZE] = {
         &Request::parseRequestLine,
@@ -173,7 +167,7 @@ bool    Request::parseHeaderEnd(void) {
     if (hs == _headers.end()) {
         THROW_STATUS("no Host defined on request");
     }
-    if (cl != _headers.end()) { // case expected 100-continue w/o c-l defined??
+    if (cl != _headers.end()) {
         char *ptr;
 
         int clFieldValue = strtol(cl->second.c_str(), &ptr, 0);

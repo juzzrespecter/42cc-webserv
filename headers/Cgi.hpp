@@ -16,7 +16,6 @@
 
 // temp
 #ifndef TMP_def
-# define CGI_PATH "nil" 
 # define EXECVE_FAIL EXIT_FAILURE 
 # define CGI_PIPE_BUFFER_SIZE 4000
 #endif
@@ -26,19 +25,15 @@ class CGI
 	private:
 		char **_envvar;
 		char **_args;
-		//Body *_emptyBody;
+
 		Request *_req;
-		//std::fstream _openArgfile;
-		//std::string _exec;
-		//std::string _realUri;
-		//std::string _getBuffFile;
-		std::string _path_info;
+
         int _fdIN[2];
         int _fdOut[2];
 		
+		std::string _path_info;
 		std::string _raw_response;
 
-		//int _status_code;
 		StatusLine _status_line;
 		std::map<std::string, std::string> _header_map;
 		std::string _body_string;
@@ -48,7 +43,7 @@ class CGI
 
 		/* ------------------------ COPLIEN FORM ----------------------- */
 
-		CGI(/*Body *,*/ Request *, const std::string &, const cgi_pair &);
+		CGI(Request *, const std::string &, const cgi_pair &);
 		CGI &operator=(CGI &);
 		~CGI();
 	
@@ -81,7 +76,7 @@ class CGI
 
 		std::string buildCGIPath(const std::string&, const std::string&, const Location&);
 		void mySwap(CGI &, CGI &);
-		CGI(void); // needs to be defined
+		CGI(void);
 		CGI(CGI const &);
 
 };
