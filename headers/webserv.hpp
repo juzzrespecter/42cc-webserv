@@ -5,6 +5,10 @@
 #include <exception>
 #include <string>
 #include <sstream>
+#include <map>
+#include <string>
+
+typedef std::map<std::string, std::string> header_map;
 
 enum methods { GET, HEAD, POST, DELETE, PUT };
 

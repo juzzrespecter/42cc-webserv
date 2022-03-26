@@ -39,7 +39,6 @@
 #include <fstream>
 #include <sstream>
 #include <deque>
-#include <algorithm>
 #include "config_blocks.hpp"
 
 class Parser {

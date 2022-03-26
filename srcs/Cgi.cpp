@@ -50,9 +50,11 @@ void CGI::set_env_variables(const std::string& uri/*, const std::string& file_ex
 
         // stupid bug in php-cgi
         _envvar[i++] = strdup("REQUEST_METHOD=GET");
-
-        tmpBuf = "QUERY_STRING=" + _req->getQuery();
-        _envvar[i++] = strdup(tmpBuf.c_str());
+//        tmpBuf = "QUERY_STRING=" + _req->getQuery();
+        if (!_req->getQuery().empty()) {
+            _envvar[i++] = strdup(std::string("QUERY_STRING=" + _req->getQuery()).c_str());
+            _envvar[i++] = strdup("CONTENT_TYPE=text/html");
+        }
     } else {
         // stupid bug in php-cgi
         _envvar[i++] = strdup("REQUEST_METHOD=POST");	
@@ -61,6 +63,11 @@ void CGI::set_env_variables(const std::string& uri/*, const std::string& file_ex
         intToString << _req->getBody().getBody().size();
         tmpBuf = std::string("CONTENT_LENGTH=") + intToString.str();
         _envvar[i++] = strdup(tmpBuf.c_str());
+
+        header_map::const_iterator ct = _req->getHeaders().find("Content-Type");
+        if (ct != _req->getHeaders().end()) {
+            _envvar[i++] = strdup(std::string("CONTENT_TYPE=" + ct->second).c_str());
+        }
     }
     _envvar[i] = NULL;
 }

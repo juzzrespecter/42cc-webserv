@@ -8,6 +8,8 @@
 #include <signal.h>
 #include <fcntl.h>
 
+typedef std::map<std::string, std::string> header_map;
+
 enum socket_status_f {
     CLOSED, /* fin de la conexión */
     STANDBY, /* socket no está aún preparado para realizar acción */

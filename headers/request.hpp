@@ -2,10 +2,7 @@
 #define REQUEST_HPP
 
 #include <iostream>
-#include <sstream>
-#include <string>
 #include <cctype>
-#include <vector>
 #include <map>
 
 #include "webserv.hpp"
@@ -28,7 +25,6 @@
 class Request
 {
 	private:
-		typedef std::map<std::string, std::string>	header_map;
 		typedef bool (Request::*req_options)(void);
 		/* ------------------------- ATTRIBUTES ------------------------ */
 

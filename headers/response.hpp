@@ -4,18 +4,11 @@
 #include <ctime>
 #include <sys/stat.h>
 #include <cstdio>
-#include <fstream>
-#include <iostream>
 #include <dirent.h>
 #include <errno.h>
 
 #include "request.hpp"
 #include "Cgi.hpp"
-#include "msg_format/StatusLine.hpp"
-#include "msg_format/Body.hpp"
-
-#include "parser.hpp"
-#include "server.hpp"
 
 #ifdef __APPLE__
 #ifndef st_mtime

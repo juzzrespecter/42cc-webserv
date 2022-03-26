@@ -1,7 +1,6 @@
 #ifndef __SERVER_HPP__
 #define __SERVER_HPP__
 
-#include "parser.hpp"
 #include "location.hpp"
 
 struct listen_directive_t {

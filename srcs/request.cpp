@@ -23,7 +23,7 @@ Request& Request::operator=(Request a) {
 const RequestLine& Request::getRequestLine() const {
     return _reqLine;
 }
-const Request::header_map& Request::getHeaders() const {
+const header_map& Request::getHeaders() const {
     return _headers;
 }
 

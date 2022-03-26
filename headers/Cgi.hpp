@@ -1,12 +1,9 @@
 #ifndef CGI_HPP
 # define CGI_HPP
 
-#include "msg_format/Body.hpp"
-#include "msg_format/StatusLine.hpp"
 #include "request.hpp"
 #include <iostream>
 #include <unistd.h>
-#include <fstream>
 #include <cstring>
 #include <sstream>
 #include <sys/wait.h>
