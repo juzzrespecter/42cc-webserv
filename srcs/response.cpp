@@ -149,7 +149,6 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 
 void Response::execCgi(const std::string& realUri, const cgi_pair& cgiConfig)
 {
-	std::cerr << "[echo]\n";
     struct stat st;
     if (stat(realUri.c_str(), &st) == -1)
 	{
@@ -187,7 +186,7 @@ void Response::execPost(const std::string& realUri)
     }
     else 
     {
-        throw (StatusLine(403, REASON_403, "POST: posting to a static file"));
+        throw (StatusLine(403, REASON_403, "POST: posting to a static file (or script not allowed by cgi_pass"));
     }
 }
 
@@ -311,8 +310,8 @@ std::string Response::reconstructFullURI(int method, std::string uri)
 	}
 	// If no root in location block, or root doesn't start with a '.', need to add it to find the file using
 	// relative path
-	if (!uri.empty() && uri[0] == '/')
-		uri.insert(uri.begin(), '.');
+	//if (!uri.empty() && uri[0] == '/')
+	//	uri.insert(uri.begin(), '.');
 
 	// Checking if the path after root substitution is correct, and if it's a directory trying
 	// to add indexs. Case POST method, no 404 because it can create the file.
@@ -533,7 +532,7 @@ std::vector<std::string> Response::splitWithSep(const std::string& str, char dlm
 }
 
 cgi_pair Response::getCgiExecutableName(const std::string& uri) const {
-    std::string fileExt(getResourceExtension(uri)); 
+    std::string fileExt(getResourceExtension(uri));
     if (!fileExt.compare("cgi")) {
         return cgi_pair(".cgi", "");
     }

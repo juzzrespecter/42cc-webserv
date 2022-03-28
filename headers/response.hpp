@@ -131,16 +131,6 @@ class Response
         void execDelete(const std::string& realUri);
 		void execPut(const std::string&);
 
-        template<class T>
-        std::string convertNbToString(T nb) 
-		{
-            std::string nbString;
-            std::stringstream nbStream;
-            nbStream << nb;
-            nbString = nbStream.str();
-            return nbString;
-        }
-
 		std::vector<std::string> splitWithSep(const std::string&, char);
 
 		void autoIndexDisplayer(const std::string&, std::string&);

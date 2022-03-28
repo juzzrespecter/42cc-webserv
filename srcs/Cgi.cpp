@@ -2,15 +2,18 @@
 
 std::string CGI::buildCGIPath(const std::string& relPath, const std::string& cwd, const Location& loc)
 {
-    std::string absPath(cwd);
-
-    if (relPath.empty())
-        return "";
-    if (relPath.at(0) != '/')
-    {
-        absPath.append(loc.get_root());
-        if (absPath.at(absPath.size() - 1) != '/')
-            absPath.push_back('/');
+    std::string absPath;
+    
+    if (loc.get_root().at(0) != '/') {
+      absPath.append(cwd + '/' + loc.get_root());
+    } else {
+      absPath.append(loc.get_root());
+    }
+    if (absPath.at(absPath.size() - 1) != '/') {
+      absPath.push_back('/');
+    }
+    if (relPath.at(0) == '/') {
+      absPath.pop_back();
     }
     absPath.append(relPath);
     return absPath;
@@ -277,7 +280,7 @@ void CGI::executeCGI()
         }
 
         if (execve(_args[0], _args, _envvar) < 0){
-            std::cerr << "[CGI error] execve(): \n" << strerror(errno) << "\n";
+            std::cerr << "[CGI error] execve(): " << strerror(errno) << "\n";
             exit(EXECVE_FAIL);
         }
 

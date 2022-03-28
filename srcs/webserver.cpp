@@ -81,17 +81,14 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
         return STANDBY;
     }
     if (socket_rd_stat == 0) {
-        /* cliente ha cerrado conexión; cerramos socket y eliminamos de la lista */
         conn_socket.close_socket();
         nfds_down(conn_socket.fd);
         return CLOSED;
     }
-    /* puede ser que una lectura del socket traiga más de una request ?? (std::vector<Request>) */
-    /* (pipelining; sending multiple requests without waiting for an response) */
     try {
         conn_socket.build_request(req_buff, socket_rd_stat);
     } catch (StatusLine& sl) {
-        log("request: ", sl.getReason() + " - " + sl.getAdditionalInfo());
+      log("request: ", convertNbToString(sl.getCode()) + " " + sl.getReason() + " - " + sl.getAdditionalInfo());
         conn_socket.build_response(sl);
         return CONTINUE;
     }
@@ -109,8 +106,6 @@ socket_status_f    Webserver::write_to_socket(Socket& conn_socket) {
         log("write(): ", strerror(errno));
         return STANDBY;
     }
-    //if (/* Cliente ha indicado en cabecera que hay que cerrar la conexión tras enviar la respuesta */) {
-    /* si la respuesta contiene un codigo de error, hay que chapar conexion */
     if (conn_socket.marked_for_closing()) {
         conn_socket.close_socket();
         return CLOSED;

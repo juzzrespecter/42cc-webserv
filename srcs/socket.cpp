@@ -27,7 +27,7 @@ Socket::Socket(const listen_directive_t& sock_addr) : _type(PASSV), _sock_addr(s
     if ((bind(fd, reinterpret_cast<sa_t*>(&sockaddr_s), sizeof(sockaddr_s))) == -1) {
         throw std::runtime_error(strerror(errno));
     }
-    if ((listen(fd, FD_SETSIZE)) == -1) {/* fd_setsize?? */
+    if ((listen(fd, FD_SETSIZE)) == -1) {
         throw std::runtime_error(strerror(errno));
     }
 }

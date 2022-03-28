@@ -20,6 +20,16 @@ enum methods { GET, HEAD, POST, DELETE, PUT };
 #define MAX_HEADER_LEN 8000
 #define HEADER_LIMIT 100
 
+template<class T>
+std::string convertNbToString(T nb) 
+{
+    std::string nbString;
+    std::stringstream nbStream;
+    nbStream << nb;
+    nbString = nbStream.str();
+    return nbString;
+}
+
 // Number of octets that the request buffer can contain
 #define REQUEST_BUFFER_SIZE 2046
 
