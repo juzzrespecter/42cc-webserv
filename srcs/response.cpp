@@ -348,7 +348,7 @@ void Response::fillError(const StatusLine& sta)
 	  std::string error_abs_path = _loc.get_root() + error_uri;
 	  struct stat file_inf;
 
-	  replaceLocInUri(path_error, _loc.get_root());
+	  replaceLocInUri(error_uri, _loc.get_root());
 	  if (stat(error_uri.c_str(), &file_inf) != -1) {
 	    _staLine = StatusLine(302, REASON_302, "fillError(): redirecting to default error page");
 	    _req->setPath(error_uri);
@@ -357,14 +357,14 @@ void Response::fillError(const StatusLine& sta)
 	std::string error_file = getErrorPage(_staLine);
 
 	fillStatusLine(_staLine);
-	fillServerheadeer();
+	fillServerHeader();
 	fillDateHeader();
 
 	if (_staLine.getCode() == 301 || _staLine.getCode() == 302) {
 	  fillLocationHeader(_req->getPath());
 	}
-	fillContenttypeHeader();
-	fillContentlengthHeadr(convertNbToString(error_file.size()));
+	fillContentTypeHeader();
+	fillContentlengthHeader(convertNbToString(error_file.size()));
 	_buffer += CRLF + error_file;
 }
 
@@ -596,7 +596,7 @@ std::string Response::getResourceExtension(const std::string& uri) const {
 	return ext;
 }
 
-std::string Response::getResourceName(const std::string& uri) {
+std::string Response::getResourceName(const std::string& uri) const {
   size_t slash_pos = uri.rfind('/');
 
   if (slash_pos == std::string::npos) {
