@@ -96,6 +96,7 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 	setLocation(loc);
 	setStatusLine(sl);
 
+	print_Loc(_loc);
     if (_staLine.getCode() == 100)
     {
         return setUp100Continue();
@@ -257,6 +258,7 @@ void print_Loc(const Location& _loc)
 
 void Response::replaceLocInUri(std::string& uri, const std::string& root)
 {
+  std::cerr << "[debug] in replaceLocInUri: uri - " << uri << ", root - " << root << "\n"; 
 	if (root[root.size() - 1] == '/') {
 		uri.erase(0, 1);
 	}	
@@ -296,105 +298,78 @@ void Response::checkMethods(int method, const std::vector<std::string>& methodsA
 
 std::string Response::reconstructFullURI(int method, std::string uri)
 {
-	bool fileExist = true;
+  //	bool fileExist = true;
 	struct stat infFile;
 
-	// Replacing the part of the URI that matched with the root path if there is one existing
-	if (!_loc.get_root().empty() && !(method == PUT && !_loc.get_upload_path().empty()))
-		replaceLocInUri(uri, _loc.get_root());
+	checkMethods(method, _loc.get_methods());
+	if (method == PUT) {
+	  if (_loc.get_upload_path().empty()) {
+	    throw (StatusLine(403, REASON_403, "PUT: method allowed, but no upload_path was setted server configuration"));
+	  }
+	  if (!isResourceAFile(uri)) {
+	    throw (StatusLine(403, REASON_403, "PUT: tried to upload a directory"));
+	  }
+	  std::string upload_uri(_loc.get_root() + _loc.get_upload_path() + getResourceName(uri)); // this needs cleaning;
 
-	else if (method == PUT && !_loc.get_upload_path().empty()){ /* before need to be checked CGI */
-		std::string fullUploadPath(_loc.get_upload_path());
-		replaceLocInUri(fullUploadPath, _loc.get_root());
-		replaceLocInUri(uri, fullUploadPath);
+	  return upload_uri;
 	}
-	// If no root in location block, or root doesn't start with a '.', need to add it to find the file using
-	// relative path
-	//if (!uri.empty() && uri[0] == '/')
-	//	uri.insert(uri.begin(), '.');
+	replaceLocInUri(uri, _loc.get_root());
 
 	// Checking if the path after root substitution is correct, and if it's a directory trying
-	// to add indexs. Case POST method, no 404 because it can create the file.
-	if (stat(uri.c_str(), &infFile) == -1 && !(fileExist = false) && method != PUT)
-		throw StatusLine(404, REASON_404, "reconstructFullURI method: " + uri);
-
-    // Case we match a directory and an autoindex isn't set. We try all the possible indexs, if none
-    // works addIndex throw a 403 error StatusLine object
-	if (fileExist && S_ISDIR(infFile.st_mode))
-	{
-		if (!uri.empty() && uri.at(uri.size() - 1) != '/') // redirect directories not ended in '/'
-		{
-			_req->setPath(_req->getPath() + "/");
-			throw StatusLine(301, REASON_301, "redirect " + uri + " to complete directory uri");
-		}
-		if (!(method == DELETE))
-		{
-			uri = addIndex(uri, _loc.get_index());
-		}
+	// to add indexs.
+	if (stat(uri.c_str(), &infFile) == -1) {
+	  throw StatusLine(404, REASON_404, "reconstructFullURI method: " + uri);
 	}
-	checkMethods(method, _loc.get_methods());
+
+    // works addIndex throw a 403 error StatusLine object
+	if (S_ISDIR(infFile.st_mode))
+	{
+	  if (!isResourceAFile(uri)) // redirect directories not ended in '/'
+	    {
+	      _req->setPath(_req->getPath() + "/");
+	      throw StatusLine(301, REASON_301, "redirect " + uri + " to complete directory uri");
+	    }
+	  if (!(method == DELETE))
+	    {
+	      uri = addIndex(uri, _loc.get_index());
+	    }
+	}
 	return uri;
 }
 
 void Response::fillError(const StatusLine& sta)
-{    
-    if (sta.getCode() != _staLine.getCode())
-    {
-	    _staLine = sta;
+{
+        if (sta.getCode() != _staLine.getCode()) {
+	  _staLine = sta;
 	}
-	
 	_buffer.clear();
-	
-	// Filling buffer with error code + some basic headers
-	fillStatusLine(sta);
-	fillServerHeader();
+	if (_staLine.getCode() == 404) {
+	  std::string error_uri = _req->getPath().substr(0, _req->getPath().rfind('/')) + "/" + _loc.get_error_page();
+	  std::string error_abs_path = _loc.get_root() + error_uri;
+	  struct stat file_inf;
+
+	  replaceLocInUri(path_error, _loc.get_root());
+	  if (stat(error_uri.c_str(), &file_inf) != -1) {
+	    _staLine = StatusLine(302, REASON_302, "fillError(): redirecting to default error page");
+	    _req->setPath(error_uri);
+	  }
+	}
+	std::string error_file = getErrorPage(_staLine);
+
+	fillStatusLine(_staLine);
+	fillServerheadeer();
 	fillDateHeader();
 
-    // Case HTTP redirection
-    if (_staLine.getCode() == 301)
-	{
-        fillLocationHeader(_req->getPath());
+	if (_staLine.getCode() == 301 || _staLine.getCode() == 302) {
+	  fillLocationHeader(_req->getPath());
 	}
-
-	// Value of host header field in request
-	const std::string* hostField = &_req->getHeaders().find("host")->second;
-	const std::string hostValue(hostField->substr(0, hostField->find(':')));
-
-	// Looking in each virtual server names if one match host header field value, if
-    // not using default server
-
-
-	std::string pathError;
-	std::string errorFile;
-	std::string errorCodeHTML = "/" + convertNbToString(sta.getCode()) + ".html";
-
-    // Custom error pages if set in config file
-	if (_staLine.getCode() != 404 || _loc.get_error_page().empty()) {
-		errorFile = getErrorPage(sta);
-		fillContentTypeHeader();
-	} 
-	else
-	{
-        // Adding relative file access if not well filled in config file
-		std::string pathError = _req->getPath().substr(0, _req->getPath().rfind('/')) + "/" + _loc.get_error_page();
-		replaceLocInUri(pathError, _loc.get_root());
-		struct stat infFile;
-		if (stat(pathError.c_str(), &infFile) == -1) {
-			errorFile = getErrorPage(sta);
-			fillContentTypeHeader();
-		}
-		else {
-			FileParser body(pathError.c_str(), true);
-			errorFile = body.getRequestFile();
-			fillContentTypeHeader(getResourceExtension(pathError));
-		}
-	}
-	fillContentlengthHeader(convertNbToString(errorFile.size()));
-	_buffer += CRLF + errorFile;
+	fillContenttypeHeader();
+	fillContentlengthHeadr(convertNbToString(error_file.size()));
+	_buffer += CRLF + error_file;
 }
 
 bool Response::isResourceAFile(const std::string& uri) const {
-	return (!uri.empty() && uri[uri.size() - 1] == '/');
+  return (!uri.empty() && uri.at(uri.size() - 1) == '/');
 }
 
 void Response::execGet(const std::string& realUri)
@@ -437,20 +412,24 @@ void Response::execGet(const std::string& realUri)
 
 void Response::execPut(const std::string& realUri)
 {
-	if (_loc.get_upload_path().empty())
-		throw StatusLine(403, REASON_403, "PUT: method is accepted but upload_path is not set in config");
+  // maybe testing here upload_path directory makes more sense
+    if (_loc.get_upload_path().empty()) {
+	throw StatusLine(403, REASON_403, "PUT: method is accepted but upload_path is not set in configuration file");
+    }
 	struct stat infoFile;
     int fileExists = stat(realUri.c_str(), &infoFile);
 	
-	if (!fileExists && (S_ISDIR(infoFile.st_mode)))
-		throw StatusLine(403, REASON_403, "PUT: trying to upload a file when not allowed");
+    if (!fileExists && (S_ISDIR(infoFile.st_mode))) {
+	throw StatusLine(403, REASON_403, "PUT: trying to upload a file when not allowed");
+    }
 	_staLine = (!fileExists) ?
-		StatusLine(204, REASON_204, "PUT: file already exists") :
-		StatusLine(201, REASON_201, "PUT: create new resource");
+	    StatusLine(204, REASON_204, "PUT: update existing resource") :
+	    StatusLine(201, REASON_201, "PUT: create new resource");
 
 	std::fstream postFile(realUri.c_str(), std::ios_base::out | std::ios_base::trunc);
-	if (!postFile.is_open())
-		throw StatusLine(500, REASON_500, "PUT: failed to open/create new resource");
+	if (!postFile.is_open()) {
+	    throw StatusLine(500, REASON_500, "PUT: failed to open/create new resource");
+	}
 	postFile << _req->getBody().getBody();
 	postFile.close();
 
@@ -615,6 +594,16 @@ std::string Response::getResourceExtension(const std::string& uri) const {
 	}
 	ext = uri.substr(dot_pos + 1);
 	return ext;
+}
+
+std::string Response::getResourceName(const std::string& uri) {
+  size_t slash_pos = uri.rfind('/');
+
+  if (slash_pos == std::string::npos) {
+    return ""; // bad format
+  }
+  std::string resource_name = uri.substr(slash_pos);
+  return resource_name;
 }
 
 bool Response::isMarkedForClosing(void) const

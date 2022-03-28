@@ -13,7 +13,7 @@ std::string CGI::buildCGIPath(const std::string& relPath, const std::string& cwd
       absPath.push_back('/');
     }
     if (relPath.at(0) == '/') {
-      absPath.pop_back();
+      absPath.erase(absPath.size() - 1);
     }
     absPath.append(relPath);
     return absPath;
