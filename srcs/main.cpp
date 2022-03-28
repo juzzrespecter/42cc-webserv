@@ -7,7 +7,7 @@ int main(int argc, char *argv[]) {
         std::cerr << "[ server ] wrong number of arguments\n";
         return EXIT_FAILURE;
     }
-    std::string parser_path("test.conf");
+    std::string parser_path("config/webserver.conf");
     Parser p;
     if (argc == 2) {
         parser_path = argv[1];
