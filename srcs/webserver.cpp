@@ -2,7 +2,6 @@
 
 sig_atomic_t    quit_f = 0;
 static void sighandl(int signal) {
-
     if (signal == SIGINT || signal == SIGQUIT) {
         quit_f = 1;
     }

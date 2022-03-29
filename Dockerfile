@@ -7,8 +7,8 @@ ADD [".", "/var/www/webserv/"]
 COPY ["./config/docker-entrypoint.sh", "/tmp"]
 COPY ["./config/setup_mysql.sql", "/tmp"]
 
-RUN apt update \
-    && apt install wget \
+RUN apt-get update \
+    && apt-get install wget \
                    make \
                    clang \
                    default-mysql-server \
@@ -22,7 +22,11 @@ RUN apt update \
     &&  mv wordpress/* /var/www/html/ \
     &&  service mysql start \
     &&  mysql -u root -p < /tmp/setup_mysql.sql \
+    &&  mkdir $SERVER_PATH/cgi-bin/ \
+    &&  cp $(which php-cgi) $SERVER_PATH/cgi-bin/ \
     &&  chmod +x ./docker-entrypoint.sh
+
+COPY ["./config/docker.conf", "/var/www/webserv/config/webserver.conf"]
 
 EXPOSE 80
 
