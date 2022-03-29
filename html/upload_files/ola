@@ -1,0 +1,43 @@
+server {
+    server_name test2 ;
+    index index.html ;
+    location /post_test {
+        accept_upload . ;
+        accept_method POST GET PUT;
+       # client_max_body_size 100 ;
+    }
+}
+
+server {
+    listen 8081 ;
+    root / ;
+    autoindex on;
+}
+
+server {
+    listen 8082 ;
+
+    autoindex on;
+    location /cgi_test {
+        cgi_pass py /html/cgi-bin/python3 ;
+        cgi_pass pl /html/cgi-bin/perl    ;
+        accept_method POST GET;
+    }
+    location /delete_test {
+        accept_method GET DELETE ;
+    }
+}
+
+server {
+    listen 7979 ;
+
+    location /cgi_test {
+        return /post_test ;
+    }
+    location /post_t {
+        accept_method POST ;
+    }
+    location / {
+        return google.com ;
+    }
+}

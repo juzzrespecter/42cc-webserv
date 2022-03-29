@@ -96,7 +96,6 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
 	setLocation(loc);
 	setStatusLine(sl);
 
-	print_Loc(_loc);
     if (_staLine.getCode() == 100)
     {
         return setUp100Continue();
@@ -258,7 +257,6 @@ void print_Loc(const Location& _loc)
 
 void Response::replaceLocInUri(std::string& uri, const std::string& root)
 {
-  std::cerr << "[debug] in replaceLocInUri: uri - " << uri << ", root - " << root << "\n"; 
 	if (root[root.size() - 1] == '/') {
 		uri.erase(0, 1);
 	}	
@@ -302,25 +300,24 @@ std::string Response::reconstructFullURI(int method, std::string uri)
 	struct stat infFile;
 
 	checkMethods(method, _loc.get_methods());
+	replaceLocInUri(uri, _loc.get_root());
+	if (stat(uri.c_str(), &infFile) == -1 && method != PUT) {
+	  throw (StatusLine(404, REASON_404, "reconstructFuLLURI: file " + uri + " does not exist"));
+	}
+	
 	if (method == PUT) {
+	  std::string upload_uri(get_filename_from_uri(uri));
+
+	  replaceLocInUri(upload_uri, _loc.get_upload_path());
+	  replaceLocInUri(upload_uri, _loc.get_root());
 	  if (_loc.get_upload_path().empty()) {
 	    throw (StatusLine(403, REASON_403, "PUT: method allowed, but no upload_path was setted server configuration"));
 	  }
-	  if (!isResourceAFile(uri)) {
+	  if (S_ISDIR(infFile.st_mode)) {
 	    throw (StatusLine(403, REASON_403, "PUT: tried to upload a directory"));
 	  }
-	  std::string upload_uri(_loc.get_root() + _loc.get_upload_path() + getResourceName(uri)); // this needs cleaning;
-
 	  return upload_uri;
 	}
-	replaceLocInUri(uri, _loc.get_root());
-
-	// Checking if the path after root substitution is correct, and if it's a directory trying
-	// to add indexs.
-	if (stat(uri.c_str(), &infFile) == -1) {
-	  throw StatusLine(404, REASON_404, "reconstructFullURI method: " + uri);
-	}
-
     // works addIndex throw a 403 error StatusLine object
 	if (S_ISDIR(infFile.st_mode))
 	{
@@ -348,14 +345,18 @@ void Response::fillError(const StatusLine& sta)
 	  struct stat file_inf;
 	  
 	  if (error_uri.at(0) != '/') {
-	    error_uri = _req->getPath().substr(0, _req->getPath().rfind('/')) + error_uri;
+	    std::string error_path = _req->getPath().substr(0, _req->getPath().rfind('/'));
+
+	    if (error_path.empty() || error_path.at(error_path.size() - 1) != '/') {
+	      error_path.push_back('/');
+	    }
+	    error_uri.insert(0, error_path);
 	  }
 	  error_abs_path = error_uri;
 	  replaceLocInUri(error_abs_path, _loc.get_root());
 	  if (stat(error_abs_path.c_str(), &file_inf) != -1) {
 	    _staLine = StatusLine(302, REASON_302, "fillError(): redirecting to default error page");
 	    _req->setPath(error_uri);
-	    std::cerr << "[debug] -- " << error_uri << "\n";
 	  }
 	}
 	std::string error_file = getErrorPage(_staLine);
@@ -600,7 +601,7 @@ std::string Response::getResourceExtension(const std::string& uri) const {
 	return ext;
 }
 
-std::string Response::getResourceName(const std::string& uri) const {
+std::string Response::get_filename_from_uri(const std::string& uri) const {
   size_t slash_pos = uri.rfind('/');
 
   if (slash_pos == std::string::npos) {

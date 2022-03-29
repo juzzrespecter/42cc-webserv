@@ -139,7 +139,7 @@ class Response
 		bool isMarkedForClosing(void) const;
 
 		cgi_pair     getCgiExecutableName(const std::string&) const;
-  std::string  getResourceName(const std::string&) const;
+  std::string  get_filename_from_uri(const std::string&) const;
 		std::string  getResourceExtension(const std::string&) const;
 		std::string  getErrorPage(const StatusLine&);
 

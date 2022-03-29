@@ -13,6 +13,7 @@ Content-Type: text-html
     <h1>Client_max_body_size success</h1>
     <hr/>
     <p>Webserv was capable of handling your request!</p>
+    <li>Script path: <b>$ENV{'PATH_INFO'}</b>
     <li>Your input: <b>$buffer</b>
     <br/><hr/>
     <a href="client_max_body_size.html">Go back.</a>
