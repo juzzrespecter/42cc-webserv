@@ -67,6 +67,7 @@ class CGI
         void set_path_info(const std::string&);
 //		void executeCGI();
 
+  void parse_normalize(void);
 		void parse_response_headers(const std::string&);
 		void parse_response_body(const std::string&);
 		void parse_status_line(void);

@@ -91,6 +91,15 @@ void CGI::set_path_info(const std::string& resource_path) {
     _path_info = resource_path.substr(0, path_separator);
 }
 
+/* CGIs imprimen como fin de linea tanto LF como CRLF: preparamos la respuesta para normalizarla a un único estándar (LF) */
+void CGI::parse_normalize(void) {
+  size_t i = 0;
+
+  while ((i = _raw_response.find("\r\n", i)) != std::string::npos) {
+    _raw_response.erase(i, 1);
+  }
+}
+
 /*  Da formato a la respuesta recibida por el CGI y comprueba posibles errores sintácticos:
  * Una respuesta proveniente de un CGI ha de tener al menos un CGI-Header; si
  no está presente el servidoro se repiten lanza respuesta 500 (internal server error)
@@ -101,6 +110,7 @@ void CGI::set_path_info(const std::string& resource_path) {
  * La presencia de un header Status sobreescribe el estado anterior de la respuesta
  * El código de estado por defecto es 200 OK
  */
+
 void CGI::parse_response_headers(const std::string& headers) {
     static const std::string cgi_header[3] = { "Content-Type", "Location", "Status"};
 
@@ -114,10 +124,13 @@ void CGI::parse_response_headers(const std::string& headers) {
             continue ;
         }
         std::string header_field(header_line.substr(0, separator++));
-        std::string header_value(header_line.substr(separator, header_line.find_first_not_of(' ', separator)));
+        std::string header_value(header_line.substr(header_line.find_first_not_of(' ', separator)));
 
         if (header_value.empty()) {
             continue ;
+        }
+	if (!header_field.compare("Content-type")) {
+	  header_field = "Content-Type";
         }
         for (int i = 0; i < 3; i++) {
             if (!header_field.compare(cgi_header[i])) {
@@ -134,6 +147,7 @@ void CGI::parse_response_headers(const std::string& headers) {
             _header_map.find(cgi_header[2]) == _header_map.end()) {
         throw (StatusLine(500, REASON_500, "CGI: parse(), missing necessary CGI-Header in response"));
     }
+    std::cerr << "[headers] " << getHeaders();
 }
 
 void CGI::parse_response_body(const std::string& body) {
@@ -190,7 +204,7 @@ void CGI::parse_status_line(void) {
  *		      si content-length && !(body.size() == content-length) -> 500
  */
 void CGI::parse_response(void) {
-
+  parse_normalize();
     size_t separator = _raw_response.find("\n\n");
 
     if (separator == std::string::npos) {
@@ -227,8 +241,7 @@ CGI::CGI(Request *req, const std::string& uri, const cgi_pair& cgi_info) :
     if (getcwd(cwd, PWD_BUFFER) == NULL) {
         throw std::runtime_error("CGI: getcwd() call failure");
     }
-
-    std::string resource_path(std::string(cwd) + "/" + uri); /* ruta absoluta al recurso */
+    std::string resource_path = (uri.at(0) == '/') ? uri : std::string(cwd) + "/" + uri;
     std::string cgi_path = buildCGIPath(cgi_info.second, cwd, _req->getLocation()); /* ruta absoluta al ejecutable */
 
     set_env_variables(resource_path/*, cgi_info.first*/);
@@ -278,7 +291,6 @@ void CGI::executeCGI()
             std::cerr << "[CGI error] chdir(): " << strerror(errno) << "\n";
             exit(EXECVE_FAIL);
         }
-
         if (execve(_args[0], _args, _envvar) < 0){
             std::cerr << "[CGI error] execve(): " << strerror(errno) << "\n";
             exit(EXECVE_FAIL);
