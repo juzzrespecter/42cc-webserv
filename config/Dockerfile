@@ -4,7 +4,7 @@ ENV SERVER_PATH="/var/www/webserv/"
 
 ADD [".", "/var/www/webserv/"]
 
-COPY ["./config/setup.sh", "/tmp"]
+COPY ["./config/docker-entrypoint.sh", "/tmp"]
 COPY ["./config/setup_mysql.sql", "/tmp"]
 
 RUN apt update \
@@ -20,12 +20,12 @@ RUN apt update \
     &&  tar -xvf latest.tar.gz \
     &&  mkdir /var/www/html \
     &&  mv wordpress/* /var/www/html/ \
-    && service mysql start \
+    &&  service mysql start \
     &&  mysql -u root -p < /tmp/setup_mysql.sql \
-    &&  chmod +x ./setup.sh
+    &&  chmod +x ./docker-entrypoint.sh
 
 EXPOSE 80
 
 WORKDIR "/var/www"
 
-ENTRYPOINT [ "/tmp/setup.sh" ]
+ENTRYPOINT [ "/tmp/docker-entrypoint.sh" ]

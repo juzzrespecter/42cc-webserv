@@ -343,15 +343,19 @@ void Response::fillError(const StatusLine& sta)
 	  _staLine = sta;
 	}
 	_buffer.clear();
-	if (_staLine.getCode() == 404) {
-	  std::string error_uri = _req->getPath().substr(0, _req->getPath().rfind('/')) + "/" + _loc.get_error_page();
-	  std::string error_abs_path = _loc.get_root() + error_uri;
+	if (_staLine.getCode() == 404 && !_loc.get_error_page().empty()) {
+	  std::string error_uri = _loc.get_error_page(), error_abs_path;
 	  struct stat file_inf;
-
-	  replaceLocInUri(error_uri, _loc.get_root());
-	  if (stat(error_uri.c_str(), &file_inf) != -1) {
+	  
+	  if (error_uri.at(0) != '/') {
+	    error_uri = _req->getPath().substr(0, _req->getPath().rfind('/')) + error_uri;
+	  }
+	  error_abs_path = error_uri;
+	  replaceLocInUri(error_abs_path, _loc.get_root());
+	  if (stat(error_abs_path.c_str(), &file_inf) != -1) {
 	    _staLine = StatusLine(302, REASON_302, "fillError(): redirecting to default error page");
 	    _req->setPath(error_uri);
+	    std::cerr << "[debug] -- " << error_uri << "\n";
 	  }
 	}
 	std::string error_file = getErrorPage(_staLine);
