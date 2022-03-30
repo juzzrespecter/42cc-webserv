@@ -8,8 +8,7 @@ int usage(void) {
 
 int main(int argc, char *argv[]) {
     if (argc > 2) {
-        std::cerr << "[ server ] wrong number of arguments\n";
-	return usage();
+    	return usage();
     }
     std::string parser_path("tester.conf");
     Parser p;
