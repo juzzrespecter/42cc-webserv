@@ -8,72 +8,62 @@ Body::~Body() {}
 
 Body& Body::operator=(Body a)
 {
-	swap(*this, a);
-	return *this;
+  swap(*this, a);
+  return *this;
 }
 
-const std::string& Body::getBody() const 
+const std::string& Body::get_body() const 
 {
-     return _buff; 
+  return _buff; 
 }
 
-size_t Body::getSize() const 
+size_t Body::get_size() const 
 {
-     return _size; 
+  return _size; 
 }
 
-size_t Body::getMaxSize() const 
+size_t Body::get_max_size() const 
 {
-     return _maxSize; 
+  return _maxSize; 
 }
 
-void Body::setSize(size_t size) 
+void Body::set_size(size_t size) 
 {
-     _size = size; 
+  _size = size; 
 }
 
-void Body::setMaxSize(long maxSize) 
+void Body::set_max_size(long maxSize) 
 {
-     _maxSize = maxSize; 
+  _maxSize = maxSize; 
 }
 
 void Body::setBuff(std::string const &buf) 
 {
-     _buff = buf; 
-}
-
-void Body::startReceiving() 
-{
-     _recv = true; 
-}
-
-bool Body::isReceiving() const 
-{
-     return _recv; 
+  _buff = buf; 
 }
 
 void Body::clear()
 {
-	_recv = false;
-	_size = 0;
-	_buff.clear();
+  _recv = false;
+  _size = 0;
+  _buff.clear();
 }
 
-void Body::recvBuffer(const std::string& buffer/*, size_t index, size_t lenToRead*/)
+void Body::recv_buffer(const std::string& buffer/*, size_t index, size_t lenToRead*/)
 {
-	_buff.append(buffer);
-	if (_maxSize > 0 && _buff.size() > static_cast<size_t>(_maxSize)) {
-		throw StatusLine(413, REASON_413, "request body exceeded location max body configuration");
-	}
-	if (_size > 0 && _buff.size() > _size) {
-		throw StatusLine(400, REASON_400, "request body exceeded content-length value");
-	}
+  _buff.append(buffer);
+  if (_maxSize > 0 && _buff.size() > static_cast<size_t>(_maxSize)) {
+    throw StatusLine(413, REASON_413, "request body exceeded location max body configuration");
+  }
+  if (_size > 0 && _buff.size() > _size) {
+    throw StatusLine(400, REASON_400, "request body exceeded content-length value");
+  }
 }
 
 void swap(Body& a, Body& b)
 {
-	std::swap(a._recv, b._recv);
-	std::swap(a._size, b._size);
-	std::swap(a._maxSize, b._maxSize);
-	std::swap(a._buff, b._buff);
+  std::swap(a._recv, b._recv);
+  std::swap(a._size, b._size);
+  std::swap(a._maxSize, b._maxSize);
+  std::swap(a._buff, b._buff);
 }

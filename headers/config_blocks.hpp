@@ -4,12 +4,13 @@
 #include <string>
 #include <algorithm>
 
-#define N_DIR_LOC 9
-#define N_DIR_SRV 11
+#define N_DIR_LOC 10
+#define N_DIR_SRV 13
 
 enum directive_flag_t {
             D_BODY_SIZE,
             D_ROOT,
+	    D_ALIAS,
             D_AUTOINDEX,
             D_INDEX,
             D_METHOD,

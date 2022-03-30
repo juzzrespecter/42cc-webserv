@@ -6,57 +6,48 @@
 
 class Body
 {
-	private:
+private:
+  bool		_recv;		// Indicates when request line + headers have been received
+  size_t		_size;		// Content-length size
+  long		_maxSize;	// Max octets that Body object can receive
+  std::string	_buff;		// Buffer containing the payload
 
+
+public:
+  Body();
+  Body(const Body& c);
+  ~Body();
+  Body& operator=(Body a);
 		
-		/* ------------------------- ATTRIBUTES ------------------------ */
+  /* --------------------------- GETTERS ------------------------- */
+
+  const std::string& get_body(void) const ;
+  size_t             get_size(void) const ;
+  size_t             get_max_size(void) const ;
+
+
+  /* --------------------------- SETTERS ------------------------- */
 		
-			bool		_recv;		// Indicates when request line + headers have been received
-			size_t		_size;		// Content-length size
-			long		_maxSize;	// Max octets that Body object can receive
-			std::string	_buff;		// Buffer containing the payload
+  void set_size(size_t size);
+  void set_max_size(long maxSize);
+  void setBuff(std::string const &buf);
 
 
-	public:
+  /* --------------------------- METHODS ------------------------- */
 
+  // Returns true or false depending if request line + all headers have been received
+  //  bool isReceiving() const;
 		
-		/* ------------------------ COPLIEN FORM ----------------------- */
-
-		Body();
-		Body(const Body& c);
-		~Body();
-		Body& operator=(Body a);
+  // Reset the Body object
+  void clear();
 		
-		/* --------------------------- GETTERS ------------------------- */
-
-		const std::string& getBody() const ;
-		size_t getSize() const ;
-		size_t getMaxSize() const ;
-
-
-		/* --------------------------- SETTERS ------------------------- */
-		
-		void setSize(size_t size);
-		void setMaxSize(long maxSize);
-		void setBuff(std::string const &buf);
-		void startReceiving();
-
-
-		/* --------------------------- METHODS ------------------------- */
-
-		// Returns true or false depending if request line + all headers have been received
-		bool isReceiving() const;
-		
-		// Reset the Body object
-		void clear();
-		
-		// Append buffer received from client until content-length octets have been received.
-		/*int*/void recvBuffer(const std::string& buffer/*, size_t index, size_t lenToRead*/);
+  // Append buffer received from client until content-length octets have been received.
+  void recv_buffer(const std::string&);
 		
 	
-		/* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */
+  /* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */
 
-		friend void swap(Body& a, Body& b);
+  friend void swap(Body& a, Body& b);
 }; 
 
 #endif

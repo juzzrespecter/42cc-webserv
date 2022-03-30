@@ -65,10 +65,14 @@ void    server_block_t::setup_default_directives(void) {
 }
 
 void    server_block_t::location_inherits_from_server(location_block_t& loc) {
-    for (int i = 0; i < 3; i++) {
-        if (loc.dir[i].empty()) {
-            loc.dir[i].push_back(dir[i].front());
-        }
+    if (loc.dir[D_BODY_SIZE].empty()) {
+      loc.dir[D_BODY_SIZE].push_back(dir[D_BODY_SIZE].front());
+    }
+    if (loc.dir[D_ROOT].empty() && loc.dir[D_ALIAS].empty()) {
+      loc.dir[D_ROOT].push_back(dir[D_ROOT].front());
+    }
+    if (loc.dir[D_AUTOINDEX].empty()) {
+      loc.dir[D_AUTOINDEX].push_back(dir[D_AUTOINDEX].front());
     }
     if (loc.dir[D_INDEX].empty()) {
         loc.dir[D_INDEX].insert(loc.dir[D_INDEX].begin(), dir[D_INDEX].begin(), dir[D_INDEX].end());

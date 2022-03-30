@@ -19,6 +19,7 @@ enum methods { GET, HEAD, POST, DELETE, PUT };
 #define MAX_URI_LEN 8000
 #define MAX_HEADER_LEN 8000
 #define HEADER_LIMIT 100
+#define REQ_MAX_SIZE 65536
 
 template<class T>
 std::string convertNbToString(T nb) 

@@ -22,120 +22,76 @@
 
 #define THROW_STATUS(extraInfo)	throw StatusLine(400, REASON_400, extraInfo)
 
-class Request
-{
-	private:
-		typedef bool (Request::*req_options)(void);
-		/* ------------------------- ATTRIBUTES ------------------------ */
+class Request {
+private:
+  typedef bool (Request::*req_options)(void);
 
-		std::string	_buffer;		// Store the request received
-		size_t		_index;			// Indicates which part of the buffer is left to treat
+  std::string _buffer;		// Store the request received
+  std::string _line;
         
-		std::vector<const Server*> _serv_v;
-		size_t	_headerCount;
+  std::vector<const Server*> _serv_v;
+  size_t	_header_count;
 
-		RequestLine	_reqLine;	// Contains all the information from the request line
-        header_map	_headers;	// Store the headers
-        Body		_body;		// Store the body
+  RequestLine	_request_line;	// Contains all the information from the request line
+  header_map	_headers;	// Store the headers
+  Body		_body;		// Store the body
 	
-		size_t	_stage;
+  size_t	_stage;
 	
-		static const std::string header_list[HEADER_LIST_SIZE];
+  static const std::string _header_list[HEADER_LIST_SIZE];
 
-	public:
+public:
+  Request(void);
+  Request(const std::vector<const Server*>&);
+  Request(const Request& c);
+  ~Request();
+  Request& operator=(Request a);
 
-		/* ------------------------ COPLIEN FORM ----------------------- */
+  const RequestLine& get_request_line(void) const;
+  const header_map&  get_headers(void) const;
+  const Body&        get_request_body(void) const;
+  //  const std::string& get_buffer() const;
+  int                get_method(void) const;
+  const std::string& get_path(void) const;
+  const std::string& get_query(void) const;
 
-		Request();
-		Request(const std::vector<const Server*>&);
-		Request(const Request& c);
-		~Request();
-		Request& operator=(Request a);
-		
+  size_t             get_request_stage(void) const;
 
-		/* --------------------------- GETTERS ------------------------- */
+  const Location&    get_location(void) const;
 
-		const RequestLine& getRequestLine() const;
-		const header_map& getHeaders() const;
-		const Body& getBody() const;
-		const std::string& getBuffer() const;
-		int getMethod() const;
-		const std::string& getPath() const;
-		const std::string& getQuery() const;
-		const Location& getLocation(void) const;
-        size_t getStage(void) const;
+  void set_path(const std::string&);
 
+  void recv_buffer(const char[], int);
 
-		/* --------------------------- SETTERS ------------------------- */
-
-        	void setPath(const std::string& path);
-
-		/* --------------------------- METHODS ------------------------- */
-
-		// Add the buffer from receive to request object
-		//Request& operator+=(const char* charBuffer);
-		void recvBuffer(const char[], int);
-
-		// Check if the data received is correct. If an error occur or if a request was
-		// fully received, throws a status line with the appropriate code.
-
-		// Reset the request object
-		void clear();
-
-		// Print the Request object on stdout
-		void print() const;
+  void clear();
+  void print() const;
 	
-		/* void parseChunkedRequest() */
-	
-	private:
+private:
+  /* Parseo de Request-Line */
+  void parse_method(const std::string&);
+  void parse_uri(std::string&);
+  void parse_HTTP_version(const std::string&);
+  bool parse_request_line(void);
 
-		/* ------------------ PRIVATE MEMBER FUNCTIONS ----------------- */
-		
-		// Check if a new line was received (corresponding to a request line or an header).
-		// If the request line is superior to MAX_URI_LEN or if an header line is superior 
-		// to MAX_HEADER_LEN, throws a status line with the appropriate code.
-        //	bool newLineReceived(size_t posCRLF);
+  /* Parseo de Header-Line */
+  void parse_header_requirements(void) const;
+  void request_body_settings(void);
+  bool parse_header_end(void);
+  bool parse_header(void);
 
-		// Checks that the request line received respect the RFC norme.
-		bool parseRequestLine(void);
+  /* Parseo de Request-Body */
+  bool   transfer_encoding_is_chunked(void) const;
+  size_t parse_chunk_size(void);
+  bool   parse_chunk_req_body(void);
+  bool   parse_request_body(void);
 
-		// Checks that the first word in a request line in a appropriate method.
-		void parseMethodToken(const std::string& token); // Checks that the first word in a request line in a appropriate method.
-		void parseURI(std::string& token);				// Check that the URI in the request line respect the RFC norme.
+  /* Accesos a headers */
+  std::string	host(void) const;
+  size_t        content_length(void) const;
 
-		// Check that the HTTP version in the request line is respecting the RFC norme and is equal 
-		// to 1.1.
-		void parseHTTPVersion(const std::string& token);
-        
-		// Check that the header line received respect the RFC norme.
-       	bool parseHeaderLine(void);
-		void headerMeetsRequirements(void) const;
-		void setUpRequestBody(void);
-		bool parseHeaderEnd(void);
-		
-		// Received the body until n octets (from content-length header) has been received. Then throw 
-		// a status line with the appropriate code.
-		bool parseReqBody(void);
-
-		size_t parseChunkSize(void);
-		bool parseChunkReqBody(void);
-		
-		// Search for the correct server block (matching host header field, if not using default server
-		// block) and returns an unsigned max_body_size if the field is existing in the config file, otherwise
-		// returns -1.
-		bool transferEncodingIsChunked(void) const;
-
-		// Header accesses
-		std::string	host(void) const;
-		size_t 		contentLength(void) const;
-
-		size_t _getNextLine(std::string&);
-
-		
-		/* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */
-		
-		friend void swap(Request& a, Request& b);
-		
+  bool get_next_line(void);
+  
+  friend void swap(Request& a, Request& b);
 };
 
 #endif

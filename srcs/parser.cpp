@@ -177,7 +177,7 @@ bool    Parser::syntax_directive_max_body_size(void) const {
     return (is_word(current()) && is_number(current().token) && is_semicolon(peek()));
 }
 
-bool    Parser::syntax_directive_rrue(void) const {
+bool    Parser::syntax_directive_rruea(void) const {
     return (is_word(current()) && is_semicolon(peek()));
 }
 
@@ -244,36 +244,45 @@ directive_flag_t Parser::syntax_directive(void) {
     int id;
 
     for (id = 0; id < N_DIR_MAX; id++) {
-        if (!current().token.compare(dir_name[id])) {
+        if (!current().token.compare(_dir_name[id])) {
             break ;
         }
     }
     if (id >= N_DIR_MAX) {
-        throw std::runtime_error("dir not recognized in token: \'" + current().token + "\'");
+        throw std::runtime_error("Parser: directive not recognized in token: \'" + current().token + "\'");
     }
     next();
-    if (!(this->*dir_options[id])()) {
-        throw std::runtime_error("syntax error in dir: \'" + dir_name[id] + "\'");
+    if (!(this->*_dir_options[id])()) {
+        throw std::runtime_error("Parser: syntax error in directive: \'" + _dir_name[id] + "\'");
     }
     return directive_flag_t(id);
 }
 
 location_block_t   Parser::syntax_location_block(const std::string& uri) {
-    if (empty()) throw std::runtime_error("unexpected end of config file\n");
+    if (empty()) throw std::runtime_error("Parser: unexpected end of config file\n");
 
     location_block_t loc(uri);
 
     for (;!empty() && is_word(current()); next()) {
         directive_flag_t id = syntax_directive();
         if (id >= N_DIR_LOC) {
-            throw std::runtime_error("dir not allowed in this context \'" + dir_name[id] + "\'");
+            throw std::runtime_error("Parser: directive not allowed in this context \'" + _dir_name[id] + "\'");
         }
+	if (id != D_METHOD && id != D_CGI_PASS && !loc.dir[id].empty()) {
+	  throw std::runtime_error("Parser: duplicate directive declared in location \'" + _dir_name[id] + "\'");
+	}
+	if (id == D_ROOT && !loc.dir[D_ALIAS].empty()) {
+	  throw std::runtime_error("Parser: cannot set root directive - alias already declared in location");
+	}
+	if (id == D_ALIAS && !loc.dir[D_ROOT].empty()) {
+	  throw std::runtime_error("Parser: cannot set alias directive - root already declared in location");
+	}
         for (;!is_semicolon(current()); next()) {
             loc.dir[id].push_back(current().token);
         }
     }
     if (!is_cbc(current())) {
-        throw std::runtime_error("unexpected syntax near token \'" + current().token + "\'");            
+        throw std::runtime_error("Parser: unexpected syntax near token \'" + current().token + "\'");            
     }
     next();
     return loc;
@@ -284,17 +293,22 @@ server_block_t    Parser::syntax_server_block(void) {
 
     while (!empty() && is_word(current())) {
         directive_flag_t id = syntax_directive();
+	if (id == D_ALIAS) {
+	  throw std::runtime_error("Parser: directive \'" + _dir_name[id] + "\' not allowed in server context");
+	}
         if (id == D_LOCATION) {
             std::string uri(current().token);
             for (std::vector<location_block_t>::iterator it = vsrv.loc.begin(); it != vsrv.loc.end(); it++) {
-                if (!uri.compare(it->uri)) throw std::runtime_error("duplicate dir declared in server \'" + dir_name[id] + "\'");
+	      if (!uri.compare(it->uri)) {
+		throw std::runtime_error("Parser: duplicate directive declared in server \'" + _dir_name[id] + "\'");
+	      }
             }
             next();
             next();
             vsrv.loc.push_back(syntax_location_block(uri));
         } else {
             if (!vsrv.dir[id].empty()) {
-                throw std::runtime_error("duplicate dir declared in server \'" + dir_name[id] + "\'");
+                throw std::runtime_error("Parser: duplicate directive declared in server \'" + _dir_name[id] + "\'");
             }
             for ( ; !is_semicolon(current()); next()) {
                 vsrv.dir[id].push_back(current().token);
@@ -303,7 +317,7 @@ server_block_t    Parser::syntax_server_block(void) {
         }
     }
     if (empty() || !is_cbc(current())) {
-        throw std::runtime_error("syntax error near unexpected token \'" + current().token + "\'");
+        throw std::runtime_error("Parser: syntax error near unexpected token \'" + current().token + "\'");
     }
     next();
     vsrv.setup_default_directives();
@@ -322,7 +336,7 @@ std::vector<server_block_t> Parser::parse(const std::string& config_path) {
     while (!empty() && is_word(current()) && !current().token.compare("server")) {
         next();
         if (!is_cbo(current())) {
-            throw std::runtime_error("syntax error near unexpected token \'" + current().token + "\'");
+            throw std::runtime_error("Parser: syntax error near unexpected token \'" + current().token + "\'");
         }
         next();
         vsrv_vector.push_back(syntax_server_block());
@@ -334,9 +348,10 @@ std::vector<server_block_t> Parser::parse(const std::string& config_path) {
     return vsrv_vector;
 }
 
-const std::string Parser::dir_name[N_DIR_MAX] = {
+const std::string Parser::_dir_name[N_DIR_MAX] = {
     "client_max_body_size",
     "root",
+    "alias",
     "autoindex",
     "index",
     "accept_method",
@@ -365,16 +380,17 @@ void Parser::next(void) {
     this->tok_lst.pop_front();
 }
 
-Parser::directive_parse_table Parser::dir_options[N_DIR_MAX] = {
+Parser::directive_parse_table Parser::_dir_options[N_DIR_MAX] = {
     &Parser::syntax_directive_max_body_size,
-    &Parser::syntax_directive_rrue,
+    &Parser::syntax_directive_rruea,
+    &Parser::syntax_directive_rruea,
     &Parser::syntax_directive_autoindex,
     &Parser::syntax_directive_index,
     &Parser::syntax_directive_accept_method,
-    &Parser::syntax_directive_rrue,
-    &Parser::syntax_directive_rrue,    
+    &Parser::syntax_directive_rruea,
+    &Parser::syntax_directive_rruea,    
     &Parser::syntax_directive_cgi_pass,
-    &Parser::syntax_directive_rrue,
+    &Parser::syntax_directive_rruea,
     &Parser::syntax_directive_listen,
     &Parser::syntax_directive_server_name,
     &Parser::syntax_directive_location
@@ -384,13 +400,13 @@ Parser::directive_parse_table Parser::dir_options[N_DIR_MAX] = {
 void Parser::debug_print(const std::vector<server_block_t>& v) const {
     std::cout << "----  SERVER CONFIG ----\n";
     for (std::vector<server_block_t>::const_iterator it = v.begin(); it != v.end(); it++) {
-        std::cout << dir_name[D_LISTEN] << ": " << it->dir[D_LISTEN].front() << "\n";
-        //std::cout << dir_name[D_SERVER_NAME] << ": " << it->dir[D_SERVER_NAME] << "\n";
+        std::cout << _dir_name[D_LISTEN] << ": " << it->dir[D_LISTEN].front() << "\n";
+        //std::cout << _dir_name[D_SERVER_NAME] << ": " << it->dir[D_SERVER_NAME] << "\n";
         std::cout << "[location blocks]\n";
         for (std::vector<location_block_t>::const_iterator it_2 = it->loc.begin(); it_2 != it->loc.end(); it_2++) {
             std::cout << "\t[ URI - " << it_2->uri << " ]\n";
             for (int i = 0; i < N_DIR_LOC; i++) {
-                std::cout << "\t" << dir_name[i] << ": ";
+                std::cout << "\t" << _dir_name[i] << ": ";
                 if (it_2->dir[i].empty()) {
                     std::cout << "<null>";
                 } else {

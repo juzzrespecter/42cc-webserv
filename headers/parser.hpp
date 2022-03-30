@@ -32,7 +32,7 @@
  */
 
 #define N_TOK_TYPE 5
-#define N_DIR_MAX 12
+#define N_DIR_MAX 13
 
 #include <cctype>
 #include <iostream>
@@ -66,12 +66,11 @@ class Parser {
             token_t(const token_t& other);
         };
 
-
         std::deque<token_t> tok_lst;
         std::string         raw_input;
 
-        static const std::string     dir_name[N_DIR_MAX];
-        static directive_parse_table dir_options[N_DIR_MAX];
+        static const std::string     _dir_name[N_DIR_MAX];
+        static directive_parse_table _dir_options[N_DIR_MAX];
 
         bool    is_number(const std::string& str, int n_max = 0, int n_min = 0) const;
         bool    is_addr(const std::string& addr) const;
@@ -82,7 +81,7 @@ class Parser {
         bool    is_cbc(const token_t& tok) const;
 
         bool    syntax_directive_max_body_size(void) const;
-        bool    syntax_directive_rrue(void) const; /* root, return, upload, error_page */
+        bool    syntax_directive_rruea(void) const; /* root, return, upload, error_page, alias */
         bool    syntax_directive_autoindex(void) const;
         bool    syntax_directive_index(void) const;
         bool    syntax_directive_return(void) const;

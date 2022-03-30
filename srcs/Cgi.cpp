@@ -49,13 +49,13 @@ void CGI::set_env_variables(const std::string& uri/*, const std::string& file_ex
     _envvar[i++] = strdup("SERVER_PROTOCOL=HTTP/1.1");
     // used for php-cgi
     _envvar[i++] = strdup("REDIRECT_STATUS=200");
-    if (_req->getMethod() == GET){
+    if (_req->get_method() == GET){
 
         // stupid bug in php-cgi
         _envvar[i++] = strdup("REQUEST_METHOD=GET");
-//        tmpBuf = "QUERY_STRING=" + _req->getQuery();
-        if (!_req->getQuery().empty()) {
-            _envvar[i++] = strdup(std::string("QUERY_STRING=" + _req->getQuery()).c_str());
+//        tmpBuf = "QUERY_STRING=" + _req->get_query();
+        if (!_req->get_query().empty()) {
+            _envvar[i++] = strdup(std::string("QUERY_STRING=" + _req->get_query()).c_str());
             _envvar[i++] = strdup("CONTENT_TYPE=text/html");
         }
     } else {
@@ -63,12 +63,12 @@ void CGI::set_env_variables(const std::string& uri/*, const std::string& file_ex
         _envvar[i++] = strdup("REQUEST_METHOD=POST");	
 
         std::stringstream intToString;
-        intToString << _req->getBody().getBody().size();
+        intToString << _req->get_request_body().get_body().size();
         tmpBuf = std::string("CONTENT_LENGTH=") + intToString.str();
         _envvar[i++] = strdup(tmpBuf.c_str());
 
-        header_map::const_iterator ct = _req->getHeaders().find("Content-Type");
-        if (ct != _req->getHeaders().end()) {
+        header_map::const_iterator ct = _req->get_headers().find("Content-Type");
+        if (ct != _req->get_headers().end()) {
             _envvar[i++] = strdup(std::string("CONTENT_TYPE=" + ct->second).c_str());
         }
     }
@@ -240,7 +240,7 @@ CGI::CGI(Request *req, const std::string& uri, const cgi_pair& cgi_info) :
         throw std::runtime_error("CGI: getcwd() call failure");
     }
     std::string resource_path = (uri.at(0) == '/') ? uri : std::string(cwd) + "/" + uri;
-    std::string cgi_path = buildCGIPath(cgi_info.second, cwd, _req->getLocation()); /* ruta absoluta al ejecutable */
+    std::string cgi_path = buildCGIPath(cgi_info.second, cwd, _req->get_location()); /* ruta absoluta al ejecutable */
 
     set_env_variables(resource_path/*, cgi_info.first*/);
     set_args(Response::get_filename_from_uri(resource_path), cgi_path);
@@ -298,8 +298,8 @@ void CGI::executeCGI()
     close(fdOut[1]);
     fdOut[1] = -1;
 
-    if (_req->getMethod() == POST){
-        if (write(fdIN[1], _req->getBody().getBody().c_str(), _req->getBody().getBody().size()) < 0)
+    if (_req->get_method() == POST){
+        if (write(fdIN[1], _req->get_request_body().get_body().c_str(), _req->get_request_body().get_body().size()) < 0)
             throw StatusLine(500, REASON_500, "write failed in executeCGI method");
     }
     close_fdIN();

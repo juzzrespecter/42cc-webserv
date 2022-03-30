@@ -32,8 +32,8 @@ Socket::Socket(const listen_directive_t& sock_addr) : _type(PASSV), _sock_addr(s
     }
 }
 
-Socket::Socket(int conn_fd, const Socket& passv_Socket) : 
-    _type(ACTV), _sock_addr(passv_Socket._sock_addr), _serv_v(passv_Socket._serv_v), _req(_serv_v), fd(conn_fd) { 
+Socket::Socket(int conn_fd, const Socket& passv_socket) : 
+    _type(ACTV), _sock_addr(passv_socket._sock_addr), _serv_v(passv_socket._serv_v), _req(_serv_v), fd(conn_fd) { 
 }
 
 Socket::~Socket() { }
@@ -56,11 +56,11 @@ const listen_directive_t& Socket::get_socket_addr(void) const {
 }
 
 void Socket::build_request(const char buffer[], int buffer_size) {
-     _req.recvBuffer(buffer, buffer_size);
+     _req.recv_buffer(buffer, buffer_size);
 }
 
 void Socket::build_response(const StatusLine& sl) {
-     _resp.fillBuffer(&_req, _req.getLocation(), sl);
+     _resp.fillBuffer(&_req, _req.get_location(), sl);
 }
 
 std::string Socket::get_response_string(void) const {
@@ -93,7 +93,7 @@ void Socket::close_socket(void) const {
 
 void Socket::clear_response(void) {
     _resp.clear();
-    if (_req.getStage() == READY) {
+    if (_req.get_request_stage() == READY) {
         _req.clear();
     }
 }

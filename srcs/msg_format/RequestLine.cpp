@@ -8,71 +8,71 @@ RequestLine::~RequestLine() { }
 
 RequestLine& RequestLine::operator=(RequestLine a)
 {
-	swap(*this, a);
-	return *this;
+  swap(*this, a);
+  return *this;
 }
 
-int RequestLine::getMethod() const 
+int RequestLine::get_method() const 
 { 
-    return _method; 
+  return _method; 
 }
 
-const std::string& RequestLine::getPath() const 
+const std::string& RequestLine::get_path() const 
 { 
-    return _path; 
+  return _path; 
 }
 
-const std::string& RequestLine::getQuery() const 
+const std::string& RequestLine::get_query() const 
 { 
-    return _query; 
+  return _query; 
 }
 		
-void RequestLine::setMethod(int method) 
+void RequestLine::set_method(int method) 
 { 
-    _method = method;
+  _method = method;
 }
 
-void RequestLine::setPath(const std::string& path) 
+void RequestLine::set_path(const std::string& path) 
 { 
-    _path = path;
+  _path = path;
 }
 
-void RequestLine::setQuery(const std::string& query) 
+void RequestLine::set_query(const std::string& query) 
 { 
-    _query = query;
+  _query = query;
 }
 
 void RequestLine::clear()
 {
-	_method = -1;
-	_path.clear();
-	_query.clear();
+  _method = -1;
+  _path.clear();
+  _query.clear();
 }
 
 bool RequestLine::empty() const 
 {
-    return _path.empty();
+  return _path.empty();
 }
 
 void RequestLine::print() const
 {
-	std::cout << "------ REQUEST LINE ------\nmet: " << _method << ", path: |" << _path
-		<< "|, query: |" << _query << "|\n";
+  std::cout << "------ REQUEST LINE ------\nmet: " << _method << ", path: |" << _path
+	    << "|, query: |" << _query << "|\n";
 }
 
 void swap(RequestLine& a, RequestLine& b)
 {
-	std::swap(a._method, b._method);
-	std::swap(a._path, b._path);
-	std::swap(a._query, b._query);
+  std::swap(a._method, b._method);
+  std::swap(a._path, b._path);
+  std::swap(a._query, b._query);
 }
 
 inline std::ostream& operator<<(std::ostream& stream, const RequestLine& reqLine)
 {
-	stream << "Method = " << reqLine.getMethod() << ", path = |" << reqLine.getPath() << "|";
+  stream << "Method = " << reqLine.get_method() << ", path = |" << reqLine.get_path() << "|";
 	
-	if (!reqLine.getQuery().empty())
-		stream << ", query = |" << reqLine.getQuery() << "|";
+  if (!reqLine.get_query().empty())
+    stream << ", query = |" << reqLine.get_query() << "|";
 		
-	return stream;
+  return stream;
 }
