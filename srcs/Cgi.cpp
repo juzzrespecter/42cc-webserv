@@ -169,7 +169,6 @@ void CGI::parse_response_body(const std::string& body) {
 /* Status = "Status:" status-code SP reason-phrase NL */
 
 void CGI::parse_status_line(void) {
-    enum status_f {code, reason, size};
     std::map<std::string, std::string>::const_iterator lc(_header_map.find("Location"));
     std::map<std::string, std::string>::iterator st(_header_map.find("Status"));
 
@@ -179,18 +178,17 @@ void CGI::parse_status_line(void) {
     }
     if (st != _header_map.end()) {
         std::stringstream status_ss(st->second);
-        std::string status_token[size];
+        std::string code, reason;
         char *ptr;
 
-        for (int i = 0; i < 2; i++) {
-            status_ss >> status_token[i];
-        }
-        long status_code = strtol(status_token[code].c_str(), &ptr, 0);
+        status_ss >> code;
+	std::getline(status_ss, reason);
+        long status_code = strtol(code.c_str(), &ptr, 0);
 
-        if (status_ss.rdbuf()->in_avail() || !(status_code >= 100 && status_code < 600) || *ptr) {
+        if (!(status_code >= 100 && status_code < 600) || *ptr) {
             throw StatusLine(500, REASON_500, "CGI: parse(), malformed Status-Header");
         }
-        _status_line = StatusLine(static_cast<int>(code), status_token[reason].c_str(), "CGI-defined Status line");
+        _status_line = StatusLine(static_cast<int>(status_code), reason.c_str(), "CGI-defined Status line");
         _header_map.erase(st);
     }
 }
@@ -245,7 +243,7 @@ CGI::CGI(Request *req, const std::string& uri, const cgi_pair& cgi_info) :
     std::string cgi_path = buildCGIPath(cgi_info.second, cwd, _req->getLocation()); /* ruta absoluta al ejecutable */
 
     set_env_variables(resource_path/*, cgi_info.first*/);
-    set_args(resource_path, cgi_path);
+    set_args(Response::get_filename_from_uri(resource_path), cgi_path);
     set_path_info(resource_path);
 }
 

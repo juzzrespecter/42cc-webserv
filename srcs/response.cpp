@@ -601,7 +601,7 @@ std::string Response::getResourceExtension(const std::string& uri) const {
 	return ext;
 }
 
-std::string Response::get_filename_from_uri(const std::string& uri) const {
+std::string Response::get_filename_from_uri(const std::string& uri) {
   size_t slash_pos = uri.rfind('/');
 
   if (slash_pos == std::string::npos) {

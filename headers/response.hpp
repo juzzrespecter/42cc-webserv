@@ -71,7 +71,7 @@ class Response
 		int  getCode() const;
 		bool getEndConn() const;
 		
-
+static  std::string  get_filename_from_uri(const std::string&) ;
 		/* --------------------------- METHODS ------------------------- */
 
 		// Reset response object
@@ -139,7 +139,7 @@ class Response
 		bool isMarkedForClosing(void) const;
 
 		cgi_pair     getCgiExecutableName(const std::string&) const;
-  std::string  get_filename_from_uri(const std::string&) const;
+
 		std::string  getResourceExtension(const std::string&) const;
 		std::string  getErrorPage(const StatusLine&);
 

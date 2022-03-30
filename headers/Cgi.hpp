@@ -2,6 +2,7 @@
 # define CGI_HPP
 
 #include "request.hpp"
+#include "response.hpp"
 #include <iostream>
 #include <unistd.h>
 #include <cstring>

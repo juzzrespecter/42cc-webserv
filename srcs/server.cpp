@@ -1,6 +1,6 @@
 #include "server.hpp"
 
-listen_directive_t::listen_directive_t(void) : addr("127.0.0.1"), port(8080) { }
+listen_directive_t::listen_directive_t(void) : addr(/*"127.0.0.1"*/"0.0.0.0"), port(8080) { }
 
 listen_directive_t::listen_directive_t(const listen_directive_t& other) : addr(other.addr), port(other.port) { }
 
@@ -14,11 +14,11 @@ listen_directive_t::listen_directive_t(const std::string& raw_directive) {
         char *ptr;
 
         strtol(raw_directive.c_str(), &ptr, 0);
-        this->addr = !*ptr ? "127.0.0.1" : raw_directive;
+        this->addr = !*ptr ? /*"127.0.0.1"*/"0.0.0.0" : raw_directive;
         this->port = !*ptr ? std::atoi(raw_directive.c_str()) : 8080;
     }
     if (!this->addr.compare("localhost")) {
-        this->addr = "127.0.0.1";
+        this->addr = "0.0.0.0"/*"127.0.0.1"*/;
     }
 }
 
