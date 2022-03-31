@@ -180,6 +180,7 @@ void Response::execCgi(const std::string& realUri, const cgi_pair& cgiConfig)
 void Response::execPost(const std::string& realUri)
 {
     cgi_pair cgi_info = getCgiExecutableName(realUri);
+
     if (!cgi_info.first.empty())
     {
 	execCgi(realUri, cgi_info);
@@ -257,7 +258,12 @@ void print_Loc(const Location& _loc)
 
 void Response::replaceLocInUri(std::string& uri, const std::string& root)
 {
-    if (root[root.size() - 1] == '/') {
+    if (!root.empty() && root.at(root.size() - 1) != '/' \
+        && !uri.empty() && uri.at(0) != '/') {
+	uri.insert(0, 1, '/');
+    }
+    if (!root.empty() && root[root.size() - 1] == '/' \
+	&& !uri.empty() && uri.at(0) == '/') {
 	uri.erase(0, 1);
     }	
     uri.insert(0, root);
@@ -363,6 +369,10 @@ void Response::fillError(const StatusLine& sta)
     }
     std::string error_file = getErrorPage(_staLine);
 
+    // delete this
+    if (_staLine.getCode() == 403 ) {
+	_staLine.setCode(404);
+    }
     fillStatusLine(_staLine);
     fillServerHeader();
     fillDateHeader();
@@ -423,7 +433,6 @@ void Response::execGet(const std::string& realUri)
 
 void Response::execPut(const std::string& realUri)
 {
-    // maybe testing here upload_path directory makes more sense
     if (_loc.get_upload_path().empty()) {
 	throw StatusLine(403, REASON_403, "PUT: method is accepted but upload_path is not set in configuration file");
     }

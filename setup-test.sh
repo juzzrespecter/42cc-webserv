@@ -12,7 +12,7 @@ if [ "$1" = "clean" ]; then
 fi
 
 if [ ! -d "./YoupiBanane" ]; then 
-    mkdir -pv {cgi-bin,YoupiBanane/{nop,Yeah}}
+    mkdir -pv {cgi-bin,YoupiBanane/{nop,Yeah,put_test,upload_files,post_body}}
     touch YoupiBanane/youpi.bad_extension \
 	  YoupiBanane/youpi.bla \
 	  YoupiBanane/nop/youpi.bad_extension \
@@ -44,10 +44,12 @@ server {
        accept_method GET ;
        cgi_pass bla $PWD/cgi-bin/cgi_tester ;
        location /put_test/ {
+       		root ./YoupiBanane/ ;
                 accept_method PUT ;
                 accept_upload /upload_files/ ;
        }
-       location /post_body/ {
+       location /post_body {
+       		root ./YoupiBanane/ ;
                 accept_method POST ;
                 client_max_body_size 100 ;
        }

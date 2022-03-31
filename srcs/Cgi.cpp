@@ -163,7 +163,6 @@ void CGI::parse_response_headers(const std::string& headers) {
             _header_map.find(cgi_header[2]) == _header_map.end()) {
         throw (StatusLine(500, REASON_500, "CGI: parse(), missing necessary CGI-Header in response"));
     }
-    std::cerr << "[headers] " << getHeaders();
 }
 
 void CGI::parse_response_body(const std::string& body) {
@@ -282,9 +281,6 @@ CGI::~CGI()
 
 void CGI::executeCGI()
 {
-//    int fdOut[2];
-//    int fdIN[2];
-
     if (pipe(_fdOut) < 0 || pipe(_fdIN) < 0)
         throw StatusLine(500, REASON_500, "pipe failed in executeCGI method");
 
@@ -318,22 +314,30 @@ void CGI::executeCGI()
     close(_fdOut[1]);
     _fdOut[1] = -1;
 
-    if (_req->get_method() == POST){
-        if (write(_fdIN[1], _req->get_request_body().get_body().c_str(), _req->get_request_body().get_body().size()) < 0)
+    if (_req->get_method() == POST) {
+        if (write(_fdIN[1], _req->get_request_body().get_body().c_str(), _req->get_request_body().get_body().size()) < 0) {
             throw StatusLine(500, REASON_500, "write failed in executeCGI method");
+	}
+	std::cerr << "{CALLING WRITE END}\n";
     }
+//    size_t 
+//    while () {
+	
+//    }
     close_fdIN();
     char buf[CGI_PIPE_BUFFER_SIZE + 1] = {0};
     int rd_out;
    
     while ((rd_out = read(_fdOut[0], buf, CGI_PIPE_BUFFER_SIZE)) > 0)
     {
+	std::cerr << "{CALLING READ}\n";
         _raw_response.append(buf, rd_out);
         memset(buf, 0, CGI_PIPE_BUFFER_SIZE + 1);
     }
     if (rd_out == -1) {
         throw StatusLine(500, REASON_500, std::string("CGI: read() - ") + strerror(errno));
     }
+    std::cerr << "{CALLING READ END}\n";
     close_fdOut();
 
     // Checking if execve correctly worked
@@ -344,6 +348,7 @@ void CGI::executeCGI()
         throw StatusLine(500, REASON_500, "execve failed in executeCGI method");
     }
     _raw_response.append(buf, rd_out);
+    std::cerr << "{EXITING executeCGI}\n";
 }
 
 std::string CGI::getHeaders(void) const {
