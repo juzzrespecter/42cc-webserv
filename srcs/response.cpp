@@ -96,6 +96,7 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
   setLocation(loc);
   setStatusLine(sl);
 
+  print_Loc(loc);
   if (_staLine.getCode() == 100)
     {
       return setUp100Continue();
@@ -298,11 +299,13 @@ std::string Response::reconstructFullURI(int method, std::string uri)
 {
   struct stat infFile;
 
+  std::cerr << "[DEBUG] pre: "<<uri<<"\n";
   checkMethods(method, _loc.get_methods());
   if (_loc.get_alias() == true && _loc.uri.size() > 1) {
     uri.erase(0, _loc.uri.size());
   }
   replaceLocInUri(uri, _loc.get_root());
+  std::cerr << "[DEBUG] post: "<<uri<<"\n";
   if (stat(uri.c_str(), &infFile) == -1 && method != PUT) {
     throw (StatusLine(404, REASON_404, "reconstructFuLLURI: file " + uri + " does not exist"));
   }

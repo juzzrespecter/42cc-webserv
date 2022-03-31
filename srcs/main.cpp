@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
     if (argc > 2) {
     	return usage();
     }
-    std::string parser_path("tester.conf");
+    std::string parser_path("config/webserver.conf");
     Parser p;
     if (argc == 2) {
       if (!std::string(argv[1]).compare("-h")) {

@@ -54,6 +54,7 @@ Location& Location::operator=(const Location& other) {
   _error_page = other._error_page;
   _root = other._root;
   _return_uri = other._return_uri;
+  _alias = other._alias;
   _upload_path = other._upload_path;
   _index = other._index;
   _accept_method = other._accept_method;

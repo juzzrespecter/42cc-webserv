@@ -46,8 +46,8 @@ server_block_t& server_block_t::operator=(const server_block_t& other) {
 }
 
 void    server_block_t::setup_default_directives(void) {
-  static const std::string default_dir[N_DIR_LOC - 4] = {"0","./html/","off","index.html","GET"};
-  for (int i = 0; i < N_DIR_LOC - 4; i++) {
+  static const std::string default_dir[N_DEFAULT_DIR] = {"0","./html/","off","index.html","GET"};
+  for (int i = 0; i < N_DEFAULT_DIR; i++) {
     if (dir[i].empty()) {
       dir[i].push_back(default_dir[i]);
     }

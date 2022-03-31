@@ -6,14 +6,15 @@
 
 #define N_DIR_LOC 10
 #define N_DIR_SRV 13
+#define N_DEFAULT_DIR 5
 
 enum directive_flag_t {
             D_BODY_SIZE,
             D_ROOT,
-	    D_ALIAS,
             D_AUTOINDEX,
             D_INDEX,
             D_METHOD,
+	    D_ALIAS,
             D_UPLOAD,
             D_RETURN,
             D_CGI_PASS,

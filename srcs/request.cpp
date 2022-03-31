@@ -77,7 +77,8 @@ void    Request::recv_buffer(const char new_buffer[], int size) {
         &Request::parse_chunk_req_body
     };
     bool still_parsing = true;
-    
+
+    std::cerr << "{req}: " << new_buffer;
     _buffer.append(new_buffer, size);
     if (_buffer.size() > REQ_MAX_SIZE) {
       throw(StatusLine(413, REASON_413, "Request: buffer exceeded max size"));

@@ -351,10 +351,10 @@ std::vector<server_block_t> Parser::parse(const std::string& config_path) {
 const std::string Parser::_dir_name[N_DIR_MAX] = {
     "client_max_body_size",
     "root",
-    "alias",
     "autoindex",
     "index",
     "accept_method",
+    "alias",
     "accept_upload",
     "return",
     "cgi_pass",
@@ -382,15 +382,15 @@ void Parser::next(void) {
 
 Parser::directive_parse_table Parser::_dir_options[N_DIR_MAX] = {
     &Parser::syntax_directive_max_body_size,
-    &Parser::syntax_directive_rruea,
-    &Parser::syntax_directive_rruea,
+    &Parser::syntax_directive_rruea, /* root */
     &Parser::syntax_directive_autoindex,
     &Parser::syntax_directive_index,
     &Parser::syntax_directive_accept_method,
-    &Parser::syntax_directive_rruea,
-    &Parser::syntax_directive_rruea,    
+    &Parser::syntax_directive_rruea, /* alias */
+    &Parser::syntax_directive_rruea, /* upload */
+    &Parser::syntax_directive_rruea, /* return */
     &Parser::syntax_directive_cgi_pass,
-    &Parser::syntax_directive_rruea,
+    &Parser::syntax_directive_rruea, /* error_page */
     &Parser::syntax_directive_listen,
     &Parser::syntax_directive_server_name,
     &Parser::syntax_directive_location
