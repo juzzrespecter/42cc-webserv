@@ -1,22 +1,38 @@
 #include "Cgi.hpp"
 
-std::string CGI::buildCGIPath(const std::string& relPath, const std::string& cwd, const Location& loc)
+std::string CGI::get_resource_path(const std::string& uri, const std::string& cwd) {
+    /* comprueba si la ruta al recurso tiene una raíz absoluta */
+    if (!uri.empty() && uri.at(0) == '/') {
+	return uri;
+    }
+
+    /* monta ruta relativa */
+    std::string abs_path(std::string(cwd) + "/" + uri);
+    return abs_path;
+}
+
+std::string CGI::get_cgi_path(const std::string& cgi_path, const std::string& cwd, const Location& loc)
 {
-    std::string absPath;
-    
+    std::string abs_path;
+
+    /* comprueba si la ruta al CGI ya está configurada como absoluta */
+    if (!cgi_path.empty() && cgi_path.at(0) == '/') {
+	return cgi_path;
+    }
+
+    /* comprueba si root está configurado como absoluto */
     if (loc.get_root().at(0) != '/') {
-      absPath.append(cwd + '/' + loc.get_root());
+      abs_path.append(cwd + '/' + loc.get_root());
     } else {
-      absPath.append(loc.get_root());
+      abs_path.append(loc.get_root());
     }
-    if (absPath.at(absPath.size() - 1) != '/') {
-      absPath.push_back('/');
+
+    if (abs_path.at(abs_path.size() - 1) != '/') {
+      abs_path.push_back('/');
     }
-    if (relPath.at(0) == '/') {
-      absPath.erase(absPath.size() - 1);
-    }
-    absPath.append(relPath);
-    return absPath;
+    /* añade ruta relativa a CGI */
+    abs_path.append(cgi_path);
+    return abs_path;
 }
 
 void CGI::close_fdIN(void) {
@@ -239,8 +255,9 @@ CGI::CGI(Request *req, const std::string& uri, const cgi_pair& cgi_info) :
     if (getcwd(cwd, PWD_BUFFER) == NULL) {
         throw std::runtime_error("CGI: getcwd() call failure");
     }
-    std::string resource_path = (uri.at(0) == '/') ? uri : std::string(cwd) + "/" + uri;
-    std::string cgi_path = buildCGIPath(cgi_info.second, cwd, _req->get_location()); /* ruta absoluta al ejecutable */
+//    std::string resource_path = std::string(cwd) + "/" + uri;
+    std::string resource_path = get_resource_path(uri, cwd);
+    std::string cgi_path = get_cgi_path(cgi_info.second, cwd, _req->get_location()); /* ruta absoluta al ejecutable */
 
     set_env_variables(resource_path/*, cgi_info.first*/);
     set_args(Response::get_filename_from_uri(resource_path), cgi_path);
@@ -265,10 +282,10 @@ CGI::~CGI()
 
 void CGI::executeCGI()
 {
-    int fdOut[2];
-    int fdIN[2];
+//    int fdOut[2];
+//    int fdIN[2];
 
-    if (pipe(fdOut) < 0 || pipe(fdIN) < 0)
+    if (pipe(_fdOut) < 0 || pipe(_fdIN) < 0)
         throw StatusLine(500, REASON_500, "pipe failed in executeCGI method");
 
     pid_t pid = fork();
@@ -278,10 +295,10 @@ void CGI::executeCGI()
     if (!pid){
 
         // stdout is now a copy of fdOut[1] and in case post method, stdin is a copy of fdIn[0]
-        dup2(fdOut[1], STDOUT_FILENO);
+        dup2(_fdOut[1], STDOUT_FILENO);
         close_fdOut();
 
-        dup2(fdIN[0], STDIN_FILENO);
+        dup2(_fdIN[0], STDIN_FILENO);
         close_fdIN();
 
         // change the repo into where the program is
@@ -290,23 +307,26 @@ void CGI::executeCGI()
             exit(EXECVE_FAIL);
         }
         if (execve(_args[0], _args, _envvar) < 0){
+	    std::cerr << _args[0] << "\n";
+	    std::cerr << _args[1] << "\n";
+	    std::cerr << _path_info << "\n";
             std::cerr << "[CGI error] execve(): " << strerror(errno) << "\n";
             exit(EXECVE_FAIL);
         }
 
     }
-    close(fdOut[1]);
-    fdOut[1] = -1;
+    close(_fdOut[1]);
+    _fdOut[1] = -1;
 
     if (_req->get_method() == POST){
-        if (write(fdIN[1], _req->get_request_body().get_body().c_str(), _req->get_request_body().get_body().size()) < 0)
+        if (write(_fdIN[1], _req->get_request_body().get_body().c_str(), _req->get_request_body().get_body().size()) < 0)
             throw StatusLine(500, REASON_500, "write failed in executeCGI method");
     }
     close_fdIN();
     char buf[CGI_PIPE_BUFFER_SIZE + 1] = {0};
     int rd_out;
-
-    while ((rd_out = read(fdOut[0], buf, CGI_PIPE_BUFFER_SIZE)) > 0)
+   
+    while ((rd_out = read(_fdOut[0], buf, CGI_PIPE_BUFFER_SIZE)) > 0)
     {
         _raw_response.append(buf, rd_out);
         memset(buf, 0, CGI_PIPE_BUFFER_SIZE + 1);

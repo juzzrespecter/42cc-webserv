@@ -20,63 +20,64 @@
 
 class CGI
 {
-	private:
-		char **_envvar;
-		char **_args;
+private:
+    char **_envvar;
+    char **_args;
 
-		Request *_req;
+    Request *_req;
 
-        int _fdIN[2];
-        int _fdOut[2];
+    int _fdIN[2];
+    int _fdOut[2];
 		
-		std::string _path_info;
-		std::string _raw_response;
+    std::string _path_info;
+    std::string _raw_response;
 
-		StatusLine _status_line;
-		std::map<std::string, std::string> _header_map;
-		std::string _body_string;
+    StatusLine _status_line;
+    std::map<std::string, std::string> _header_map;
+    std::string _body_string;
 
 		
-	public:
+public:
 
-		/* ------------------------ COPLIEN FORM ----------------------- */
+    /* ------------------------ COPLIEN FORM ----------------------- */
 
-		CGI(Request *, const std::string &, const cgi_pair &);
-		CGI &operator=(CGI &);
-		~CGI();
+    CGI(Request *, const std::string &, const cgi_pair &);
+    CGI &operator=(CGI &);
+    ~CGI();
 	
-		/* ------------------------ PUBLIC METHODS ----------------------- */
+    /* ------------------------ PUBLIC METHODS ----------------------- */
 
-		void executeCGI();
-		void parse_response(void);
+    void executeCGI();
+    void parse_response(void);
 
-		std::string getHeaders(void) const;
-		std::string getBody(void) const;
+    std::string getHeaders(void) const;
+    std::string getBody(void) const;
 
-		const StatusLine& getStatusLine(void) const;
+    const StatusLine& getStatusLine(void) const;
 
-		bool isHeaderDefined(const std::string&) const;
-	private:
+    bool isHeaderDefined(const std::string&) const;
+private:
 	
 
-		/* ------------------------ PRIVATE METHODS ----------------------- */
-        void close_fdIN(void);
-        void close_fdOut(void);
+    /* ------------------------ PRIVATE METHODS ----------------------- */
+    void close_fdIN(void);
+    void close_fdOut(void);
 
-		void set_env_variables(const std::string&/*, const std::string&*/);
-		void set_args(const std::string&, const std::string&);
-        void set_path_info(const std::string&);
+    void set_env_variables(const std::string&/*, const std::string&*/);
+    void set_args(const std::string&, const std::string&);
+    void set_path_info(const std::string&);
 //		void executeCGI();
 
-  void parse_normalize(void);
-		void parse_response_headers(const std::string&);
-		void parse_response_body(const std::string&);
-		void parse_status_line(void);
+    void parse_normalize(void);
+    void parse_response_headers(const std::string&);
+    void parse_response_body(const std::string&);
+    void parse_status_line(void);
 
-		std::string buildCGIPath(const std::string&, const std::string&, const Location&);
-		void mySwap(CGI &, CGI &);
-		CGI(void);
-		CGI(CGI const &);
+    std::string get_resource_path(const std::string&, const std::string&);
+    std::string get_cgi_path(const std::string&, const std::string&, const Location&);
+    void mySwap(CGI &, CGI &);
+    CGI(void);
+    CGI(CGI const &);
 
 };
 

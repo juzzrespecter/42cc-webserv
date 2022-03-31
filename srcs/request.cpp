@@ -59,18 +59,18 @@ void Request::set_path(const std::string& path) {
 }
 
 void swap(Request& a, Request& b) {
-   swap(a._buffer, b._buffer);
-   std::swap(a._line, b._line);
-   std::swap(a._serv_v, b._serv_v);
-   std::swap(a._header_count, b._header_count);
-   swap(a._request_line, b._request_line);
-   swap(a._headers, b._headers);
-   swap(a._body, b._body);
-   std::swap(a._stage, b._stage);
+    swap(a._buffer, b._buffer);
+    std::swap(a._line, b._line);
+    std::swap(a._serv_v, b._serv_v);
+    std::swap(a._header_count, b._header_count);
+    swap(a._request_line, b._request_line);
+    swap(a._headers, b._headers);
+    swap(a._body, b._body);
+    std::swap(a._stage, b._stage);
 }
 
 void    Request::recv_buffer(const char new_buffer[], int size) {
-    static req_options req_table[REQ_TAB_SIZE] = {
+    static _req_options req_table[REQ_TAB_SIZE] = {
         &Request::parse_request_line,
         &Request::parse_header,
         &Request::parse_request_body,
@@ -78,85 +78,84 @@ void    Request::recv_buffer(const char new_buffer[], int size) {
     };
     bool still_parsing = true;
 
-    std::cerr << "{req}: " << new_buffer;
     _buffer.append(new_buffer, size);
     if (_buffer.size() > REQ_MAX_SIZE) {
-      throw(StatusLine(413, REASON_413, "Request: buffer exceeded max size"));
+	throw(StatusLine(413, REASON_413, "Request: buffer exceeded max size"));
     }
     while (still_parsing == true) {
-      still_parsing = (this->*req_table[_stage])();
+	still_parsing = (this->*req_table[_stage])();
     }
     if (_stage == READY) {
-      throw StatusLine(200, REASON_200, "request received successfully");
+	throw StatusLine(200, REASON_200, "request received successfully");
     }
 }
 
 bool Request::parse_request_line(void) {
-  enum request_token_f {method, uri, http_ver, size};
+    enum request_token_f {method, uri, http_ver, size};
   
-  if (!get_next_line()) {
-    return false;
-  }
-  if (_line.empty()) {
-    THROW_STATUS("Request-line: received empty request-line");
-  }
-  std::stringstream   line_ss(_line);
-  std::string         token[size];
+    if (!get_next_line()) {
+	return false;
+    }
+    if (_line.empty()) {
+	THROW_STATUS("Request-line: received empty request-line");
+    }
+    std::stringstream   line_ss(_line);
+    std::string         token[size];
 
-  for (int i = 0; i < 3; i++) {
-    line_ss >> token[i];
-  }
-  if (line_ss.rdbuf()->in_avail()) {
-    THROW_STATUS("Request-line: wrong number of tokens in request-line");
-  }
-  parse_method(token[method]);
-  parse_uri(token[uri]);
-  parse_HTTP_version(token[http_ver]);
-  _stage = HEADER;
-  return true;
+    for (int i = 0; i < 3; i++) {
+	line_ss >> token[i];
+    }
+    if (line_ss.rdbuf()->in_avail()) {
+	THROW_STATUS("Request-line: wrong number of tokens in request-line");
+    }
+    parse_method(token[method]);
+    parse_uri(token[uri]);
+    parse_HTTP_version(token[http_ver]);
+    _stage = HEADER;
+    return true;
 }
 
 void    Request::parse_method(const std::string& token) {
-  std::string method_opts[NB_METHODS] = {"GET", "HEAD", "POST", "DELETE", "PUT"};
+    std::string method_opts[NB_METHODS] = {"GET", "HEAD", "POST", "DELETE", "PUT"};
 
-  for (int method_id = 0; method_id < NB_METHODS; method_id++) {
-    if (!token.compare(method_opts[method_id])) {
-      _request_line.set_method(method_id);
-      return ;
+    for (int method_id = 0; method_id < NB_METHODS; method_id++) {
+	if (!token.compare(method_opts[method_id])) {
+	    _request_line.set_method(method_id);
+	    return ;
+	}
     }
-  }
-  THROW_STATUS("unknown method in request");
+    THROW_STATUS("unknown method in request");
 }
 
 void    Request::parse_uri(std::string& token) {
-  if (token.size() > MAX_URI_LEN) {
-    throw StatusLine(414, REASON_414, "Request-URI: exceeded size limit");
-  }
-  std::string allowed_ptcl[2] = { "http://", "https://" };
-  size_t query_i = token.find('?');
-
-  if (query_i != std::string::npos) {
-    _request_line.set_query(token.substr(++query_i));
-    token = token.substr(0, --query_i);
-  }
-  for (size_t i = 0; i < 2; i++) {
-    if (!token.compare(0, allowed_ptcl[i].size(), allowed_ptcl[i])) {
-      std::string hostname = token.substr(0, token.find("/", allowed_ptcl[i].size()));
-      std::string abs_path = token.substr(hostname.size());
-
-      _headers.insert(std::pair<std::string, std::string>("Host", hostname));
-      if (abs_path.empty()) {
-	abs_path.append("/");
-      }
-      _request_line.set_path(abs_path);
-      return ;
+    if (token.size() > MAX_URI_LEN) {
+	throw StatusLine(414, REASON_414, "Request-URI: exceeded size limit");
     }
-  }
-  if (token[0] == '/') {
-    _request_line.set_path(token);
-    return ;
-  }
-  THROW_STATUS("Request-URI: bad URI format");
+    std::string allowed_ptcl[2] = { "http://", "https://" };
+    size_t query_i = token.find('?');
+
+    if (query_i != std::string::npos) {
+	_request_line.set_query(token.substr(++query_i));
+	token = token.substr(0, --query_i);
+    }
+    for (size_t i = 0; i < 2; i++) {
+	if (!token.compare(0, allowed_ptcl[i].size(), allowed_ptcl[i])) {
+	    std::string hostname = token.substr(0, token.find("/", allowed_ptcl[i].size()));
+	    std::string abs_path = token.substr(hostname.size());
+
+	    _headers.insert(std::pair<std::string, std::string>("Host", hostname));
+	    if (abs_path.empty()) {
+		abs_path.append("/");
+	    }
+	    _request_line.set_path(abs_path);
+	    return ;
+	}
+    }
+    if (token[0] == '/') {
+	_request_line.set_path(token);
+	return ;
+    }
+    THROW_STATUS("Request-URI: bad URI format");
 }
 
 void    Request::parse_HTTP_version(const std::string& token) {
@@ -225,10 +224,10 @@ bool    Request::parse_header(void) {
         THROW_STATUS("Request-Header: too many headers on request");
     }
     for (size_t i = 0; i < HEADER_LIST_SIZE; i++) {
-      if (!field_name.compare(_header_list[i])) {
-	_headers.insert(std::pair<std::string, std::string>(field_name, field_value));
-	break ;
-      }
+	if (!field_name.compare(_header_list[i])) {
+	    _headers.insert(std::pair<std::string, std::string>(field_name, field_value));
+	    break ;
+	}
     }
     return true;
 }
@@ -246,55 +245,71 @@ void    Request::request_body_settings(void) {
     }
 }
 
-size_t Request::parse_chunk_size(void) {
-    char*       last;
+bool Request::parse_chunk_req_size(void) {
+    //char*       last;
 
-    get_next_line();
     if (_line.empty()) {
         THROW_STATUS("Request-Body: bad chunked-request syntax");
     }
-    int size = strtol(_line.c_str(), &last, 0);
+    //int size = strtol(_line.c_str(), &last, 0);
+    std::stringstream size_h_sstr;
+    long size;
 
-    if (*last || size < 0) {
+    size_h_sstr << std::hex << _line;
+    size_h_sstr >> size;
+    
+    if ((size_h_sstr.rdbuf()->in_avail()) || size < 0) {
         THROW_STATUS("Request-Body: bad chunked-request syntax");
     }
-    return static_cast<size_t>(size);
+    _body.set_size(static_cast<size_t>(size));
+    _body.switch_stage();
+    return true;
 }
 
-// Sintaxis SIZE CRLF CHUNK CRLF
-// Para el último chunk, sintaxis 0 CRLF CRLF y marcamos Request como preparada para servir
-bool    Request::parse_chunk_req_body(void) {
-  size_t      size = parse_chunk_size();
+bool  Request::parse_chunk_req_chunk(void) {
+    _body.recv_buffer_chunk(_line);
+    _body.switch_stage();
+    if (!_body.get_size()) {
+	_stage = READY;
+	return false;
+    }
+    return true;
+}
 
-  get_next_line();
-  if (_line.empty() && ((!size && !_line.empty()) && (size != _line.size()))) {
-    THROW_STATUS("Request-Body: bad chunked-request syntax");
-  }
-  _body.recv_buffer(_line);
-  if (!size) {
-    _stage = READY;
-  }
-  return false;
+bool Request::parse_chunk_req_body(void) {
+    static _req_options req_chunk_body_opts[2] = {
+	&Request::parse_chunk_req_size,
+	&Request::parse_chunk_req_chunk
+    };
+    bool still_parsing = true;
+    
+    while ((still_parsing = get_next_line())) {
+	still_parsing = (this->*req_chunk_body_opts[_body.stage])();
+	if (!still_parsing) {
+	    break ;
+	}
+    }
+    return still_parsing;
 }
 
 bool    Request::parse_request_body(void) {
-  get_next_line();
+    get_next_line();
   
-  _body.recv_buffer(_line);
-  if (_body.get_body().size() == content_length()) {
-    _stage = READY;
-  }
-  return false;
+    _body.recv_buffer(_line);
+    if (_body.get_body().size() == content_length()) {
+	_stage = READY;
+    }
+    return false;
 }
 
 bool    Request::transfer_encoding_is_chunked(void) const {
-  header_map::const_iterator te = _headers.find("Transfer-Encoding");
-  header_map::const_iterator cl = _headers.find("Content-Length");
+    header_map::const_iterator te = _headers.find("Transfer-Encoding");
+    header_map::const_iterator cl = _headers.find("Content-Length");
 
-  if ((te != _headers.end() && !te->second.compare("chunked")) || (cl == _headers.end())) {
-    return true;
-  }
-  return false;
+    if ((te != _headers.end() && !te->second.compare("chunked")) || (cl == _headers.end())) {
+	return true;
+    }
+    return false;
 }
 
 std::string  Request::host(void) const {
@@ -335,21 +350,21 @@ void Request::clear(void) {
 }
 
 bool Request::get_next_line(void) {
-  size_t crlf_i;
+    size_t crlf_i;
   
-  _line.clear();
-  if (_stage >= REQ_BODY) {
-    _line = _buffer;
-    _buffer.clear();
+    _line.clear();
+    if (_stage == REQ_BODY) {
+	_line = _buffer;
+	_buffer.clear();
+	return true;
+    }
+    crlf_i = _buffer.find(CRLF);
+    if (crlf_i == std::string::npos) {
+	return false;
+    }
+    _line = _buffer.substr(0, crlf_i);
+    _buffer = _buffer.substr(crlf_i + 2);
     return true;
-  }
-  crlf_i = _buffer.find(CRLF);
-  if (crlf_i == std::string::npos) {
-    return false;
-  }
-  _line = _buffer.substr(0, crlf_i);
-  _buffer = _buffer.substr(crlf_i + 2);
-  return true;
 }
 
 const std::string Request::_header_list[HEADER_LIST_SIZE] = {
@@ -364,5 +379,3 @@ const std::string Request::_header_list[HEADER_LIST_SIZE] = {
     "Transfer-Encoding","User-Agent",      "Upgrade",                       "Via",
     "Warning"
 };
-
-

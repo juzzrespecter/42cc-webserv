@@ -1,22 +1,30 @@
 #!/bin/bash
 
 TESTER=tester
-CGI_PATH=YoupiBanane/cgi-bin
+CGI_PATH=cgi-bin
+
+if [ "$1" = "clean" ]; then
+    rm -rfv YoupiBanane cgi-bin
+    rm -v $TESTER
+    rm -v webs.conf
+    make fclean
+    exit
+fi
 
 if [ ! -d "./YoupiBanane" ]; then 
-    mkdir -pv YoupiBanane/{nop,Yeah,cgi-bin}
+    mkdir -pv {cgi-bin,YoupiBanane/{nop,Yeah}}
     touch YoupiBanane/youpi.bad_extension \
 	  YoupiBanane/youpi.bla \
 	  YoupiBanane/nop/youpi.bad_extension \
 	  YoupiBanane/nop/other.pouic \
 	  YoupiBanane/Yeah/not_happy.bad_extension
     if [ $(uname) == "Linux" ]; then
-	wget -O $PWD/$CGI_PATH/ubuntu_cgi_tester https://projects.intra.42.fr/uploads/document/document/6716/ubuntu_cgi_tester
-	chmod +x $CGI_PATH/ubuntu_cgi_tester
+	wget -O $PWD/$CGI_PATH/cgi_tester https://projects.intra.42.fr/uploads/document/document/6716/ubuntu_cgi_tester
     else
 	wget -O $PWD/$CGI_PATH/cgi_tester https://projects.intra.42.fr/uploads/document/document/6717/cgi_tester
-	chmod +x $CGI_PATH/cgi_tester
+
     fi
+    chmod +x $CGI_PATH/cgi_tester
 fi
 
 if [ ! -f $TESTER ]; then
@@ -28,13 +36,13 @@ if [ ! -f $TESTER ]; then
     chmod +x $TESTER
 fi
 
-if [ ! -f webserver.conf ]; then
-    cat <<EOF > tester.conf
+if [ ! -f webs.conf ]; then
+    cat <<EOF > webs.conf
 server {
        listen 8080 ;
 
        accept_method GET ;
-       cgi_pass bla ./YoupiBanane/cgi-bin/cgi_tester ;
+       cgi_pass bla $PWD/cgi-bin/cgi_tester ;
        location /put_test/ {
                 accept_method PUT ;
                 accept_upload /upload_files/ ;
@@ -43,8 +51,8 @@ server {
                 accept_method POST ;
                 client_max_body_size 100 ;
        }
-       location /directory/ {
-                error_page youpi.bad_extension ;
+       location /directory {
+                index youpi.bad_extension ;
                 alias ./YoupiBanane/ ;
        }
 }
@@ -52,5 +60,4 @@ EOF
 fi
 
 make
-./webserver tester.conf &
-./tester http://localhost:8080
+echo "Ready: ./webserver webs.conf && ./$TESTER http://localhost:8080"
