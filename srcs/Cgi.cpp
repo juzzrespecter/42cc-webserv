@@ -22,13 +22,13 @@ std::string CGI::set_cgi_path(const std::string& cgi_path, const std::string& cw
 
     /* comprueba si root está configurado como absoluto */
     if (loc.get_root().at(0) != '/') {
-      abs_path.append(cwd + '/' + loc.get_root());
+	abs_path.append(cwd + '/' + loc.get_root());
     } else {
-      abs_path.append(loc.get_root());
+	abs_path.append(loc.get_root());
     }
 
     if (abs_path.at(abs_path.size() - 1) != '/') {
-      abs_path.push_back('/');
+	abs_path.push_back('/');
     }
     /* añade ruta relativa a CGI */
     abs_path.append(cgi_path);
@@ -84,6 +84,7 @@ void CGI::set_env_variables(void) {
     }    
     _envvar[i++] = strdup(std::string("REQUEST_METHOD=" + request_method).c_str());
     _envvar[i++] = strdup(std::string("SCRIPT_NAME=" + _resource_path).c_str());
+    _envvar[i++] = strdup(std::string("SCRIPT_FILENAME=" + _resource_path).c_str());
     _envvar[i++] = strdup("SERVER_NAME=localhost");
     _envvar[i++] = strdup("SERVER_PROTOCOL=HTTP/1.1");
     _envvar[i++] = strdup("SERVER_SOFTWARE=webserver/1.0");
@@ -119,11 +120,11 @@ std::string CGI::set_path_info(void) {
 
 /* CGIs imprimen como fin de linea tanto LF como CRLF: preparamos la respuesta para normalizarla a un único estándar (LF) */
 void CGI::parse_normalize(void) {
-  size_t i = 0;
+    size_t i = 0;
 
-  while ((i = _raw_response.find("\r\n", i)) != std::string::npos) {
-    _raw_response.erase(i, 1);
-  }
+    while ((i = _raw_response.find("\r\n", i)) != std::string::npos) {
+	_raw_response.erase(i, 1);
+    }
 }
 
 /*  Da formato a la respuesta recibida por el CGI y comprueba posibles errores sintácticos:
@@ -141,7 +142,7 @@ void CGI::parse_response_headers(const std::string& headers) {
     static const std::string cgi_header[3] = { "Content-Type", "Location", "Status"};
 
     std::stringstream headers_ss(headers);
-    std::string header_line;
+    std::string       header_line;
 
     while (std::getline(headers_ss, header_line)) {
         size_t separator = header_line.find(':');
@@ -156,7 +157,7 @@ void CGI::parse_response_headers(const std::string& headers) {
             continue ;
         }
 	if (!header_field.compare("Content-type")) {
-	  header_field = "Content-Type";
+	    header_field = "Content-Type";
         }
         for (int i = 0; i < 3; i++) {
             if (!header_field.compare(cgi_header[i])) {
@@ -169,8 +170,8 @@ void CGI::parse_response_headers(const std::string& headers) {
         _header_map.insert(std::pair<std::string, std::string>(header_field, header_value));
     }
     if (_header_map.find(cgi_header[0]) == _header_map.end() &&
-            _header_map.find(cgi_header[1]) == _header_map.end() &&
-            _header_map.find(cgi_header[2]) == _header_map.end()) {
+	_header_map.find(cgi_header[1]) == _header_map.end() &&
+	_header_map.find(cgi_header[2]) == _header_map.end()) {
         throw (StatusLine(500, REASON_500, "CGI: parse(), missing necessary CGI-Header in response"));
     }
 }
@@ -227,7 +228,7 @@ void CGI::parse_status_line(void) {
  *		      si content-length && !(body.size() == content-length) -> 500
  */
 void CGI::parse_response(void) {
-  parse_normalize();
+    parse_normalize();
     size_t separator = _raw_response.find("\n\n");
 
     if (separator == std::string::npos) {
@@ -251,7 +252,7 @@ CGI::CGI(Request *req, const std::string& uri, const cgi_pair& cgi_info) :
 
     // GET : QUERY_STRING + PATH_INFO 
     // POST : PATH_INFO + CONTENT_length 
-    if ((_envvar = new char*[10]) == NULL) {
+    if ((_envvar = new char*[12]) == NULL) {
         throw std::runtime_error("Error on a cgi malloc\n");
     }
     // ** Set args for execve **
