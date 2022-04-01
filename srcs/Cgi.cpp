@@ -1,6 +1,6 @@
 #include "Cgi.hpp"
 
-std::string CGI::get_resource_path(const std::string& uri, const std::string& cwd) {
+std::string CGI::set_resource_path(const std::string& uri, const std::string& cwd) {
     /* comprueba si la ruta al recurso tiene una raíz absoluta */
     if (!uri.empty() && uri.at(0) == '/') {
 	return uri;
@@ -11,7 +11,7 @@ std::string CGI::get_resource_path(const std::string& uri, const std::string& cw
     return abs_path;
 }
 
-std::string CGI::get_cgi_path(const std::string& cgi_path, const std::string& cwd, const Location& loc)
+std::string CGI::set_cgi_path(const std::string& cgi_path, const std::string& cwd, const Location& loc)
 {
     std::string abs_path;
 
@@ -57,63 +57,64 @@ void CGI::close_fdOut(void) {
     }
 }
 
-void CGI::set_env_variables(const std::string& uri, const std::string& file_ext) {
-    std::string tmpBuf;
-    int i = 0;
-    (void) uri; (void) file_ext;
+void CGI::set_env_variables(void) {
+    size_t i = 0;
+    std::string request_method = (_req->get_method() == GET) ? "GET" : "POST";
+    
+    header_map::const_iterator content_type = _req->get_headers("Content-Type");
+    header_map::const_iterator remote_host = _req->get_headers("Host");
+    header_map::const_iterator http_cookie = _req->get_headers("Cookie");   
+    
+    if (_req->get_method() == POST && !_req->get_body_string().empty()) {
+	std::stringstream content_length;
 
-    //_envvar[i++] = strdup(("PATH_INFO=" + uri).c_str());
+	content_length << _req->get_body_size();
+	_envvar[i++] = strdup(std::string("CONTENT_LENGTH=" + content_length.str()).c_str());
+    }
+    if (content_type != _req->get_headers().end()) {
+	_envvar[i++] = strdup(std::string("CONTENT_TYPE=" + content_type->second).c_str());
+    }
+    _envvar[i++] = strdup("GATEWAY_INTERFACE=CGI/1.1");
+    if (_req->get_method() == GET && !_req->get_query().empty()) {
+	_envvar[i++] = strdup(std::string("QUERY_STRING=" + _req->get_query()).c_str());
+	_envvar[i++] = strdup("CONTENT_TYPE=text/html");
+    }
+    if (remote_host != _req->get_headers().end()) {
+	_envvar[i++] = strdup(std::string("REMOTE_HOST=" + remote_host->second).c_str()); 
+    }    
+    _envvar[i++] = strdup(std::string("REQUEST_METHOD=" + request_method).c_str());
+    _envvar[i++] = strdup(std::string("SCRIPT_NAME=" + _resource_path).c_str());
+    _envvar[i++] = strdup("SERVER_NAME=localhost");
     _envvar[i++] = strdup("SERVER_PROTOCOL=HTTP/1.1");
-    // used for php-cgi
+    _envvar[i++] = strdup("SERVER_SOFTWARE=webserver/1.0");
     _envvar[i++] = strdup("REDIRECT_STATUS=200");
-    if (_req->get_method() == GET){
 
-        // stupid bug in php-cgi
-	//if (!file_ext.compare("php")) {
-	//   _envvar[i++] = strdup(std::string("REQUEST_URI=" + _path_info + _args[1]).c_str());
-	//  std::cerr << _envvar[i - 1] << "\n";
-	//}
-        _envvar[i++] = strdup("REQUEST_METHOD=GET");
-//        tmpBuf = "QUERY_STRING=" + _req->get_query();
-        if (!_req->get_query().empty()) {
-            _envvar[i++] = strdup(std::string("QUERY_STRING=" + _req->get_query()).c_str());
-            _envvar[i++] = strdup("CONTENT_TYPE=text/html");
-        }
-    } else {
-        // stupid bug in php-cgi
-	//if (!file_ext.compare("php")) {
-	//    _envvar[i++] = strdup(std::string("REQUEST_URI=" + _path_info).c_str());
-	//    std::cerr << _envvar[i - 1] << "\n";
-	//}
-        _envvar[i++] = strdup("REQUEST_METHOD=POST");
-
-        std::stringstream intToString;
-        intToString << _req->get_request_body().get_body().size();
-        tmpBuf = std::string("CONTENT_LENGTH=") + intToString.str();
-        _envvar[i++] = strdup(tmpBuf.c_str());
-
-        header_map::const_iterator ct = _req->get_headers().find("Content-Type");
-        if (ct != _req->get_headers().end()) {
-            _envvar[i++] = strdup(std::string("CONTENT_TYPE=" + ct->second).c_str());
-        }
+    if (http_cookie != _req->get_headers().end()) {
+	_envvar[i++] = strdup(std::string("HTTP_COOKIE=" + http_cookie->second).c_str());
     }
     _envvar[i] = NULL;
+
+    /* path_info -> req_parser set _cgi_suffix
+       path_translated ->true path from path_info
+       remote_addr ->getsockname(); n to str
+       server_port -> _port in request when built
+    */
 }
 
-void CGI::set_args(const std::string& uri, const std::string& cgi_path) {
-    _args[0] = (cgi_path.empty()) ? strdup(uri.c_str()) : strdup(cgi_path.c_str());
-    _args[1] = (cgi_path.empty()) ? NULL : strdup(uri.c_str());
+void CGI::set_args(void) {
+    std::string uri = Response::get_filename_from_uri(_resource_path);
+    
+    _args[0] = (_cgi_path.empty()) ? strdup(uri.c_str()) : strdup(_cgi_path.c_str());
+    _args[1] = (_cgi_path.empty()) ? NULL : strdup(uri.c_str());
     _args[2] = NULL;
 }
 
-void CGI::set_path_info(const std::string& resource_path) {
-    size_t path_separator = resource_path.rfind('/');
+std::string CGI::set_path_info(void) {
+    size_t path_separator = _resource_path.rfind('/');
 
-    if (path_separator == std::string::npos) {
-        _path_info = "/";
-        return ;
-    }
-    _path_info = resource_path.substr(0, path_separator);
+    return (path_separator == std::string::npos) ?
+	"/" :
+	_resource_path.substr(0, path_separator);
 }
 
 /* CGIs imprimen como fin de linea tanto LF como CRLF: preparamos la respuesta para normalizarla a un único estándar (LF) */
@@ -250,7 +251,7 @@ CGI::CGI(Request *req, const std::string& uri, const cgi_pair& cgi_info) :
 
     // GET : QUERY_STRING + PATH_INFO 
     // POST : PATH_INFO + CONTENT_length 
-    if ((_envvar = new char*[7]) == NULL) {
+    if ((_envvar = new char*[10]) == NULL) {
         throw std::runtime_error("Error on a cgi malloc\n");
     }
     // ** Set args for execve **
@@ -263,13 +264,12 @@ CGI::CGI(Request *req, const std::string& uri, const cgi_pair& cgi_info) :
     if (getcwd(cwd, PWD_BUFFER) == NULL) {
         throw std::runtime_error("CGI: getcwd() call failure");
     }
-//    std::string resource_path = std::string(cwd) + "/" + uri;
-    std::string resource_path = get_resource_path(uri, cwd);
-    std::string cgi_path = get_cgi_path(cgi_info.second, cwd, _req->get_location()); /* ruta absoluta al ejecutable */
+    _resource_path = set_resource_path(uri, cwd);
+    _cgi_path = set_cgi_path(cgi_info.second, cwd, _req->get_location());
+    _path_info = set_path_info();
 
-    set_path_info(resource_path);
-    set_args(Response::get_filename_from_uri(resource_path), cgi_path);
-    set_env_variables(resource_path, cgi_info.first);
+    set_args();
+    set_env_variables();
 }
 
 CGI::~CGI()
@@ -340,8 +340,8 @@ void CGI::executeCGI()
             std::cerr << "[CGI error] chdir(): " << strerror(errno) << "\n";
             exit(EXECVE_FAIL);
         }
-        if (execve(_args[0], _args, _envvar) < 0){
-            std::cerr << "[CGI error] execve(): " << strerror(errno) << "\n";
+        if (execve(_args[0], _args, _envvar) < 0) {
+	    std::cerr << _path_info << ", " << _resource_path << ", " << _cgi_path << "\n";            std::cerr << "[CGI error] execve(): " << strerror(errno) << "\n";
             exit(EXECVE_FAIL);
         }
 

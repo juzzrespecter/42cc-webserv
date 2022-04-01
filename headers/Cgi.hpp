@@ -29,7 +29,9 @@ private:
 
     int _fdIN[2];
     int _fdOut[2];
-		
+
+    std::string _resource_path;
+    std::string _cgi_path;
     std::string _path_info;
     std::string _raw_response;
 
@@ -64,9 +66,9 @@ private:
     void close_fdIN(void);
     void close_fdOut(void);
 
-    void set_env_variables(const std::string&, const std::string&);
-    void set_args(const std::string&, const std::string&);
-    void set_path_info(const std::string&);
+    void set_env_variables(void);
+    void set_args(void);
+
 
     void executeCGI_write(void);
     void executeCGI_read(void);
@@ -76,9 +78,12 @@ private:
     void parse_response_body(const std::string&);
     void parse_status_line(void);
 
-    std::string get_resource_path(const std::string&, const std::string&);
-    std::string get_cgi_path(const std::string&, const std::string&, const Location&);
+    std::string set_resource_path(const std::string&, const std::string&);
+    std::string set_cgi_path(const std::string&, const std::string&, const Location&);
+    std::string set_path_info(void);
+    
     void mySwap(CGI &, CGI &);
+    
     CGI(void);
     CGI(CGI const &);
 

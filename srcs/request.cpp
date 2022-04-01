@@ -27,6 +27,10 @@ const header_map& Request::get_headers() const {
     return _headers;
 }
 
+header_map::const_iterator Request::get_headers(const std::string& header_name) const {
+    return _headers.find(header_name);
+}
+
 const Body& Request::get_request_body() const {
     return _body;
 }

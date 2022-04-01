@@ -49,10 +49,14 @@ public:
     Request& operator=(Request a);
 
     const RequestLine& get_request_line(void) const;
-    const header_map&  get_headers(void) const;
+    
+    const header_map&          get_headers(void) const;
+    header_map::const_iterator get_headers(const std::string&) const;
+    
     const Body&        get_request_body(void) const;
     const std::string& get_body_string(void) const;
     int                get_body_size(void) const;
+    
     int                get_method(void) const;
     const std::string& get_path(void) const;
     const std::string& get_query(void) const;
