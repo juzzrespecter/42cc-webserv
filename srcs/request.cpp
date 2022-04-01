@@ -31,6 +31,14 @@ const Body& Request::get_request_body() const {
     return _body;
 }
 
+const std::string& Request::get_body_string(void) const {
+    return _body.get_body();
+}
+
+int Request::get_body_size(void) const {
+    return _body.get_size();
+}
+
 int Request::get_method() const {
     return _request_line.get_method();
 }

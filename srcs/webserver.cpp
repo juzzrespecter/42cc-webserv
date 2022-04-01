@@ -73,7 +73,6 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
     /* paso a una sola llamada a read por llamada a select, para evitar que una petición muy grande
      * nos bloquee el servidor */
     int socket_rd_stat = recv(conn_socket.fd, req_buff, REQUEST_BUFFER_SIZE, 0);
-    //std::cerr << "[the killing touch] " << socket_rd_stat << "\n";
     if (socket_rd_stat == -1) {
         /* supón error EAGAIN, la conexión estaba marcada como activa pero ha bloqueado,
          * se guarda a la espera de que el cliente envíe información */
@@ -88,7 +87,7 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
     try {
         conn_socket.build_request(req_buff, socket_rd_stat);
     } catch (StatusLine& sl) {
-      log("request: ", convertNbToString(sl.getCode()) + " " + sl.getReason() + " - " + sl.getAdditionalInfo());
+	log("request: ", convertNbToString(sl.getCode()) + " " + sl.getReason() + " - " + sl.getAdditionalInfo());
         conn_socket.build_response(sl);
         return CONTINUE;
     }

@@ -9,8 +9,15 @@ if [ $(uname) = "Linux" ]; then
 fi
 
 if [ "$1" = "clean" ]; then
-    $SUDO docker rm $($SUDO docker ps -a | grep $DOC_CONT |  awk '{print $1}')
-    $SUDO docker rmi $($SUDO docker images | grep $DOC_IMAGE | awk '{print $1}')
+    DOC_IMAGE=$($SUDO docker images | grep $DOC_IMAGE | awk '{print $1}')
+    DOC_CONT=$($SUDO docker ps -a | grep $DOC_CONT | awk '{print $1}')
+
+    if [ -n "$DOC_CONT" ]; then
+	$SUDO docker rm $DOC_CONT
+    fi
+    if [ -n "$DOC_IMAGE" ]; then
+	$SUDO docker rmi $DOC_IMAGE
+    fi
     exit 0;
 fi
 

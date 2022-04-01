@@ -41,8 +41,11 @@ if [ ! -f webs.conf ]; then
 server {
        listen 8080 ;
 
-       accept_method GET ;
+       accept_method GET POST;
        cgi_pass bla $PWD/cgi-bin/cgi_tester ;
+       location / {
+       		accept_method GET ;
+       }
        location /put_test/ {
        		root ./YoupiBanane/ ;
                 accept_method PUT ;

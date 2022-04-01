@@ -158,8 +158,7 @@ void Response::execCgi(const std::string& realUri, const cgi_pair& cgiConfig)
     CGI cgi(_req, realUri, cgiConfig);
     cgi.executeCGI();
     cgi.parse_response();
-	
-    /* deberían gestionarse de alguna manera las redirecciones locales */
+
     fillStatusLine(_staLine);
     if (cgi.isHeaderDefined("Server") == false) {
 	fillServerHeader();
@@ -167,7 +166,7 @@ void Response::execCgi(const std::string& realUri, const cgi_pair& cgiConfig)
     if (cgi.isHeaderDefined("Date") == false) {
 	fillDateHeader();
     }
-    if (cgi.isHeaderDefined("Content-Length") == false) {
+    if (cgi.isHeaderDefined("Content-Length") == false && cgi.getBody().size()) {
 	fillContentlengthHeader(convertNbToString(cgi.getBody().size()));
     }
     _buffer += cgi.getHeaders();
@@ -369,10 +368,6 @@ void Response::fillError(const StatusLine& sta)
     }
     std::string error_file = getErrorPage(_staLine);
 
-    // delete this
-    if (_staLine.getCode() == 403 ) {
-	_staLine.setCode(404);
-    }
     fillStatusLine(_staLine);
     fillServerHeader();
     fillDateHeader();

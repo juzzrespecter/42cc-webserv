@@ -1,0 +1,5 @@
+# Git folder
+./.git/
+
+# Local HTML files (we will use wordpress on the docker container)
+./html/

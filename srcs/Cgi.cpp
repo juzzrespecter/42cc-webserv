@@ -57,17 +57,22 @@ void CGI::close_fdOut(void) {
     }
 }
 
-void CGI::set_env_variables(const std::string& uri/*, const std::string& file_ext*/) {
+void CGI::set_env_variables(const std::string& uri, const std::string& file_ext) {
     std::string tmpBuf;
     int i = 0;
+    (void) uri; (void) file_ext;
 
-    _envvar[i++] = strdup(("PATH_INFO=" + uri).c_str());
+    //_envvar[i++] = strdup(("PATH_INFO=" + uri).c_str());
     _envvar[i++] = strdup("SERVER_PROTOCOL=HTTP/1.1");
     // used for php-cgi
     _envvar[i++] = strdup("REDIRECT_STATUS=200");
     if (_req->get_method() == GET){
 
         // stupid bug in php-cgi
+	//if (!file_ext.compare("php")) {
+	//   _envvar[i++] = strdup(std::string("REQUEST_URI=" + _path_info + _args[1]).c_str());
+	//  std::cerr << _envvar[i - 1] << "\n";
+	//}
         _envvar[i++] = strdup("REQUEST_METHOD=GET");
 //        tmpBuf = "QUERY_STRING=" + _req->get_query();
         if (!_req->get_query().empty()) {
@@ -76,7 +81,11 @@ void CGI::set_env_variables(const std::string& uri/*, const std::string& file_ex
         }
     } else {
         // stupid bug in php-cgi
-        _envvar[i++] = strdup("REQUEST_METHOD=POST");	
+	//if (!file_ext.compare("php")) {
+	//    _envvar[i++] = strdup(std::string("REQUEST_URI=" + _path_info).c_str());
+	//    std::cerr << _envvar[i - 1] << "\n";
+	//}
+        _envvar[i++] = strdup("REQUEST_METHOD=POST");
 
         std::stringstream intToString;
         intToString << _req->get_request_body().get_body().size();
@@ -258,9 +267,9 @@ CGI::CGI(Request *req, const std::string& uri, const cgi_pair& cgi_info) :
     std::string resource_path = get_resource_path(uri, cwd);
     std::string cgi_path = get_cgi_path(cgi_info.second, cwd, _req->get_location()); /* ruta absoluta al ejecutable */
 
-    set_env_variables(resource_path/*, cgi_info.first*/);
-    set_args(Response::get_filename_from_uri(resource_path), cgi_path);
     set_path_info(resource_path);
+    set_args(Response::get_filename_from_uri(resource_path), cgi_path);
+    set_env_variables(resource_path, cgi_info.first);
 }
 
 CGI::~CGI()
@@ -277,6 +286,35 @@ CGI::~CGI()
 
     close_fdIN();
     close_fdOut();
+}
+
+void CGI::executeCGI_write(void) {
+    std::string wr_buff      = _req->get_body_string();
+    size_t      wr_buff_size = _req->get_body_size();
+
+    while (wr_buff_size > 0) {
+	size_t wr_call_size = (wr_buff_size > WR_BUFFR) ? WR_BUFFR : wr_buff_size;
+
+	if (write(_fdIN[1], wr_buff.c_str(), wr_call_size) < 0) {
+	    throw StatusLine(500, REASON_500, std::string("CGI: write() - ") + strerror(errno));
+	}
+	wr_buff.erase(0, wr_call_size);
+	wr_buff_size -= wr_call_size;
+    }
+}
+
+void CGI::executeCGI_read(void) {
+    char buf[CGI_PIPE_BUFFER_SIZE + 1] = {0};
+    int rd_out;
+   
+    while ((rd_out = read(_fdOut[0], buf, CGI_PIPE_BUFFER_SIZE)) > 0)
+    {
+        _raw_response.append(buf, rd_out);
+        memset(buf, 0, CGI_PIPE_BUFFER_SIZE + 1);
+    }
+    if (rd_out == -1) {
+        throw StatusLine(500, REASON_500, std::string("CGI: read() - ") + strerror(errno));
+    }
 }
 
 void CGI::executeCGI()
@@ -303,9 +341,6 @@ void CGI::executeCGI()
             exit(EXECVE_FAIL);
         }
         if (execve(_args[0], _args, _envvar) < 0){
-	    std::cerr << _args[0] << "\n";
-	    std::cerr << _args[1] << "\n";
-	    std::cerr << _path_info << "\n";
             std::cerr << "[CGI error] execve(): " << strerror(errno) << "\n";
             exit(EXECVE_FAIL);
         }
@@ -315,29 +350,11 @@ void CGI::executeCGI()
     _fdOut[1] = -1;
 
     if (_req->get_method() == POST) {
-        if (write(_fdIN[1], _req->get_request_body().get_body().c_str(), _req->get_request_body().get_body().size()) < 0) {
-            throw StatusLine(500, REASON_500, "write failed in executeCGI method");
-	}
-	std::cerr << "{CALLING WRITE END}\n";
+	executeCGI_write();
     }
-//    size_t 
-//    while () {
-	
-//    }
     close_fdIN();
-    char buf[CGI_PIPE_BUFFER_SIZE + 1] = {0};
-    int rd_out;
-   
-    while ((rd_out = read(_fdOut[0], buf, CGI_PIPE_BUFFER_SIZE)) > 0)
-    {
-	std::cerr << "{CALLING READ}\n";
-        _raw_response.append(buf, rd_out);
-        memset(buf, 0, CGI_PIPE_BUFFER_SIZE + 1);
-    }
-    if (rd_out == -1) {
-        throw StatusLine(500, REASON_500, std::string("CGI: read() - ") + strerror(errno));
-    }
-    std::cerr << "{CALLING READ END}\n";
+    
+    executeCGI_read();
     close_fdOut();
 
     // Checking if execve correctly worked
@@ -347,8 +364,6 @@ void CGI::executeCGI()
     {
         throw StatusLine(500, REASON_500, "execve failed in executeCGI method");
     }
-    _raw_response.append(buf, rd_out);
-    std::cerr << "{EXITING executeCGI}\n";
 }
 
 std::string CGI::getHeaders(void) const {

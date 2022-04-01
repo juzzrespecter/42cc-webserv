@@ -11,6 +11,7 @@
 #include <errno.h>
 
 #define PWD_BUFFER 4095
+#define WR_BUFFR   4000
 
 // temp
 #ifndef TMP_def
@@ -63,11 +64,13 @@ private:
     void close_fdIN(void);
     void close_fdOut(void);
 
-    void set_env_variables(const std::string&/*, const std::string&*/);
+    void set_env_variables(const std::string&, const std::string&);
     void set_args(const std::string&, const std::string&);
     void set_path_info(const std::string&);
-//		void executeCGI();
 
+    void executeCGI_write(void);
+    void executeCGI_read(void);
+    
     void parse_normalize(void);
     void parse_response_headers(const std::string&);
     void parse_response_body(const std::string&);
