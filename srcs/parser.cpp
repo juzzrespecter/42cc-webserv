@@ -282,7 +282,7 @@ location_block_t   Parser::syntax_location_block(const std::string& uri) {
         }
     }
     if (!is_cbc(current())) {
-        throw std::runtime_error("Parser: unexpected syntax near token \'" + current().token + "\'");            
+        throw std::runtime_error("Parser: expected closing bracket at end of location block");            
     }
     next();
     return loc;
@@ -317,7 +317,7 @@ server_block_t    Parser::syntax_server_block(void) {
         }
     }
     if (empty() || !is_cbc(current())) {
-        throw std::runtime_error("Parser: syntax error near unexpected token \'" + current().token + "\'");
+        throw std::runtime_error("Parser: expected closing bracket at end of server block declaration");
     }
     next();
     vsrv.setup_default_directives();

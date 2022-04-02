@@ -159,6 +159,11 @@ void Response::execCgi(const std::string& realUri, const cgi_pair& cgiConfig)
     cgi.executeCGI();
     cgi.parse_response();
 
+    if (cgi.getStatusLine().getCode() == 400) {
+	_staLine = StatusLine(500, REASON_500, "CGI: received bad request");
+    } else {
+	_staLine = cgi.getStatusLine();
+    }
     fillStatusLine(_staLine);
     if (cgi.isHeaderDefined("Server") == false) {
 	fillServerHeader();
@@ -166,7 +171,8 @@ void Response::execCgi(const std::string& realUri, const cgi_pair& cgiConfig)
     if (cgi.isHeaderDefined("Date") == false) {
 	fillDateHeader();
     }
-    if (cgi.isHeaderDefined("Content-Length") == false && cgi.getBody().size()) {
+    if (!cgi.isHeaderDefined("Content-Length") &&
+	client_expects_body_in_response()) {
 	fillContentlengthHeader(convertNbToString(cgi.getBody().size()));
     }
     _buffer += cgi.getHeaders();
@@ -637,6 +643,13 @@ void Response::setUp100Continue(void)
     fillDateHeader();
 
     _buffer += CRLF;
+}
+
+bool Response::client_expects_body_in_response(void) const {
+    return (_staLine.getCode() >= 200) &&
+	(_staLine.getCode() != 204)    &&
+	(_staLine.getCode() != 304)    &&
+	(_req->get_method() != HEAD);
 }
 
 /* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */

@@ -81,11 +81,13 @@ void CGI::set_env_variables(void) {
     }
     if (remote_host != _req->get_headers().end()) {
 	_envvar[i++] = strdup(std::string("REMOTE_HOST=" + remote_host->second).c_str()); 
-    }    
+    } else {
+	_envvar[i++] = strdup("REMOTE_HOST=");
+    }
     _envvar[i++] = strdup(std::string("REQUEST_METHOD=" + request_method).c_str());
     _envvar[i++] = strdup(std::string("SCRIPT_NAME=" + _resource_path).c_str());
     _envvar[i++] = strdup(std::string("SCRIPT_FILENAME=" + _resource_path).c_str());
-    _envvar[i++] = strdup("SERVER_NAME=localhost");
+    _envvar[i++] = strdup("SERVER_NAME=172.0.0.1");
     _envvar[i++] = strdup("SERVER_PROTOCOL=HTTP/1.1");
     _envvar[i++] = strdup("SERVER_SOFTWARE=webserver/1.0");
     _envvar[i++] = strdup("REDIRECT_STATUS=200");
@@ -93,11 +95,11 @@ void CGI::set_env_variables(void) {
     if (http_cookie != _req->get_headers().end()) {
 	_envvar[i++] = strdup(std::string("HTTP_COOKIE=" + http_cookie->second).c_str());
     }
+    _envvar[i++] = strdup(std::string("REMOTE_ADDR=" + _req->get_client_addr()).c_str());
     _envvar[i] = NULL;
 
     /* path_info -> req_parser set _cgi_suffix
        path_translated ->true path from path_info
-       remote_addr ->getsockname(); n to str
        server_port -> _port in request when built
     */
 }
@@ -198,10 +200,6 @@ void CGI::parse_status_line(void) {
     std::map<std::string, std::string>::const_iterator lc(_header_map.find("Location"));
     std::map<std::string, std::string>::iterator st(_header_map.find("Status"));
 
-    if (lc != _header_map.end()) {
-        _status_line = StatusLine(302, REASON_302, "CGI: redirection");
-        return ;
-    }
     if (st != _header_map.end()) {
         std::stringstream status_ss(st->second);
         std::string code, reason;
@@ -217,16 +215,12 @@ void CGI::parse_status_line(void) {
         _status_line = StatusLine(static_cast<int>(status_code), reason.c_str(), "CGI-defined Status line");
         _header_map.erase(st);
     }
+    if (lc != _header_map.end()) {
+        _status_line = StatusLine(302, REASON_302, "CGI: redirection");
+        return ;
+    }
 }
 
-/*
- * encuentra separador headers & body
- * substr headers / body
- *  	headers: while (field ':' value NL)
- *	             comprueba sintaxis de la respuesta {al menos un CGIHeader, no repetidos}
- * 		body: si !body.empty() && !content-type -> 500
- *		      si content-length && !(body.size() == content-length) -> 500
- */
 void CGI::parse_response(void) {
     parse_normalize();
     size_t separator = _raw_response.find("\n\n");
@@ -252,7 +246,7 @@ CGI::CGI(Request *req, const std::string& uri, const cgi_pair& cgi_info) :
 
     // GET : QUERY_STRING + PATH_INFO 
     // POST : PATH_INFO + CONTENT_length 
-    if ((_envvar = new char*[12]) == NULL) {
+    if ((_envvar = new char*[13]) == NULL) {
         throw std::runtime_error("Error on a cgi malloc\n");
     }
     // ** Set args for execve **

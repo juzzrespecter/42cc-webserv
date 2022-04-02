@@ -23,8 +23,6 @@ RUN apt-get update \
     &&  mv wordpress/* /var/www/html/ \
     &&  chmod +x ./docker-entrypoint.sh
 
-COPY ["./config/docker.conf", "/var/www/webserv/config/webserver.conf"]
-
 EXPOSE 8080/tcp
 
 WORKDIR "/var/www/webserv/"

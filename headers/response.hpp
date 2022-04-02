@@ -144,6 +144,7 @@ private:
     std::string  getErrorPage(const StatusLine&);
 
     void setUp100Continue(void);
+    bool client_expects_body_in_response(void) const;
 public:
 	
     /* --------------- NON-MEMBER FUNCTION OVERLOADS --------------- */

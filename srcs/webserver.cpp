@@ -53,16 +53,18 @@ void    Webserver::nfds_down(int fd) {
 
 /* acepta nuevas conexiones de los sockets pasivos; no trata fallos en accept como críticos */
 void    Webserver::accept_new_connection(const Socket& passv) {
-    struct sockaddr_in addr_in;
-    socklen_t addr_len = sizeof(addr_in);
-
-    int new_conn = accept(passv.fd, reinterpret_cast<sa_t*>(&addr_in), &addr_len);
-    if (new_conn == -1) {
+    struct sockaddr_in client_addr;
+    socklen_t          client_addr_len = sizeof(client_addr);
+    int                client_fd = accept(passv.fd,
+					  reinterpret_cast<sa_t*>(&client_addr),
+					  &client_addr_len);
+    
+    if (client_fd == -1) {
         log ("accept(): ", strerror(errno));
         return ;
     }
-    fcntl(new_conn, F_SETFL, O_NONBLOCK);
-    read_v.push_back(Socket(new_conn, passv));
+    fcntl(client_fd, F_SETFL, O_NONBLOCK);
+    read_v.push_back(Socket(client_fd, passv, inet_ntoa(client_addr.sin_addr)));
     nfds_up(read_v.back().fd);
 }
 

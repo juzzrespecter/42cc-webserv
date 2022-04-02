@@ -25,11 +25,14 @@
 class Request {
 private:
     typedef bool (Request::*_req_options)(void);
+    
+    std::vector<const Server*> _serv_v;      /* vector de servidores con mismo socket */
+    std::string                _client_addr; /* dirección del cliente */
 
     std::string _buffer;		// Store the request received
     std::string _line;
         
-    std::vector<const Server*> _serv_v;
+
     
     size_t	_header_count;
 
@@ -43,11 +46,13 @@ private:
 
 public:
     Request(void);
-    Request(const std::vector<const Server*>&);
+    Request(const std::vector<const Server*>&, std::string);
     Request(const Request& c);
     ~Request();
     Request& operator=(Request a);
 
+    const std::string& get_client_addr(void) const;
+    
     const RequestLine& get_request_line(void) const;
     
     const header_map&          get_headers(void) const;

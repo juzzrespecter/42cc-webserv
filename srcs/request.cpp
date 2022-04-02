@@ -1,14 +1,37 @@
 #include "request.hpp"
 
-Request::Request() : 
-    _buffer(), _line(), _serv_v(), _header_count(0), _request_line(), _headers(), _body(), _stage(REQ_LINE) { }
+Request::Request() :
+    _serv_v(),
+    _client_addr(),
+    _buffer(),
+    _line(),
+    _header_count(0),
+    _request_line(),
+    _headers(),
+    _body(),
+    _stage(REQ_LINE) { }
 
-Request::Request(const std::vector<const Server*>& serv_v) :
-    _buffer(), _line(), _serv_v(serv_v), _header_count(0), _request_line(), _headers(), _body(), _stage(REQ_LINE) { }
+Request::Request(const std::vector<const Server*>& serv_v, std::string client_addr) :
+    _serv_v(serv_v),
+    _client_addr(client_addr),
+    _buffer(),
+    _line(),
+    _header_count(0),
+    _request_line(),
+    _headers(),
+    _body(),
+    _stage(REQ_LINE) { }
 
 Request::Request(const Request& c) :
-    _buffer(c._buffer), _line(c._line), _serv_v(c._serv_v), _header_count(c._header_count),
-    _request_line(c._request_line), _headers(c._headers), _body(c._body), _stage(c._stage) { }
+    _serv_v(c._serv_v),
+    _client_addr(c._client_addr),
+    _buffer(c._buffer),
+    _line(c._line),
+    _header_count(c._header_count),
+    _request_line(c._request_line),
+    _headers(c._headers),
+    _body(c._body),
+    _stage(c._stage) { }
 
 Request::~Request() { }
 
@@ -18,6 +41,10 @@ Request& Request::operator=(Request a) {
     }
     swap(*this, a);
     return *this;
+}
+
+const std::string& Request::get_client_addr(void) const {
+    return _client_addr;
 }
 
 const RequestLine& Request::get_request_line() const {
@@ -74,6 +101,7 @@ void swap(Request& a, Request& b) {
     swap(a._buffer, b._buffer);
     std::swap(a._line, b._line);
     std::swap(a._serv_v, b._serv_v);
+    std::swap(a._client_addr, b._client_addr);
     std::swap(a._header_count, b._header_count);
     swap(a._request_line, b._request_line);
     swap(a._headers, b._headers);
@@ -352,6 +380,7 @@ void Request::print(void) const {
 }
 
 void Request::clear(void) {
+    _client_addr.clear();
     _buffer.clear();
     _line.clear();
     _header_count = 0;

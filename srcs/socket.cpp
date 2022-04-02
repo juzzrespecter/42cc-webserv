@@ -6,8 +6,9 @@ Socket::Socket(const Socket& other) {
     *this = other;
 }
 
+/* Constructor para sockets pasivos: llamadas a socket(), bind(), listen() */
 Socket::Socket(const listen_directive_t& sock_addr) : _type(PASSV), _sock_addr(sock_addr) {
-    struct in_addr addr = { .s_addr = inet_addr(_sock_addr.addr.c_str()) };
+    struct in_addr     addr = { .s_addr = inet_addr(_sock_addr.addr.c_str()) };
     struct sockaddr_in sockaddr_s = {
         .sin_family = AF_INET,
         .sin_port = htons(_sock_addr.port),
@@ -32,9 +33,13 @@ Socket::Socket(const listen_directive_t& sock_addr) : _type(PASSV), _sock_addr(s
     }
 }
 
-Socket::Socket(int conn_fd, const Socket& passv_socket) : 
-    _type(ACTV), _sock_addr(passv_socket._sock_addr), _serv_v(passv_socket._serv_v), _req(_serv_v), fd(conn_fd) { 
-}
+/* Constructor para sockets activos (comunicación con cliente */
+Socket::Socket(int client_fd, const Socket& passv_socket, std::string client_addr) : 
+    _type(ACTV),
+    _sock_addr(passv_socket._sock_addr),
+    _serv_v(passv_socket._serv_v),
+    _req(_serv_v, client_addr),
+    fd(client_fd) { }
 
 Socket::~Socket() { }
 
@@ -51,16 +56,16 @@ Socket& Socket::operator=(const Socket& other) {
     return *this;
 }
 
-const listen_directive_t& Socket::get_socket_addr(void) const {
-    return _sock_addr;
-}
-
 void Socket::build_request(const char buffer[], int buffer_size) {
      _req.recv_buffer(buffer, buffer_size);
 }
 
 void Socket::build_response(const StatusLine& sl) {
      _resp.fillBuffer(&_req, _req.get_location(), sl);
+}
+
+const listen_directive_t& Socket::get_socket_addr(void) const {
+    return _sock_addr;
 }
 
 std::string Socket::get_response_string(void) const {
@@ -75,16 +80,17 @@ bool Socket::is_passv(void) const {
     return _type == PASSV;
 }
 
+/* Comprueba si el servidor debe cerrar conexión con el cliente tras mandar respuesta */
 bool Socket::marked_for_closing(void) const {
-    /* case Connection header set to close */
+    /* caso Connection-header == close */
     if (_resp.getEndConn()) {
         return true;
     }
-    /* case error response (4xx / 5xx) */
+    /* caso error response (4xx / 5xx) */
     if (_resp.getCode() >= 400) {
         return true;
     }
-	return false;
+    return false;
 }
 
 void Socket::close_socket(void) const {
