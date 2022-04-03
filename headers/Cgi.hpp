@@ -10,14 +10,13 @@
 #include <sys/wait.h>
 #include <errno.h>
 
-#define PWD_BUFFER 4095
-#define WR_BUFFR   4000
+#define N_ENV_HEADER     9
+#define N_ENV_VAR        18
+#define S_BUFFR_WR       4000
+#define S_BUFFR_CGI_PIPE 4000
+#define S_BUFFR_PWD      4095
 
-// temp
-#ifndef TMP_def
-# define EXECVE_FAIL EXIT_FAILURE 
-# define CGI_PIPE_BUFFER_SIZE 4000
-#endif
+#define EXECVE_FAIL EXIT_FAILURE 
 
 class CGI
 {

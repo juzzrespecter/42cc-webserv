@@ -58,47 +58,52 @@ void CGI::close_fdOut(void) {
 }
 
 void CGI::set_env_variables(void) {
-    size_t i = 0;
     std::string request_method = (_req->get_method() == GET) ? "GET" : "POST";
+    std::string _header_env[N_ENV_HEADER] = {
+      "Content-Type",   "Host",            "Accept",
+      "Accept-Charset", "Accept-Encoding", "Accept-Language",
+      "Connection",     "User-Agent",      "Cookie"
+    };
+    std::string _var_env[N_ENV_HEADER] = {
+      "CONTENT_TYPE",        "HTTP_HOST",            "HTTP_ACCEPT",
+      "HTTP_ACCEPT_CHARSET", "HTTP_ACCEPT_ENCODING", "HTTP_ACCEPT_LANGUAGE",
+      "HTTP_CONNECTION",     "HTTP_USER_AGENT",      "HTTP_COOKIE"
+    };
+    header_map::const_iterator header_request;
+    size_t i = 0;
     
-    header_map::const_iterator content_type = _req->get_headers("Content-Type");
-    header_map::const_iterator remote_host = _req->get_headers("Host");
-    header_map::const_iterator http_cookie = _req->get_headers("Cookie");   
-    
+    for (size_t cont = 0; cont < N_ENV_HEADER; cont++) {
+      header_request = _req->get_headers(_header_env[cont]);
+      if (header_request != _req->get_headers().end()) {
+	_envvar[i++] = strdup((_var_env[cont] + "=" + header_request->second).c_str());
+      }
+    }
+   
     if (_req->get_method() == POST && !_req->get_body_string().empty()) {
 	std::stringstream content_length;
 
 	content_length << _req->get_body_size();
 	_envvar[i++] = strdup(std::string("CONTENT_LENGTH=" + content_length.str()).c_str());
     }
-    if (content_type != _req->get_headers().end()) {
-	_envvar[i++] = strdup(std::string("CONTENT_TYPE=" + content_type->second).c_str());
-    }
-    _envvar[i++] = strdup("GATEWAY_INTERFACE=CGI/1.1");
     if (_req->get_method() == GET && !_req->get_query().empty()) {
 	_envvar[i++] = strdup(std::string("QUERY_STRING=" + _req->get_query()).c_str());
 	_envvar[i++] = strdup("CONTENT_TYPE=text/html");
     }
-    if (remote_host != _req->get_headers().end()) {
-	_envvar[i++] = strdup(std::string("REMOTE_HOST=" + remote_host->second).c_str()); 
-    } else {
-	_envvar[i++] = strdup("REMOTE_HOST=");
-    }
+    _envvar[i++] = strdup("GATEWAY_INTERFACE=CGI/1.1");
     _envvar[i++] = strdup(std::string("REQUEST_METHOD=" + request_method).c_str());
     _envvar[i++] = strdup(std::string("SCRIPT_NAME=" + _resource_path).c_str());
     _envvar[i++] = strdup(std::string("SCRIPT_FILENAME=" + _resource_path).c_str());
     _envvar[i++] = strdup("SERVER_NAME=172.0.0.1");
     _envvar[i++] = strdup("SERVER_PROTOCOL=HTTP/1.1");
-    _envvar[i++] = strdup("SERVER_SOFTWARE=webserver/1.0");
+    _envvar[i++] = strdup("SERVER_SOFTWARE=webserv");
     _envvar[i++] = strdup("REDIRECT_STATUS=200");
 
-    if (http_cookie != _req->get_headers().end()) {
-	_envvar[i++] = strdup(std::string("HTTP_COOKIE=" + http_cookie->second).c_str());
-    }
+    std::cerr << "{remote address} " << _req->get_client_addr() << "\n";
     _envvar[i++] = strdup(std::string("REMOTE_ADDR=" + _req->get_client_addr()).c_str());
     _envvar[i] = NULL;
 
-    /* path_info -> req_parser set _cgi_suffix
+    std::cerr << "[debug] client_addr: " << _req->get_client_addr() << "\n";
+   /* path_info -> req_parser set _cgi_suffix
        path_translated ->true path from path_info
        server_port -> _port in request when built
     */
@@ -246,7 +251,7 @@ CGI::CGI(Request *req, const std::string& uri, const cgi_pair& cgi_info) :
 
     // GET : QUERY_STRING + PATH_INFO 
     // POST : PATH_INFO + CONTENT_length 
-    if ((_envvar = new char*[13]) == NULL) {
+    if ((_envvar = new char*[N_ENV_VAR]) == NULL) {
         throw std::runtime_error("Error on a cgi malloc\n");
     }
     // ** Set args for execve **
@@ -255,8 +260,8 @@ CGI::CGI(Request *req, const std::string& uri, const cgi_pair& cgi_info) :
     }
 
     /* llamada a getcwd: cambio de malloc a reservar memoria en stack por problemas de fugas de memoria */
-    char cwd[PWD_BUFFER];
-    if (getcwd(cwd, PWD_BUFFER) == NULL) {
+    char cwd[S_BUFFR_PWD];
+    if (getcwd(cwd, S_BUFFR_PWD) == NULL) {
         throw std::runtime_error("CGI: getcwd() call failure");
     }
     _resource_path = set_resource_path(uri, cwd);
@@ -288,7 +293,7 @@ void CGI::executeCGI_write(void) {
     size_t      wr_buff_size = _req->get_body_size();
 
     while (wr_buff_size > 0) {
-	size_t wr_call_size = (wr_buff_size > WR_BUFFR) ? WR_BUFFR : wr_buff_size;
+	size_t wr_call_size = (wr_buff_size > S_BUFFR_WR) ? S_BUFFR_WR : wr_buff_size;
 
 	if (write(_fdIN[1], wr_buff.c_str(), wr_call_size) < 0) {
 	    throw StatusLine(500, REASON_500, std::string("CGI: write() - ") + strerror(errno));
@@ -299,13 +304,13 @@ void CGI::executeCGI_write(void) {
 }
 
 void CGI::executeCGI_read(void) {
-    char buf[CGI_PIPE_BUFFER_SIZE + 1] = {0};
+    char buf[S_BUFFR_CGI_PIPE + 1] = {0};
     int rd_out;
    
-    while ((rd_out = read(_fdOut[0], buf, CGI_PIPE_BUFFER_SIZE)) > 0)
+    while ((rd_out = read(_fdOut[0], buf, S_BUFFR_CGI_PIPE)) > 0)
     {
         _raw_response.append(buf, rd_out);
-        memset(buf, 0, CGI_PIPE_BUFFER_SIZE + 1);
+        memset(buf, 0, S_BUFFR_CGI_PIPE + 1);
     }
     if (rd_out == -1) {
         throw StatusLine(500, REASON_500, std::string("CGI: read() - ") + strerror(errno));
