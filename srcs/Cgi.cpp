@@ -60,23 +60,23 @@ void CGI::close_fdOut(void) {
 void CGI::set_env_variables(void) {
     std::string request_method = (_req->get_method() == GET) ? "GET" : "POST";
     std::string _header_env[N_ENV_HEADER] = {
-      "Content-Type",   "Host",            "Accept",
-      "Accept-Charset", "Accept-Encoding", "Accept-Language",
-      "Connection",     "User-Agent",      "Cookie"
+	"Content-Type",   "Host",            "Accept",
+	"Accept-Charset", "Accept-Encoding", "Accept-Language",
+	"Connection",     "User-Agent",      "Cookie"
     };
     std::string _var_env[N_ENV_HEADER] = {
-      "CONTENT_TYPE",        "HTTP_HOST",            "HTTP_ACCEPT",
-      "HTTP_ACCEPT_CHARSET", "HTTP_ACCEPT_ENCODING", "HTTP_ACCEPT_LANGUAGE",
-      "HTTP_CONNECTION",     "HTTP_USER_AGENT",      "HTTP_COOKIE"
+	"CONTENT_TYPE",        "HTTP_HOST",            "HTTP_ACCEPT",
+	"HTTP_ACCEPT_CHARSET", "HTTP_ACCEPT_ENCODING", "HTTP_ACCEPT_LANGUAGE",
+	"HTTP_CONNECTION",     "HTTP_USER_AGENT",      "HTTP_COOKIE"
     };
     header_map::const_iterator header_request;
     size_t i = 0;
     
     for (size_t cont = 0; cont < N_ENV_HEADER; cont++) {
-      header_request = _req->get_headers(_header_env[cont]);
-      if (header_request != _req->get_headers().end()) {
-	_envvar[i++] = strdup((_var_env[cont] + "=" + header_request->second).c_str());
-      }
+	header_request = _req->get_headers(_header_env[cont]);
+	if (header_request != _req->get_headers().end()) {
+	    _envvar[i++] = strdup((_var_env[cont] + "=" + header_request->second).c_str());
+	}
     }
    
     if (_req->get_method() == POST && !_req->get_body_string().empty()) {
@@ -91,19 +91,20 @@ void CGI::set_env_variables(void) {
     }
     _envvar[i++] = strdup("GATEWAY_INTERFACE=CGI/1.1");
     _envvar[i++] = strdup(std::string("REQUEST_METHOD=" + request_method).c_str());
-    _envvar[i++] = strdup(std::string("SCRIPT_NAME=" + _resource_path).c_str());
+    _envvar[i++] = strdup(std::string("SCRIPT_NAME=" + _req->get_request_line().get_path()).c_str());
     _envvar[i++] = strdup(std::string("SCRIPT_FILENAME=" + _resource_path).c_str());
     _envvar[i++] = strdup("SERVER_NAME=172.0.0.1");
     _envvar[i++] = strdup("SERVER_PROTOCOL=HTTP/1.1");
     _envvar[i++] = strdup("SERVER_SOFTWARE=webserv");
     _envvar[i++] = strdup("REDIRECT_STATUS=200");
 
-    std::cerr << "{remote address} " << _req->get_client_addr() << "\n";
     _envvar[i++] = strdup(std::string("REMOTE_ADDR=" + _req->get_client_addr()).c_str());
     _envvar[i] = NULL;
 
-    std::cerr << "[debug] client_addr: " << _req->get_client_addr() << "\n";
-   /* path_info -> req_parser set _cgi_suffix
+    std::cerr << "[buenas tardes] : " \
+	      << _resource_path << ", "\
+	      << _req->get_request_line().get_path() << "\n";
+    /* path_info -> req_parser set _cgi_suffix
        path_translated ->true path from path_info
        server_port -> _port in request when built
     */
