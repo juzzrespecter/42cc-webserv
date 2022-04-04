@@ -579,8 +579,8 @@ void Response::fillContentTypeHeader(const std::string& fileExt) {
     const std::string audio_subtype[1] = {"mpeg"};
     const std::string audio_fileext[1] = {"mp3"};
 
-    const std::string image_subtype[5] = {"gif", "jpeg", "jpeg", "png", "tiff"};
-    const std::string image_fileext[5] = {"gif", "jpg",  "jpeg", "png", "tiff"};
+    const std::string image_subtype[6] = {"gif", "jpeg", "jpeg", "png", "tiff", "svg+xml"};
+    const std::string image_fileext[6] = {"gif", "jpg",  "jpeg", "png", "tiff", "svg"};
 
     const std::string text_subtype[5] = {"css", "csv", "html", "plain", "xml"};
     const std::string text_fileext[5] = {"css", "csv", "html", "txt",   "xml"};
@@ -591,7 +591,7 @@ void Response::fillContentTypeHeader(const std::string& fileExt) {
     const std::string* subtype_arr[5] = {appl_subtype, audio_subtype, image_subtype, text_subtype, video_subtype};
     const std::string* fileext_arr[5] = {appl_fileext, audio_fileext, image_fileext, text_fileext, video_fileext};
 
-    int subtype_id[5] = {1, 1, 5, 5, 5};
+    int subtype_id[5] = {1, 1, 6, 5, 5};
 
     for (int i = 0; i < 5; i++) {
 	for (int j = 0; j < subtype_id[i]; j++) {
