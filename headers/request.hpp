@@ -11,7 +11,7 @@
 #include "msg_format/RequestLine.hpp"
 #include "msg_format/Body.hpp"
 
-#define HEADER_LIST_SIZE 37
+#define HEADER_LIST_SIZE 41
 
 #define REQ_LINE 0
 #define HEADER 1
@@ -25,9 +25,11 @@
 class Request {
 private:
     typedef bool (Request::*_req_options)(void);
-    
-    std::vector<const Server*> _serv_v;      /* vector de servidores con mismo socket */
-    std::string                _client_addr; /* dirección del cliente */
+
+    /* información sobre el servidor que tramita la petición */
+    server_vector _serv_v;      /* vector de servidores con mismo socket */
+    std::string   _client_addr; /* dirección del cliente */
+    int           _server_port; /* port del servidor */
 
     std::string _buffer;		// Store the request received
     std::string _line;
@@ -46,13 +48,13 @@ private:
 
 public:
     Request(void);
-    Request(const std::vector<const Server*>&, std::string);
+    Request(const server_vector&, std::string, int);
     Request(const Request& c);
     ~Request();
     Request& operator=(Request a);
 
     const std::string& get_client_addr(void) const;
-    
+    int                get_server_port(void) const;
     const RequestLine& get_request_line(void) const;
     
     const header_map&          get_headers(void) const;

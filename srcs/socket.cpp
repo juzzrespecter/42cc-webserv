@@ -33,12 +33,12 @@ Socket::Socket(const listen_directive_t& sock_addr) : _type(PASSV), _sock_addr(s
     }
 }
 
-/* Constructor para sockets activos (comunicación con cliente */
+/* Constructor para sockets activos (comunicación con cliente) */
 Socket::Socket(int client_fd, const Socket& passv_socket, std::string client_addr) : 
     _type(ACTV),
     _sock_addr(passv_socket._sock_addr),
     _serv_v(passv_socket._serv_v),
-    _req(_serv_v, client_addr),
+    _req(_serv_v, client_addr, passv_socket.get_socket_addr().port),
     fd(client_fd) { }
 
 Socket::~Socket() { }

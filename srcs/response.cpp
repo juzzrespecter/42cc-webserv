@@ -96,6 +96,9 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
     setLocation(loc);
     setStatusLine(sl);
 
+    std::cerr << "[response]\n";
+    std::cerr << "\t path: " << _req->get_path() << "\n";
+    std::cerr << "\t quer: " << _req->get_query() << "\n";
     if (_staLine.getCode() == 100)
     {
 	return setUp100Continue();
@@ -142,6 +145,7 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
     {
 	fillError(errorStaLine);
     }
+    std::cerr << "[response] sent " << getCode() << "\n";
 }
 
 
@@ -173,7 +177,7 @@ void Response::execCgi(const std::string& realUri, const cgi_pair& cgiConfig)
     }
     if (!cgi.isHeaderDefined("Content-Length") &&
 	client_expects_body_in_response()) {
-	fillContentlengthHeader(convertNbToString(cgi.getBody().size()));
+	fillContentlengthHeader(n_to_str(cgi.getBody().size()));
     }
     _buffer += cgi.getHeaders();
     if (_req->get_method() != HEAD) {
@@ -233,9 +237,9 @@ void Response::fillLastModifiedHeader(const char* uri)
     const std::string day[7] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
     const std::string mon[12] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
-    _buffer += "Last-Modified: " + day[lm->tm_wday] + ", " + convertNbToString(lm->tm_mday) + " " + mon[lm->tm_mon] + " " 
-	+ convertNbToString(lm->tm_year + 1900) + " " + convertNbToString(lm->tm_hour) + ":" + 
-	convertNbToString(lm->tm_min) + ":" + convertNbToString(lm->tm_sec) + " GMT" + CRLF;
+    _buffer += "Last-Modified: " + day[lm->tm_wday] + ", " + n_to_str(lm->tm_mday) + " " + mon[lm->tm_mon] + " " 
+	+ n_to_str(lm->tm_year + 1900) + " " + n_to_str(lm->tm_hour) + ":" + 
+	n_to_str(lm->tm_min) + ":" + n_to_str(lm->tm_sec) + " GMT" + CRLF;
 }
 
 void Response::fillLocationHeader(const std::string& redirectedUri)
@@ -245,7 +249,7 @@ void Response::fillLocationHeader(const std::string& redirectedUri)
 
 void Response::fillStatusLine(const StatusLine& staLine)
 {
-    _buffer = "HTTP/1.1 " + convertNbToString(staLine.getCode()) + " " + staLine.getReason();
+    _buffer = "HTTP/1.1 " + n_to_str(staLine.getCode()) + " " + staLine.getReason();
     if (!staLine.getAdditionalInfo().empty())
 	_buffer += " (" + staLine.getAdditionalInfo() + ")";
     _buffer += CRLF;
@@ -384,7 +388,7 @@ void Response::fillError(const StatusLine& sta)
     fillContentTypeHeader();
 
     if (_req->get_method() != HEAD) {
-	fillContentlengthHeader(convertNbToString(error_file.size()));
+	fillContentlengthHeader(n_to_str(error_file.size()));
 	_buffer += CRLF + error_file;
     } else {
 	_buffer += CRLF;
@@ -411,7 +415,7 @@ void Response::execGet(const std::string& realUri)
     if (!isResourceAFile(realUri)) {
 	FileParser body(realUri.c_str(), true); // CAHNGER
 
-	fillContentlengthHeader(convertNbToString(body.getRequestFileSize()));
+	fillContentlengthHeader(n_to_str(body.getRequestFileSize()));
 	fillLastModifiedHeader(realUri.c_str());
 
 	// For GET, writing the body previously stored to the buffer
@@ -425,7 +429,7 @@ void Response::execGet(const std::string& realUri)
 	std::string autoIndexPage;
 	autoIndexDisplayer(realUri, autoIndexPage);
 	fillContentTypeHeader();
-	fillContentlengthHeader(convertNbToString(autoIndexPage.size()));
+	fillContentlengthHeader(n_to_str(autoIndexPage.size()));
 	_buffer += CRLF + autoIndexPage;
 	return ;
     }
@@ -460,7 +464,7 @@ void Response::execPut(const std::string& realUri)
     if (_staLine.getCode() == 201) 
     {
 	fillLocationHeader(realUri);
-	fillContentlengthHeader(convertNbToString(_req->get_request_body().get_body().size()));
+	fillContentlengthHeader(n_to_str(_req->get_request_body().get_body().size()));
 	_buffer += CRLF + _req->get_request_body().get_body();
     } 
     else
@@ -511,7 +515,7 @@ void Response::autoIndexDisplayer(const std::string& realUri, std::string& autoI
 	timeStamp.erase(--timeStamp.end());
 	std::string fileName = (it->size() > 10) ? it->substr(0, 15) + "." : *it;
 	std::string spaceFirst = std::string("                    ").substr(fileName.size());
-	std::string fileSize = convertNbToString(info.st_size);
+	std::string fileSize = n_to_str(info.st_size);
 	std::string spaceSecond = std::string("          ").substr(fileSize.size());
 
 	autoIndexPage.append("<li><a href=\"" + *it + "\">" + fileName + "</a>" 

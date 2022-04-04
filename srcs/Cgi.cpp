@@ -1,17 +1,26 @@
 #include "Cgi.hpp"
 
+/* 
+ * setea el directorio raíz donde trabaja el CGI:
+ * comprueba si root está configurado como absoluto 
+ */
+std::string CGI::set_document_root(const Location& loc, const std::string& cwd) {
+    return (!loc.get_root().empty() && loc.get_root().at(0) != '/') ?
+	cwd + "/" + loc.get_root() :
+	loc.get_root();
+}
+
 std::string CGI::set_resource_path(const std::string& uri, const std::string& cwd) {
     /* comprueba si la ruta al recurso tiene una raíz absoluta */
     if (!uri.empty() && uri.at(0) == '/') {
 	return uri;
     }
-
     /* monta ruta relativa */
     std::string abs_path(std::string(cwd) + "/" + uri);
     return abs_path;
 }
 
-std::string CGI::set_cgi_path(const std::string& cgi_path, const std::string& cwd, const Location& loc)
+std::string CGI::set_cgi_path(const std::string& cgi_path)
 {
     std::string abs_path;
 
@@ -19,14 +28,8 @@ std::string CGI::set_cgi_path(const std::string& cgi_path, const std::string& cw
     if (!cgi_path.empty() && cgi_path.at(0) == '/') {
 	return cgi_path;
     }
-
-    /* comprueba si root está configurado como absoluto */
-    if (loc.get_root().at(0) != '/') {
-	abs_path.append(cwd + '/' + loc.get_root());
-    } else {
-	abs_path.append(loc.get_root());
-    }
-
+    /* ruta relativa: construimos con la raíz */
+    abs_path.append(_document_root);
     if (abs_path.at(abs_path.size() - 1) != '/') {
 	abs_path.push_back('/');
     }
@@ -62,12 +65,16 @@ void CGI::set_env_variables(void) {
     std::string _header_env[N_ENV_HEADER] = {
 	"Content-Type",   "Host",            "Accept",
 	"Accept-Charset", "Accept-Encoding", "Accept-Language",
-	"Connection",     "User-Agent",      "Cookie"
+	"Connection",     "User-Agent",      "Cookie",
+	"Sec-Fetch-User", "Sec-Fetch-Site",  "Sec-Fetch-Dest",
+	"Sec-Fetch-Mode", "Cache-Control",   "Pragma"
     };
     std::string _var_env[N_ENV_HEADER] = {
 	"CONTENT_TYPE",        "HTTP_HOST",            "HTTP_ACCEPT",
 	"HTTP_ACCEPT_CHARSET", "HTTP_ACCEPT_ENCODING", "HTTP_ACCEPT_LANGUAGE",
-	"HTTP_CONNECTION",     "HTTP_USER_AGENT",      "HTTP_COOKIE"
+	"HTTP_CONNECTION",     "HTTP_USER_AGENT",      "HTTP_COOKIE",
+	"HTTP_SEC_FETCH_USER", "HTTP_SEC_FETCH_SIZE",  "HTTP_SEC_FETCH_DEST",
+	"HTTP_SEC_FECTH_MODE", "HTTP_CACHE_CONTROL",   "HTTP_PRAGMA"
     };
     header_map::const_iterator header_request;
     size_t i = 0;
@@ -91,7 +98,7 @@ void CGI::set_env_variables(void) {
     }
     _envvar[i++] = strdup("GATEWAY_INTERFACE=CGI/1.1");
     _envvar[i++] = strdup(std::string("REQUEST_METHOD=" + request_method).c_str());
-    _envvar[i++] = strdup(std::string("SCRIPT_NAME=" + _req->get_request_line().get_path()).c_str());
+    _envvar[i++] = strdup(std::string("SCRIPT_NAME=" + _req->get_path()).c_str());
     _envvar[i++] = strdup(std::string("SCRIPT_FILENAME=" + _resource_path).c_str());
     _envvar[i++] = strdup("SERVER_NAME=172.0.0.1");
     _envvar[i++] = strdup("SERVER_PROTOCOL=HTTP/1.1");
@@ -99,6 +106,11 @@ void CGI::set_env_variables(void) {
     _envvar[i++] = strdup("REDIRECT_STATUS=200");
 
     _envvar[i++] = strdup(std::string("REMOTE_ADDR=" + _req->get_client_addr()).c_str());
+    _envvar[i++] = strdup(std::string("SERVER_PORT=" + n_to_str(_req->get_server_port())).c_str());
+    _envvar[i++] = strdup(std::string("DOCUMENT_ROOT=" + _document_root).c_str());
+    _envvar[i++] = strdup(std::string("REQUEST_URI=" + \
+				      _req->get_path() + \
+				      _req->get_query()).c_str());
     _envvar[i] = NULL;
 
     /* path_info -> req_parser set _cgi_suffix
@@ -262,8 +274,9 @@ CGI::CGI(Request *req, const std::string& uri, const cgi_pair& cgi_info) :
     if (getcwd(cwd, S_BUFFR_PWD) == NULL) {
         throw std::runtime_error("CGI: getcwd() call failure");
     }
+    _document_root = set_document_root(_req->get_location(), cwd);
     _resource_path = set_resource_path(uri, cwd);
-    _cgi_path = set_cgi_path(cgi_info.second, cwd, _req->get_location());
+    _cgi_path = set_cgi_path(cgi_info.second);
     _path_info = set_path_info();
 
     set_args();
@@ -362,6 +375,7 @@ void CGI::executeCGI()
     {
         throw StatusLine(500, REASON_500, "execve failed in executeCGI method");
     }
+    std::cerr << "[CGI] " << getHeaders() << "\n";
 }
 
 std::string CGI::getHeaders(void) const {

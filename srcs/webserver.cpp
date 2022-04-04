@@ -89,7 +89,7 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
     try {
         conn_socket.build_request(req_buff, socket_rd_stat);
     } catch (StatusLine& sl) {
-	log("request: ", convertNbToString(sl.getCode()) + " " + sl.getReason() + " - " + sl.getAdditionalInfo());
+	log("request: ", n_to_str(sl.getCode()) + " " + sl.getReason() + " - " + sl.getAdditionalInfo());
         conn_socket.build_response(sl);
         return CONTINUE;
     }

@@ -22,7 +22,7 @@ enum methods { GET, HEAD, POST, DELETE, PUT };
 #define REQ_MAX_SIZE 65536
 
 template<class T>
-std::string convertNbToString(T nb) 
+std::string n_to_str(T nb) 
 {
     std::string nbString;
     std::stringstream nbStream;

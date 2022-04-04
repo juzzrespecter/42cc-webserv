@@ -39,6 +39,8 @@ class Server {
         bool operator!=(const Server&) const;
 };
 
+typedef std::vector<const Server*> server_vector;
+
 class find_server_by_host {
     public:
         find_server_by_host(const std::string&);

@@ -10,8 +10,8 @@
 #include <sys/wait.h>
 #include <errno.h>
 
-#define N_ENV_HEADER     9
-#define N_ENV_VAR        19
+#define N_ENV_HEADER     15
+#define N_ENV_VAR        28
 #define S_BUFFR_WR       4000
 #define S_BUFFR_CGI_PIPE 4000
 #define S_BUFFR_PWD      4095
@@ -30,6 +30,7 @@ private:
     int _fdOut[2];
 
     std::string _resource_path;
+    std::string _document_root;
     std::string _cgi_path;
     std::string _path_info;
     std::string _raw_response;
@@ -77,8 +78,9 @@ private:
     void parse_response_body(const std::string&);
     void parse_status_line(void);
 
+    std::string set_document_root(const Location&, const std::string&);
     std::string set_resource_path(const std::string&, const std::string&);
-    std::string set_cgi_path(const std::string&, const std::string&, const Location&);
+    std::string set_cgi_path(const std::string&);
     std::string set_path_info(void);
     
     void mySwap(CGI &, CGI &);

@@ -15,9 +15,10 @@ typedef struct sockaddr sa_t;
 
 class Socket {
 private:
-    socket_mode_f _type;                /* tipo de socket: pasivo o activo */
+    socket_mode_f      _type;                /* tipo de socket: pasivo o activo */
     listen_directive_t _sock_addr;      /* dirección y puerto en los qu e el socket escucha */
-    std::vector<const Server*> _serv_v; /* vector de servidores que comparten el mismo socket */
+    server_vector      _serv_v; /* vector de servidores que comparten el mismo socket */
+    
     Request  _req;
     Response _resp;
 

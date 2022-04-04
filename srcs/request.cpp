@@ -3,6 +3,7 @@
 Request::Request() :
     _serv_v(),
     _client_addr(),
+    _server_port(),
     _buffer(),
     _line(),
     _header_count(0),
@@ -11,9 +12,11 @@ Request::Request() :
     _body(),
     _stage(REQ_LINE) { }
 
-Request::Request(const std::vector<const Server*>& serv_v, std::string client_addr) :
+/* Constructor con información sobre la conexión de la petición */
+Request::Request(const server_vector& serv_v, std::string client_addr, int server_port) :
     _serv_v(serv_v),
     _client_addr(client_addr),
+    _server_port(server_port),
     _buffer(),
     _line(),
     _header_count(0),
@@ -25,6 +28,7 @@ Request::Request(const std::vector<const Server*>& serv_v, std::string client_ad
 Request::Request(const Request& c) :
     _serv_v(c._serv_v),
     _client_addr(c._client_addr),
+    _server_port(c._server_port),
     _buffer(c._buffer),
     _line(c._line),
     _header_count(c._header_count),
@@ -45,6 +49,10 @@ Request& Request::operator=(Request a) {
 
 const std::string& Request::get_client_addr(void) const {
     return _client_addr;
+}
+
+int Request::get_server_port(void) const {
+    return _server_port;
 }
 
 const RequestLine& Request::get_request_line() const {
@@ -82,7 +90,7 @@ const std::string& Request::get_query() const {
 }
 
 const Location& Request::get_location(void) const {
-    std::vector<const Server*>::const_iterator it = \
+    server_vector::const_iterator it = \
         std::find_if(_serv_v.begin(), _serv_v.end(), find_server_by_host(host()));
     const Server* server_host = (it == _serv_v.end()) ? _serv_v.front() : *it;
 
@@ -102,6 +110,7 @@ void swap(Request& a, Request& b) {
     std::swap(a._line, b._line);
     std::swap(a._serv_v, b._serv_v);
     std::swap(a._client_addr, b._client_addr);
+    std::swap(a._server_port, b._server_port);
     std::swap(a._header_count, b._header_count);
     swap(a._request_line, b._request_line);
     swap(a._headers, b._headers);
@@ -126,7 +135,7 @@ void    Request::recv_buffer(const char new_buffer[], int size) {
 	still_parsing = (this->*req_table[_stage])();
     }
     if (_stage == READY) {
-	throw StatusLine(200, REASON_200, "request received successfully");
+	throw StatusLine(200, REASON_200, "request received successfully: " + get_path());
     }
 }
 
@@ -381,6 +390,7 @@ void Request::print(void) const {
 
 void Request::clear(void) {
     _client_addr.clear();
+    _server_port = 0;
     _buffer.clear();
     _line.clear();
     _header_count = 0;
@@ -418,5 +428,6 @@ const std::string Request::_header_list[HEADER_LIST_SIZE] = {
     "Max-Forwards",     "Origin",          "Pragma",                        "Proxy-Authorization",
     "Range",            "Referer",         "TE",                            "Trailer",
     "Transfer-Encoding","User-Agent",      "Upgrade",                       "Via",
-    "Warning"
+    "Warning",          "Sec-Fetch-User",  "Sec-Fetch-Site",                "Sec-Fetch-Mode",
+    "Sec-Fetch-Dest"
 };
