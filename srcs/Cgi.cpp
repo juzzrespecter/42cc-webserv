@@ -101,9 +101,6 @@ void CGI::set_env_variables(void) {
     _envvar[i++] = strdup(std::string("REMOTE_ADDR=" + _req->get_client_addr()).c_str());
     _envvar[i] = NULL;
 
-    std::cerr << "[buenas tardes] : " \
-	      << _resource_path << ", "\
-	      << _req->get_request_line().get_path() << "\n";
     /* path_info -> req_parser set _cgi_suffix
        path_translated ->true path from path_info
        server_port -> _port in request when built
@@ -342,7 +339,7 @@ void CGI::executeCGI()
             exit(EXECVE_FAIL);
         }
         if (execve(_args[0], _args, _envvar) < 0) {
-	    std::cerr << _path_info << ", " << _resource_path << ", " << _cgi_path << "\n";            std::cerr << "[CGI error] execve(): " << strerror(errno) << "\n";
+            std::cerr << "[CGI error] execve(): " << strerror(errno) << "\n";
             exit(EXECVE_FAIL);
         }
 

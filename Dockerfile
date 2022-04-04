@@ -1,6 +1,9 @@
 FROM debian:buster
 
 ENV SERVER_PATH="/var/www/webserv/"
+ENV DB_NAME="wp_database"
+ENV DB_USER="wp_user"
+ENV DB_PASSWORD="wp_passwd"
 
 ADD [".", "/var/www/webserv/"]
 
@@ -19,8 +22,12 @@ RUN apt-get update \
     &&  cd /tmp \               
     &&  wget -c https://www.wordpress.org/latest.tar.gz \
     &&  tar -xvf latest.tar.gz \
-    &&  mkdir /var/www/html \
-    &&  mv wordpress/* /var/www/html/ \
+    &&  mkdir -v /var/www/html \
+    &&  mv -v wordpress/* /var/www/html/ \
+    &&  mv /var/www/html/wp-config-sample.php      /var/www/html/wp-config.php \
+    &&  sed -i -e "s/database_name_here/$DB_NAME/" /var/www/html/wp-config.php \
+    	       -e "s/username_here/$DB_USER/"      /var/www/html/wp-config.php \
+    	       -e "s/password_here/$DB_PASSWORD/"  /var/www/html/wp-config.php \
     &&  chmod +x ./docker-entrypoint.sh
 
 EXPOSE 8080/tcp

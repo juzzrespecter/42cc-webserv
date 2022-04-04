@@ -3,8 +3,8 @@
 # mariaDB configuration setup
 service mysql start
 mysql -u root <<EOF
-CREATE DATABASE wp_database;
-GRANT ALL ON wp_database.* TO 'wp_user'@'localhost' IDENTIFIED BY 'wp_passwd';
+CREATE DATABASE $DB_NAME;
+GRANT ALL ON $DB_NAME.* TO '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASSWORD';
 FLUSH PRIVILEGES;
 EOF
 

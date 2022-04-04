@@ -561,7 +561,7 @@ void Response::fillContentTypeHeader(void) {
 
 void Response::fillContentTypeHeader(const std::string& fileExt) {
     std::string contentTypeValue = "application/octet-stream"; // default value for unrecognized file extesions
-
+    
     _buffer.append("Content-Type: ");
     if (fileExt.empty()) {
 	_buffer.append(contentTypeValue + CRLF);
@@ -571,8 +571,11 @@ void Response::fillContentTypeHeader(const std::string& fileExt) {
     /* content-type should be set according to accept header values; if
        accept header is present in request and does not allow response uri file format,
        server should send 406 code error, but this behaviour is optional */
-    const std::string type[4] = {"audio", "image", "text", "video"};
+    const std::string type[5] = {"application", "audio", "image", "text", "video"};
 
+    const std::string appl_subtype[1] = {"javascript"};
+    const std::string appl_fileext[1] = {"js"};
+    
     const std::string audio_subtype[1] = {"mpeg"};
     const std::string audio_fileext[1] = {"mp3"};
 
@@ -585,12 +588,12 @@ void Response::fillContentTypeHeader(const std::string& fileExt) {
     const std::string video_subtype[5] = {"mpeg", "mp4", "quicktime", "x-flv", "webm"};
     const std::string video_fileext[5] = {"mpeg", "mp4", "mov",       "flv",   "webm"};
 
-    const std::string* subtype_arr[4] = {audio_subtype, image_subtype, text_subtype, video_subtype};
-    const std::string* fileext_arr[4] = {audio_fileext, image_fileext, text_fileext, video_fileext};
+    const std::string* subtype_arr[5] = {appl_subtype, audio_subtype, image_subtype, text_subtype, video_subtype};
+    const std::string* fileext_arr[5] = {appl_fileext, audio_fileext, image_fileext, text_fileext, video_fileext};
 
-    int subtype_id[4] = {1, 5, 5, 5};
+    int subtype_id[5] = {1, 1, 5, 5, 5};
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 5; i++) {
 	for (int j = 0; j < subtype_id[i]; j++) {
 	    if (!fileext_arr[i][j].compare(fileExt)) {
 		contentTypeValue = type[i] + "/" + subtype_arr[i][j];
@@ -603,13 +606,12 @@ void Response::fillContentTypeHeader(const std::string& fileExt) {
 
 std::string Response::getResourceExtension(const std::string& uri) const {
     std::string ext("");
-    size_t		slash_pos = uri.rfind('/');
+    size_t	slash_pos = uri.rfind('/'), dot_pos;
 
     if (slash_pos == std::string::npos) {
 	return ext;
     }
-    size_t		dot_pos = uri.find('.', slash_pos);
-
+    dot_pos = uri.rfind('.');
     if (dot_pos == std::string::npos) {
 	return ext;
     }
