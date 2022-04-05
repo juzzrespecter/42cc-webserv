@@ -16,7 +16,7 @@ Content-Type: text-html
     <li>Script path: <b>$ENV{'PATH_INFO'}</b>
     <li>Your input: <b>$buffer</b>
     <br/><hr/>
-    <a href="client_max_body_size.html">Go back.</a>
+    <a href="index.html">Go back.</a>
   </body>
 </html>
 EOF

@@ -183,7 +183,7 @@ bool    Parser::syntax_directive_rruea(void) const {
 
 bool    Parser::syntax_directive_autoindex(void) const { 
     return (is_word(current()) && 
-           (current().token.compare("on") || current().token.compare("off")) &&
+           (current().token == "on" || current().token == "off") &&
             is_semicolon(peek()));
 }
 
@@ -307,7 +307,7 @@ server_block_t    Parser::syntax_server_block(void) {
             next();
             vsrv.loc.push_back(syntax_location_block(uri));
         } else {
-            if (!vsrv.dir[id].empty()) {
+            if (!vsrv.dir[id].empty() && id != D_METHOD && id != D_CGI_PASS) {
                 throw std::runtime_error("Parser: duplicate directive declared in server \'" + _dir_name[id] + "\'");
             }
             for ( ; !is_semicolon(current()); next()) {
@@ -344,7 +344,6 @@ std::vector<server_block_t> Parser::parse(const std::string& config_path) {
     if (!empty()) {
         throw std::runtime_error("syntax error near unexpected token \'" + current().token + "\'");
     }
-    //debug_print(vsrv_vector);
     return vsrv_vector;
 }
 
@@ -395,30 +394,4 @@ Parser::directive_parse_table Parser::_dir_options[N_DIR_MAX] = {
     &Parser::syntax_directive_server_name,
     &Parser::syntax_directive_location
 };
-
-/* -- debug -- */
-void Parser::debug_print(const std::vector<server_block_t>& v) const {
-    std::cout << "----  SERVER CONFIG ----\n";
-    for (std::vector<server_block_t>::const_iterator it = v.begin(); it != v.end(); it++) {
-        std::cout << _dir_name[D_LISTEN] << ": " << it->dir[D_LISTEN].front() << "\n";
-        //std::cout << _dir_name[D_SERVER_NAME] << ": " << it->dir[D_SERVER_NAME] << "\n";
-        std::cout << "[location blocks]\n";
-        for (std::vector<location_block_t>::const_iterator it_2 = it->loc.begin(); it_2 != it->loc.end(); it_2++) {
-            std::cout << "\t[ URI - " << it_2->uri << " ]\n";
-            for (int i = 0; i < N_DIR_LOC; i++) {
-                std::cout << "\t" << _dir_name[i] << ": ";
-                if (it_2->dir[i].empty()) {
-                    std::cout << "<null>";
-                } else {
-                    for(std::vector<std::string>::const_iterator it_3 = it_2->dir[i].begin(); it_3 != it_2->dir[i].end(); it_3++) {
-                        std::cout << *it_3 << " ";
-                    }
-                }
-                std::cout << "\n";
-            }
-            std::cout << "\n";
-        }
-    }
-    std::cout << "---- ************ ----\n\n";
-}
 

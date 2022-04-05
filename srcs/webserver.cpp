@@ -17,10 +17,13 @@ Webserver::addr_comp::~addr_comp() { }
 
 /* condición de server duplicado: comparten mismas directivas listen y server_name */
 void    Webserver::check_server_duplicates(const std::vector<Server>& srv_v) {
+    if (srv_v.empty()) {
+	throw std::runtime_error("no server defined");
+    }
     for (std::vector<Server>::const_iterator it = srv_v.begin(); it != --srv_v.end(); it++) {
         for (std::vector<Server>::const_iterator it_n = it + 1; it_n != srv_v.end(); it_n++) {
             if (*it_n == *it) {
-                throw std::runtime_error("duplicate server error\n");
+                throw std::runtime_error("duplicate server error");
             }
         }
     }
