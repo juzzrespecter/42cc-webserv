@@ -15,9 +15,9 @@ typedef struct sockaddr sa_t;
 
 class Socket {
 private:
-    socket_mode_f      _type;                /* tipo de socket: pasivo o activo */
-    listen_directive_t _sock_addr;      /* dirección y puerto en los qu e el socket escucha */
-    server_vector      _serv_v; /* vector de servidores que comparten el mismo socket */
+    socket_mode_f      _type;      /* tipo de socket: pasivo o activo */
+    listen_directive_t _sock_addr; /* dirección y puerto en los qu e el socket escucha */
+    server_vector      _serv_v;    /* vector de servidores que comparten el mismo socket */
     
     Request  _req;
     Response _resp;
@@ -28,7 +28,7 @@ public:
     Socket(void);
     Socket(const Socket&);
     Socket(const listen_directive_t&);
-    Socket(int, const Socket&, std::string);
+    Socket(int, const Socket&, std::pair<std::string, std::string>);
     ~Socket();
 
     Socket& operator=(const Socket&);

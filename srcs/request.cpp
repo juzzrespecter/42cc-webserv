@@ -2,7 +2,7 @@
 
 Request::Request() :
     _serv_v(),
-    _client_addr(),
+    _client_info(),
     _server_port(),
     _buffer(),
     _line(),
@@ -13,9 +13,9 @@ Request::Request() :
     _stage(REQ_LINE) { }
 
 /* Constructor con información sobre la conexión de la petición */
-Request::Request(const server_vector& serv_v, std::string client_addr, int server_port) :
+Request::Request(const server_vector& serv_v, client_pair client_info, int server_port) :
     _serv_v(serv_v),
-    _client_addr(client_addr),
+    _client_info(client_info),
     _server_port(server_port),
     _buffer(),
     _line(),
@@ -27,7 +27,7 @@ Request::Request(const server_vector& serv_v, std::string client_addr, int serve
 
 Request::Request(const Request& c) :
     _serv_v(c._serv_v),
-    _client_addr(c._client_addr),
+    _client_info(c._client_info),
     _server_port(c._server_port),
     _buffer(c._buffer),
     _line(c._line),
@@ -39,7 +39,7 @@ Request::Request(const Request& c) :
 
 Request::~Request() { }
 
-Request& Request::operator=(Request a) { 
+Request& Request::operator=(Request a) {
     if (this == &a) {
         return *this;
     }
@@ -48,7 +48,11 @@ Request& Request::operator=(Request a) {
 }
 
 const std::string& Request::get_client_addr(void) const {
-    return _client_addr;
+    return _client_info.first;
+}
+
+const std::string& Request::get_client_port(void) const {
+    return _client_info.second;
 }
 
 int Request::get_server_port(void) const {
@@ -109,7 +113,7 @@ void swap(Request& a, Request& b) {
     swap(a._buffer, b._buffer);
     std::swap(a._line, b._line);
     std::swap(a._serv_v, b._serv_v);
-    std::swap(a._client_addr, b._client_addr);
+    std::swap(a._client_info, b._client_info);
     std::swap(a._server_port, b._server_port);
     std::swap(a._header_count, b._header_count);
     swap(a._request_line, b._request_line);
@@ -389,7 +393,7 @@ void Request::print(void) const {
 }
 
 void Request::clear(void) {
-    _client_addr.clear();
+    _client_info = client_pair("","");
     _server_port = 0;
     _buffer.clear();
     _line.clear();

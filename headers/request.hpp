@@ -25,10 +25,11 @@
 class Request {
 private:
     typedef bool (Request::*_req_options)(void);
+    typedef std::pair<std::string, std::string> client_pair;
 
     /* información sobre el servidor que tramita la petición */
     server_vector _serv_v;      /* vector de servidores con mismo socket */
-    std::string   _client_addr; /* dirección del cliente */
+    client_pair   _client_info; /* información sobre el cliente (addr, port)*/
     int           _server_port; /* port del servidor */
 
     std::string _buffer;		// Store the request received
@@ -48,12 +49,13 @@ private:
 
 public:
     Request(void);
-    Request(const server_vector&, std::string, int);
+    Request(const server_vector&, client_pair, int);
     Request(const Request& c);
     ~Request();
     Request& operator=(Request a);
 
     const std::string& get_client_addr(void) const;
+    const std::string& get_client_port(void) const;
     int                get_server_port(void) const;
     const RequestLine& get_request_line(void) const;
     

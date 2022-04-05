@@ -12,7 +12,7 @@
 #include <errno.h>
 
 #define N_ENV_HEADER     15
-#define N_ENV_VAR        28
+#define N_ENV_VAR        29
 #define S_BUFFR_CGI_PIPE 4000
 #define S_BUFFR_PWD      4095
 

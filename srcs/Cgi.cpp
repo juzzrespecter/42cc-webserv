@@ -61,6 +61,9 @@ void CGI::close_fdOut(void) {
 }
 
 void CGI::set_env_variables(void) {
+    std::string request_uri = (_req->get_query().empty()) ?
+	_req->get_path() :
+	_req->get_path() + "?" + _req->get_query();
     std::string request_method = (_req->get_method() == GET) ? "GET" : "POST";
     std::string _header_env[N_ENV_HEADER] = {
 	"Content-Type",   "Host",            "Accept",
@@ -104,13 +107,11 @@ void CGI::set_env_variables(void) {
     _envvar[i++] = strdup("SERVER_PROTOCOL=HTTP/1.1");
     _envvar[i++] = strdup("SERVER_SOFTWARE=webserv");
     _envvar[i++] = strdup("REDIRECT_STATUS=200");
-
     _envvar[i++] = strdup(std::string("REMOTE_ADDR=" + _req->get_client_addr()).c_str());
+    _envvar[i++] = strdup(std::string("REMOTE_PORT=" + _req->get_client_port()).c_str());
     _envvar[i++] = strdup(std::string("SERVER_PORT=" + n_to_str(_req->get_server_port())).c_str());
     _envvar[i++] = strdup(std::string("DOCUMENT_ROOT=" + _document_root).c_str());
-    _envvar[i++] = strdup(std::string("REQUEST_URI=" + \
-				      _req->get_path() + \
-				      _req->get_query()).c_str());
+    _envvar[i++] = strdup(std::string("REQUEST_URI=" + request_uri).c_str());
     _envvar[i] = NULL;
 
     /* path_info -> req_parser set _cgi_suffix
@@ -362,7 +363,6 @@ void CGI::executeCGI()
     {
         throw StatusLine(500, REASON_500, "execve failed in executeCGI method");
     }
-    std::cerr << "[CGI] " << getHeaders() << "\n";
 }
 
 std::string CGI::getHeaders(void) const {

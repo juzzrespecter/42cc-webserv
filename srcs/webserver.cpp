@@ -63,8 +63,19 @@ void    Webserver::accept_new_connection(const Socket& passv) {
         log ("accept(): ", strerror(errno));
         return ;
     }
-    fcntl(client_fd, F_SETFL, O_NONBLOCK);
-    read_v.push_back(Socket(client_fd, passv, inet_ntoa(client_addr.sin_addr)));
+    
+    if (fcntl(client_fd, F_SETFL, O_NONBLOCK) == -1) {
+	log ("fcntl(): ", strerror(errno));
+	return ;
+    }
+    std::pair<std::string, std::string> client_info(
+	inet_ntoa(client_addr.sin_addr),
+	n_to_str(ntohs(client_addr.sin_port))
+    );
+    Socket sck_new(client_fd, passv, client_info);
+
+    //read_v.push_back(sck_new);
+    read_v.push_back(Socket(client_fd, passv, client_info));
     nfds_up(read_v.back().fd);
 }
 
@@ -99,7 +110,7 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
 /* llamada a write con el mensaje guardado en el Socket */
 socket_status_f Webserver::write_to_socket(Socket& conn_socket) {
     const std::string& response = conn_socket.get_response_string();
-    int                wr_ret = ft_write(conn_socket.fd, response.c_str(), response.size());
+    int                wr_ret = ft_write(conn_socket.fd, response, response.size());
     
     if (wr_ret == -1) {
         /* supón error EAGAIN, el buffer de write está lleno y como trabajamos con sockets
