@@ -97,11 +97,11 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
 }
 
 /* llamada a write con el mensaje guardado en el Socket */
-socket_status_f    Webserver::write_to_socket(Socket& conn_socket) {
+socket_status_f Webserver::write_to_socket(Socket& conn_socket) {
     const std::string& response = conn_socket.get_response_string();
-    int socket_wr_stat = write(conn_socket.fd, response.c_str(), response.size());
+    int                wr_ret = ft_write(conn_socket.fd, response.c_str(), response.size());
     
-    if (socket_wr_stat == -1) {
+    if (wr_ret == -1) {
         /* supón error EAGAIN, el buffer de write está lleno y como trabajamos con sockets
          * no bloqueadores retorna con señal de error, la respuesta sigue siendo válida y el cliente espera */
         log("write(): ", strerror(errno));

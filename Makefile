@@ -14,7 +14,8 @@ SRC = config_blocks.cpp \
 		request.cpp \
 		response.cpp \
 		Cgi.cpp \
-		webserver.cpp
+		webserver.cpp \
+		webserv.cpp
 SRC_MSG = Body.cpp RequestLine.cpp StatusLine.cpp
 SRC_MAIN = $(SRC_DIR)main.cpp
 
@@ -34,28 +35,30 @@ $(NAME):		$(OBJ) $(OBJ_MSG) $(OBJ_MAIN) $(HEADER) Makefile
 	$(CXX) $(CXXFLAGS) -o $(NAME) $(OBJ) $(OBJ_MSG) $(OBJ_MAIN)
 
 $(OBJ_DIR)%.o:	$(SRC_DIR)%.cpp $(HEADER_DIR)%.hpp
-	$(CXX) $(CXXFLAGS) -c $< -I$(HEADER_DIR)
-	mkdir -p $(@D)
-	mv $(@F) $(@D)
+	@echo -n "Compiling $<..."
+	@$(CXX) $(CXXFLAGS) -c $< -I$(HEADER_DIR)
+	@echo " success."
+	@mkdir -vp $(@D)
+	@mv -v $(@F) $(@D)
 
 $(OBJ_DIR)%.o:	$(SRC_MSG_DIR)%.cpp $(HEADER_MSG_DIR)%.hpp
-	$(CXX) $(CXXFLAGS) -c $< -I$(HEADER_DIR)
-	mkdir -p $(@D)
-	mv $(@F) $(@D)
+	@echo -n "Compiling $<..."
+	@$(CXX) $(CXXFLAGS) -c $< -I$(HEADER_DIR)
+	@echo " success."
+	@mkdir -vp $(@D)
+	@mv -v $(@F) $(@D)
 
 $(OBJ_MAIN):	$(SRC_MAIN)
-	$(CXX) $(CXXFLAGS) -c $(SRC_MAIN) -I$(HEADER_DIR)
-	mkdir -p $(OBJ_DIR)
-	mv $(@F) $(@D)
+	@echo -n "Compiling $<..."
+	@$(CXX) $(CXXFLAGS) -c $(SRC_MAIN) -I$(HEADER_DIR)
+	@echo " success."
+	@mkdir -vp $(OBJ_DIR)
+	@mv -v $(@F) $(@D)
 
 clean:
-	rm -rf $(NAME)
+	@rm -rfv $(NAME)
 
 fclean:		clean
-	rm -rf $(OBJ_DIR)
-
-test:
-	echo $(SRC)
-	echo $(SRC_MSG)
+	@rm -rfv $(OBJ_DIR)
 
 re:	fclean all

@@ -7,10 +7,14 @@
 #include <sstream>
 #include <map>
 #include <string>
+#include <unistd.h>
 
 typedef std::map<std::string, std::string> header_map;
 
 enum methods { GET, HEAD, POST, DELETE, PUT };
+
+// write loop buffer
+#define S_BUFFR_WR 4000
 
 // Number of methods implemented in webserv
 #define NB_METHODS 5
@@ -21,15 +25,7 @@ enum methods { GET, HEAD, POST, DELETE, PUT };
 #define HEADER_LIMIT 100
 #define REQ_MAX_SIZE 65536
 
-template<class T>
-std::string n_to_str(T nb) 
-{
-    std::string nbString;
-    std::stringstream nbStream;
-    nbStream << nb;
-    nbString = nbStream.str();
-    return nbString;
-}
+
 
 // Number of octets that the request buffer can contain
 #define REQUEST_BUFFER_SIZE 2046
@@ -83,5 +79,19 @@ std::string n_to_str(T nb)
 #define REASON_503 "Service Unavailable"
 #define REASON_504 "Gateway Timeout"
 #define REASON_505 "HTTP Version Not Supported"
+
+// utils
+
+template<class T>
+std::string n_to_str(T nb) 
+{
+    std::string nbString;
+    std::stringstream nbStream;
+    nbStream << nb;
+    nbString = nbStream.str();
+    return nbString;
+}
+
+int ft_write(int, std::string, size_t);
 
 #endif

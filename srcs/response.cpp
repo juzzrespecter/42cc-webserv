@@ -96,9 +96,6 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
     setLocation(loc);
     setStatusLine(sl);
 
-    std::cerr << "[response]\n";
-    std::cerr << "\t path: " << _req->get_path() << "\n";
-    std::cerr << "\t quer: " << _req->get_query() << "\n";
     if (_staLine.getCode() == 100)
     {
 	return setUp100Continue();
@@ -145,7 +142,6 @@ void Response::fillBuffer(Request* req, const Location& loc, const StatusLine& s
     {
 	fillError(errorStaLine);
     }
-    std::cerr << "[response] sent " << getCode() << "\n";
 }
 
 

@@ -299,21 +299,6 @@ CGI::~CGI()
     close_fdOut();
 }
 
-void CGI::executeCGI_write(void) {
-    std::string wr_buff      = _req->get_body_string();
-    size_t      wr_buff_size = _req->get_body_size();
-
-    while (wr_buff_size > 0) {
-	size_t wr_call_size = (wr_buff_size > S_BUFFR_WR) ? S_BUFFR_WR : wr_buff_size;
-
-	if (write(_fdIN[1], wr_buff.c_str(), wr_call_size) < 0) {
-	    throw StatusLine(500, REASON_500, std::string("CGI: write() - ") + strerror(errno));
-	}
-	wr_buff.erase(0, wr_call_size);
-	wr_buff_size -= wr_call_size;
-    }
-}
-
 void CGI::executeCGI_read(void) {
     char buf[S_BUFFR_CGI_PIPE + 1] = {0};
     int rd_out;
@@ -361,7 +346,9 @@ void CGI::executeCGI()
     _fdOut[1] = -1;
 
     if (_req->get_method() == POST) {
-	executeCGI_write();
+	if (ft_write(_fdIN[1], _req->get_body_string(), _req->get_body_size()) == -1) {
+	    throw StatusLine(500, REASON_500, std::string("CGI: write() - ") + strerror(errno));
+	}
     }
     close_fdIN();
     

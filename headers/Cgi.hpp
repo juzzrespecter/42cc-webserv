@@ -1,6 +1,7 @@
 #ifndef CGI_HPP
 # define CGI_HPP
 
+#include "webserv.hpp"
 #include "request.hpp"
 #include "response.hpp"
 #include <iostream>
@@ -12,7 +13,6 @@
 
 #define N_ENV_HEADER     15
 #define N_ENV_VAR        28
-#define S_BUFFR_WR       4000
 #define S_BUFFR_CGI_PIPE 4000
 #define S_BUFFR_PWD      4095
 
@@ -69,8 +69,6 @@ private:
     void set_env_variables(void);
     void set_args(void);
 
-
-    void executeCGI_write(void);
     void executeCGI_read(void);
     
     void parse_normalize(void);

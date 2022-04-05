@@ -21,8 +21,7 @@ Socket::Socket(const listen_directive_t& sock_addr) : _type(PASSV), _sock_addr(s
     if (fd == -1) {
         throw std::runtime_error(strerror(errno));
     }
-    if ((setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt_val, sizeof(int)) == -1) ||
-        (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt_val, sizeof(int)) == -1)) {
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt_val, sizeof(int)) == -1) {
         throw std::runtime_error(strerror(errno));
     }
     if ((bind(fd, reinterpret_cast<sa_t*>(&sockaddr_s), sizeof(sockaddr_s))) == -1) {
