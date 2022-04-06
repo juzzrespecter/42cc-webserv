@@ -89,7 +89,7 @@ socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
     /* paso a una sola llamada a read por llamada a select, para evitar que una petición muy grande
      * nos bloquee el servidor */
     int socket_rd_stat = recv(conn_socket.fd, req_buff, REQUEST_BUFFER_SIZE, 0);
-    if (socket_rd_stat == -1) {
+    if (socket_rd_stat == -1) { // borrar
         /* supón error EAGAIN, la conexión estaba marcada como activa pero ha bloqueado,
          * se guarda a la espera de que el cliente envíe información */
         log("read(): ", std::strerror(errno));
@@ -115,7 +115,7 @@ socket_status_f Webserver::write_to_socket(Socket& conn_socket) {
     const std::string& response = conn_socket.get_response_string();
     int                wr_ret = ft_write(conn_socket.fd, response, response.size());
     
-    if (wr_ret == -1) {
+    if (wr_ret == -1) { // borrar
         /* supón error EAGAIN, el buffer de write está lleno y como trabajamos con sockets
          * no bloqueadores retorna con señal de error, la respuesta sigue siendo válida y el cliente espera */
         log("write(): ", strerror(errno));
