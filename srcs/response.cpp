@@ -281,6 +281,7 @@ std::string Response::addIndex(const std::string& uri, const std::vector<std::st
     {
 	// Add each index to the uri
 	std::string uriWithIndex(uri + *it);
+	std::cerr << "[index] :" << uriWithIndex << "\n";
 
 	// And then try to access the URI resulting from this concatenation
 	if (!stat(uriWithIndex.c_str(), &infFile))
