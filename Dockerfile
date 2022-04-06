@@ -1,19 +1,21 @@
 FROM debian:buster
 
-ENV SERVER_PATH="/var/www/webserv/"
+ENV SERVER_PATH="/var/www/"
 ENV DB_NAME="wp_database"
 ENV DB_USER="wp_user"
 ENV DB_PASSWORD="wp_passwd"
 
-ADD [".", "/var/www/webserv/"]
+ADD [".", "/var/www/"]
 
 COPY ["./config/docker-entrypoint.sh", "/tmp"]
 
 RUN apt-get update \
     && apt-get install wget \
+       	       	   sudo \
        	       	   curl \
                    make \
                    clang \
+		   ssh \
                    default-mysql-server \
                    php \
 		   php-curl \
@@ -37,10 +39,13 @@ RUN apt-get update \
     	       -e "s/username_here/$DB_USER/"      /var/www/html/wp-config.php \
     	       -e "s/password_here/$DB_PASSWORD/"  /var/www/html/wp-config.php \
     &&  chmod +x ./docker-entrypoint.sh \
-    &&  rm -rfv /tmp/wordpress/
+    &&  rm -rfv /tmp/wordpress/ \
+    && chown -R www-data:www-data $SERVER_PATH \
+    && chmod -R 755 $SERVER_PATH
 
 EXPOSE 8080/tcp
+EXPOSE 2222/tcp
 
-WORKDIR "/var/www/webserv/"
+WORKDIR "/var/www/"
 
 ENTRYPOINT [ "/tmp/docker-entrypoint.sh" ]

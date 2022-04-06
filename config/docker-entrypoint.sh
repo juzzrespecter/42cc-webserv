@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# sshd setup
+useradd peter
+echo "peter:1234" | chpasswd
+service ssh start
+
 # mariaDB configuration setup
 service mysql start
 mysql -u root <<EOF
@@ -31,4 +36,4 @@ echo "<?php phpinfo(); ?>" > /var/www/html/info.php
 # webserver initialization
 cd ${SERVER_PATH}
 make
-./webserver docker.conf
+sudo -u www-data ./webserver docker.conf

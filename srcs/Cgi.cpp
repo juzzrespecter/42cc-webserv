@@ -355,9 +355,9 @@ void CGI::executeCGI()
     
     executeCGI_read();
     close_fdOut();
-
     // Checking if execve correctly worked
     int status = 0;
+    
     waitpid(pid, &status, 0);
     if (WIFEXITED(status) && WEXITSTATUS(status) == EXECVE_FAIL)
     {
