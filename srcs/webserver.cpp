@@ -77,31 +77,26 @@ void    Webserver::accept_new_connection(const Socket& passv) {
     );
     Socket sck_new(client_fd, passv, client_info);
 
-    //read_v.push_back(sck_new);
     read_v.push_back(Socket(client_fd, passv, client_info));
     nfds_up(read_v.back().fd);
 }
 
+/* lectura de socket activo; parsea request y construye respuesta */
 socket_status_f    Webserver::read_from_socket(Socket& conn_socket) {
-    char     req_buff[REQUEST_BUFFER_SIZE];
-
-    memset(req_buff, 0, REQUEST_BUFFER_SIZE);
-    /* paso a una sola llamada a read por llamada a select, para evitar que una petición muy grande
-     * nos bloquee el servidor */
-    int socket_rd_stat = recv(conn_socket.fd, req_buff, REQUEST_BUFFER_SIZE, 0);
-    if (socket_rd_stat == -1) { // borrar
-        /* supón error EAGAIN, la conexión estaba marcada como activa pero ha bloqueado,
-         * se guarda a la espera de que el cliente envíe información */
+    char     req_buff[REQUEST_BUFFER_SIZE] = {0};
+//    memset(req_buff, 0, REQUEST_BUFFER_SIZE);
+    int rd_ret = recv(conn_socket.fd, req_buff, REQUEST_BUFFER_SIZE, 0);
+    
+    if (rd_ret == -1) {
         log("read(): ", std::strerror(errno));
-        return STANDBY;
     }
-    if (socket_rd_stat == 0) {
+    if (rd_ret <= 0) {
         conn_socket.close_socket();
         nfds_down(conn_socket.fd);
         return CLOSED;
     }
     try {
-        conn_socket.build_request(req_buff, socket_rd_stat);
+        conn_socket.build_request(req_buff, rd_ret);
     } catch (StatusLine& sl) {
 	log("request: ", n_to_str(sl.getCode()) + " " + sl.getReason() + " - " + sl.getAdditionalInfo());
         conn_socket.build_response(sl);
@@ -115,13 +110,10 @@ socket_status_f Webserver::write_to_socket(Socket& conn_socket) {
     const std::string& response = conn_socket.get_response_string();
     int                wr_ret = ft_write(conn_socket.fd, response, response.size());
     
-    if (wr_ret == -1) { // borrar
-        /* supón error EAGAIN, el buffer de write está lleno y como trabajamos con sockets
-         * no bloqueadores retorna con señal de error, la respuesta sigue siendo válida y el cliente espera */
+    if (wr_ret == -1) {
         log("write(): ", strerror(errno));
-        return STANDBY;
     }
-    if (conn_socket.marked_for_closing()) {
+    if (wr_ret <= 0 || conn_socket.marked_for_closing()) {
         conn_socket.close_socket();
         return CLOSED;
     }
@@ -211,6 +203,7 @@ Webserver::~Webserver() {
 void Webserver::run(void) {
     signal(SIGINT, &sighandl);
     signal(SIGQUIT, &sighandl);
+    signal(SIGPIPE, SIG_IGN);
 
     log("\033[32m[ webserver is up and running.", " ~ /danrodri, /fgomez-s ]\033[0m");
     while (!quit_f) {

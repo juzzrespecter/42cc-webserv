@@ -93,9 +93,16 @@ const std::string& Request::get_query() const {
     return _request_line.get_query();
 }
 
+/* get_location() trabaja con listas de servidors que comparten mismo puerto */
 const Location& Request::get_location(void) const {
+    std::string host_name(host());
+    size_t      port_sep(host_name.find(':'));
+
+    if (port_sep != std::string::npos) {
+	host_name = host_name.substr(0, port_sep);
+    }
     server_vector::const_iterator it = \
-        std::find_if(_serv_v.begin(), _serv_v.end(), find_server_by_host(host()));
+        std::find_if(_serv_v.begin(), _serv_v.end(), find_server_by_host(host_name));
     const Server* server_host = (it == _serv_v.end()) ? _serv_v.front() : *it;
 
     return server_host->get_location_by_path(get_path());

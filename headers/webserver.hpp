@@ -6,7 +6,6 @@
 #include "request.hpp"
 #include <unistd.h>
 #include <signal.h>
-#include <fcntl.h>
 
 typedef std::map<std::string, std::string> header_map;
 
