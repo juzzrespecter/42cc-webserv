@@ -11,8 +11,8 @@
 #include <sys/wait.h>
 #include <errno.h>
 
-#define N_ENV_HEADER     15
-#define N_ENV_VAR        31
+#define N_ENV_HEADER     16
+#define N_ENV_VAR        35
 #define S_BUFFR_CGI_PIPE 4000
 #define S_BUFFR_PWD      4095
 
@@ -33,6 +33,8 @@ private:
     std::string _document_root;
     std::string _cgi_path;
     std::string _path_info;
+    std::string _host;
+    
     std::string _raw_response;
 
     StatusLine _status_line;
@@ -76,6 +78,7 @@ private:
     void parse_response_body(const std::string&);
     void parse_status_line(void);
 
+    std::string set_host(void);
     std::string set_document_root(const Location&, const std::string&);
     std::string set_resource_path(const std::string&, const std::string&);
     std::string set_cgi_path(const std::string&);

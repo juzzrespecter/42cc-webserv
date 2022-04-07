@@ -3,7 +3,7 @@ $ENV{'REQUEST-METHOD'} =~ tr/a-z/A-Z/;
 read(STDIN, $buffer, $ENV{'CONTENT_LENGTH'});
 
 print << "EOF";
-Content-Type: text-html
+Content-Type: text/html
 
 <html>
   <head>

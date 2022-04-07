@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
     if (argc > 2) {
     	return usage();
     }
-    std::string parser_path("config/webserver.conf");
+    std::string parser_path("webserver.conf");
     Parser p;
     if (argc == 2) {
       if (!std::string(argv[1]).compare("-h")) {
@@ -28,8 +28,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     } catch(std::exception& e) {        /* child process error handler (clean exit) */
 	std::cerr << "[ cgi error ] " << e.what() << "\n";
-	return EXECVE_FAIL;
+	exit(EXECVE_FAIL);
     }
-
     return EXIT_SUCCESS;
 }

@@ -110,9 +110,6 @@ socket_status_f Webserver::write_to_socket(Socket& conn_socket) {
     const std::string& response = conn_socket.get_response_string();
     int                wr_ret = ft_write(conn_socket.fd, response, response.size());
     
-    if (wr_ret == -1) {
-        log("write(): ", strerror(errno));
-    }
     if (wr_ret <= 0 || conn_socket.marked_for_closing()) {
         conn_socket.close_socket();
         return CLOSED;
@@ -204,6 +201,7 @@ void Webserver::run(void) {
     signal(SIGINT, &sighandl);
     signal(SIGQUIT, &sighandl);
     signal(SIGPIPE, SIG_IGN);
+    signal(SIGCHLD, SIG_IGN);
 
     log("\033[32m[ webserver is up and running.", " ~ /danrodri, /fgomez-s ]\033[0m");
     while (!quit_f) {

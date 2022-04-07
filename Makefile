@@ -32,7 +32,8 @@ NAME = webserver
 all: $(NAME)
 
 $(NAME):		$(OBJ) $(OBJ_MSG) $(OBJ_MAIN) $(HEADER) Makefile
-	$(CXX) $(CXXFLAGS) -o $(NAME) $(OBJ) $(OBJ_MSG) $(OBJ_MAIN)
+	@$(CXX) $(CXXFLAGS) -o $(NAME) $(OBJ) $(OBJ_MSG) $(OBJ_MAIN)
+	@echo "$@ compiled successfully."
 
 $(OBJ_DIR)%.o:	$(SRC_DIR)%.cpp $(HEADER_DIR)%.hpp
 	@echo -n "Compiling $<..."

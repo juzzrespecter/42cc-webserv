@@ -1,13 +1,19 @@
 FROM debian:buster
 
-ENV SERVER_PATH="/var/www/"
+ENV SERVER_PATH="/var/www"
+
 ENV DB_NAME="wp_database"
 ENV DB_USER="wp_user"
 ENV DB_PASSWORD="wp_passwd"
+ENV DB_PORT="8080"
+
+ENV PMA_USER="pma_admin"
+ENV PMA_PASSWD="pma_passwd"
 
 ADD [".", "/var/www/"]
 
-COPY ["./config/docker-entrypoint.sh", "/tmp"]
+COPY ["./docker-utils/docker-entrypoint.sh", "/tmp"]
+COPY ["./docker-utils/db.sql", "/tmp"]
 
 RUN apt-get update \
     && apt-get install wget \
@@ -32,20 +38,23 @@ RUN apt-get update \
     &&  cd /tmp \               
     &&  wget -c https://www.wordpress.org/latest.tar.gz \
     &&  tar -xvf latest.tar.gz \
-    &&  mkdir -v /var/www/html \
-    &&  mv -v wordpress/* /var/www/html/ \
-    &&  mv /var/www/html/wp-config-sample.php      /var/www/html/wp-config.php \
-    &&  sed -i -e "s/database_name_here/$DB_NAME/" /var/www/html/wp-config.php \
-    	       -e "s/username_here/$DB_USER/"      /var/www/html/wp-config.php \
-    	       -e "s/password_here/$DB_PASSWORD/"  /var/www/html/wp-config.php \
-    &&  chmod +x ./docker-entrypoint.sh \
-    &&  rm -rfv /tmp/wordpress/ \
-    && chown -R www-data:www-data $SERVER_PATH \
-    && chmod -R 755 $SERVER_PATH
+    &&  mkdir -pv $SERVER_PATH/html \
+    &&  mv -v wordpress/* $SERVER_PATH/html/ \
+    &&  mv $SERVER_PATH/html/wp-config-sample.php $SERVER_PATH/html/wp-config.php \
+    &&  wget -c \
+    	https://files.phpmyadmin.net/phpMyAdmin/5.0.4/phpMyAdmin-5.0.4-all-languages.tar.gz \
+    &&  tar -xvf phpMyAdmin-5.0.4-all-languages.tar.gz \    
+    &&  mv phpMyAdmin-5.0.4-all-languages $SERVER_PATH/html/phpmyadmin \
+    &&  rm -rfv /tmp/{wordpress/,*.tar.gz} \
+    &&  chown -R www-data:www-data $SERVER_PATH \
+    &&  chmod -R 755 $SERVER_PATH \
+    &&  chmod +x ./docker-entrypoint.sh
+
+COPY --chown=www-data:www-data ["./docker-utils/wp-config.php",  "$SERVER_PATH/html/phpmyadmin/"]
 
 EXPOSE 8080/tcp
-EXPOSE 2222/tcp
+EXPOSE 22/tcp
 
-WORKDIR "/var/www/"
+WORKDIR "/var/www"
 
 ENTRYPOINT [ "/tmp/docker-entrypoint.sh" ]

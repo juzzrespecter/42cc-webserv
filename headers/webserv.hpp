@@ -1,6 +1,8 @@
 #ifndef WEBSERV_HPP
 #define WEBSERV_HPP
 
+#include <vector>
+#include <iostream>
 #include <algorithm>
 #include <exception>
 #include <string>
@@ -9,7 +11,8 @@
 #include <string>
 #include <unistd.h>
 
-typedef std::map<std::string, std::string> header_map;
+typedef std::map<std::string, std::string>  header_map;
+typedef std::pair<std::string, std::string> cgi_pair;
 
 enum methods { GET, HEAD, POST, DELETE, PUT };
 

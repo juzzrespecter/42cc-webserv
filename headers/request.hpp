@@ -56,6 +56,7 @@ public:
 
     const std::string& get_client_addr(void) const;
     const std::string& get_client_port(void) const;
+    std::string        get_server_host(void) const;
     int                get_server_port(void) const;
     const RequestLine& get_request_line(void) const;
     
@@ -68,6 +69,7 @@ public:
     
     int                get_method(void) const;
     const std::string& get_path(void) const;
+    const std::string& get_virtual_path(void) const;
     const std::string& get_query(void) const;
 
     size_t             get_request_stage(void) const;
@@ -102,7 +104,7 @@ private:
     bool   parse_request_body(void);
 
     /* Accesos a headers */
-    std::string	host(void) const;
+    std::string	  host(void) const;
     size_t        content_length(void) const;
 
     bool get_next_line(void);

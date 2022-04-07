@@ -277,15 +277,16 @@ void Response::replaceLocInUri(std::string& uri, const std::string& root)
 std::string Response::addIndex(const std::string& uri, const std::vector<std::string>& indexs)
 {
     struct stat infFile;
-    for (std::vector<std::string>::const_iterator it = indexs.begin(); it != indexs.end(); ++it)
+    for (std::vector<std::string>::const_iterator it = indexs.begin();
+	 it != indexs.end();
+	 ++it
+	)
     {
-	// Add each index to the uri
 	std::string uriWithIndex(uri + *it);
-	std::cerr << "[index] :" << uriWithIndex << "\n";
 
-	// And then try to access the URI resulting from this concatenation
-	if (!stat(uriWithIndex.c_str(), &infFile))
+	if (!stat(uriWithIndex.c_str(), &infFile)) {
 	    return uriWithIndex;
+	}
     }
     if (_loc.get_autoindex()) {
 	_autoIndex = true;

@@ -55,6 +55,23 @@ const std::string& Request::get_client_port(void) const {
     return _client_info.second;
 }
 
+std::string Request::get_server_host(void) const {
+    std::string host_name(host());
+    size_t      port(host_name.find(':'));
+
+    if (port != std::string::npos) {
+	host_name = host_name.substr(0, port);
+    }
+    server_vector::const_iterator it = std::find_if(
+	_serv_v.begin(),
+	_serv_v.end(),
+	find_server_by_host(host_name)
+	);
+    const Server* srv = (it == _serv_v.end()) ? _serv_v.front() : *it;
+
+    return (srv->server_name.empty()) ? "" : host_name;
+}
+
 int Request::get_server_port(void) const {
     return _server_port;
 }
@@ -89,6 +106,11 @@ int Request::get_method() const {
 const std::string& Request::get_path() const {
     return _request_line.get_path();
 }
+
+const std::string& Request::get_virtual_path(void) const {
+    return _request_line.get_virtual_path();
+}
+
 const std::string& Request::get_query() const {
     return _request_line.get_query();
 }
@@ -212,7 +234,7 @@ void    Request::parse_uri(std::string& token) {
 	}
     }
     if (token[0] == '/') {
-	_request_line.set_path(token);
+	_request_line.parse_path(token, get_location().get_cgi_pass());
 	return ;
     }
     THROW_STATUS("Request-URI: bad URI format");
@@ -400,8 +422,6 @@ void Request::print(void) const {
 }
 
 void Request::clear(void) {
-    _client_info = client_pair("","");
-    _server_port = 0;
     _buffer.clear();
     _line.clear();
     _header_count = 0;

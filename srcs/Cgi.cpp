@@ -1,5 +1,9 @@
 #include "Cgi.hpp"
 
+std::string CGI::set_host(void) {
+    return _req->get_server_host();
+}
+
 /* 
  * setea el directorio raíz donde trabaja el CGI:
  * comprueba si root está configurado como absoluto 
@@ -40,25 +44,41 @@ std::string CGI::set_cgi_path(const std::string& cgi_path)
 
 void CGI::close_fdIN(void) {
     if (_fdIN[0] != -1) {
-        close(_fdIN[0]);
+        if (close(_fdIN[0]) == -1) {
+	    std::cerr << "[CGI] " << strerror(errno) << "\n";
+	}
         _fdIN[0] = -1;
     }
     if (_fdIN[1] != -1) {
-        close(_fdIN[1]);
+        if (close(_fdIN[1]) == -1) {
+	    std::cerr << "[CGI] " << strerror(errno) << "\n";
+	}
         _fdIN[1] = -1;
     }
 }
 
 void CGI::close_fdOut(void) {
     if (_fdOut[0] != -1) {
-        close(_fdOut[0]);
+        if (close(_fdOut[0]) == -1) {
+	    std::cerr << "[CGI] " << strerror(errno) << "\n";
+	}
         _fdOut[0] = -1;
     }
     if (_fdOut[1] != -1) {
-        close(_fdOut[1]);
+	if (close(_fdOut[1]) == -1) {
+	    std::cerr << "[CGI] " << strerror(errno) << "\n";
+	}
         _fdOut[1] = -1;
     }
 }
+
+/*
+ *  !! CHECK !!
+ *  for (int j = 0; j < N_ENV_VAR && _envvar[j] != NULL; j++) { 
+ *     std::cerr << _envvar[i] << "\n";
+ *   }
+ *
+ */
 
 void CGI::set_env_variables(void) {
     std::string request_uri = (_req->get_query().empty()) ?
@@ -70,14 +90,16 @@ void CGI::set_env_variables(void) {
 	"Accept-Charset", "Accept-Encoding", "Accept-Language",
 	"Connection",     "User-Agent",      "Cookie",
 	"Sec-Fetch-User", "Sec-Fetch-Site",  "Sec-Fetch-Dest",
-	"Sec-Fetch-Mode", "Cache-Control",   "Pragma"
+	"Sec-Fetch-Mode", "Cache-Control",   "Pragma",
+	"Referer"
     };
     std::string _var_env[N_ENV_HEADER] = {
 	"CONTENT_TYPE",        "HTTP_HOST",            "HTTP_ACCEPT",
 	"HTTP_ACCEPT_CHARSET", "HTTP_ACCEPT_ENCODING", "HTTP_ACCEPT_LANGUAGE",
 	"HTTP_CONNECTION",     "HTTP_USER_AGENT",      "HTTP_COOKIE",
 	"HTTP_SEC_FETCH_USER", "HTTP_SEC_FETCH_SIZE",  "HTTP_SEC_FETCH_DEST",
-	"HTTP_SEC_FECTH_MODE", "HTTP_CACHE_CONTROL",   "HTTP_PRAGMA"
+	"HTTP_SEC_FECTH_MODE", "HTTP_CACHE_CONTROL",   "HTTP_PRAGMA",
+	"HTTP_REFERER"
     };
     header_map::const_iterator header_request;
     size_t i = 0;
@@ -87,8 +109,7 @@ void CGI::set_env_variables(void) {
 	if (header_request != _req->get_headers().end()) {
 	    _envvar[i++] = strdup((_var_env[cont] + "=" + header_request->second).c_str());
 	}
-    }
-   
+    }   
     if (_req->get_method() == POST && !_req->get_body_string().empty()) {
 	std::stringstream content_length;
 
@@ -98,21 +119,38 @@ void CGI::set_env_variables(void) {
     if (_req->get_method() == GET && !_req->get_query().empty()) {
 	_envvar[i++] = strdup(std::string("QUERY_STRING=" + _req->get_query()).c_str());
 	_envvar[i++] = strdup("CONTENT_TYPE=text/html");
+    } else {
+	_envvar[i++] = strdup("QUERY_STRING=");
     }
+    _envvar[i++] = strdup(std::string("DOCUMENT_ROOT=" + _document_root).c_str());
     _envvar[i++] = strdup("GATEWAY_INTERFACE=CGI/1.1");
-    _envvar[i++] = strdup(std::string("REQUEST_METHOD=" + request_method).c_str());
-    _envvar[i++] = strdup(std::string("SCRIPT_NAME=" + _req->get_path()).c_str());
-    _envvar[i++] = strdup(std::string("SCRIPT_FILENAME=" + _resource_path).c_str());
-    _envvar[i++] = strdup("SERVER_NAME=172.0.0.1");
-    _envvar[i++] = strdup("SERVER_PROTOCOL=HTTP/1.1");
-    _envvar[i++] = strdup("SERVER_SOFTWARE=webserv");
+    _envvar[i++] = strdup(std::string("PATH_INFO=" + _req->get_virtual_path()).c_str());
+    if (!_req->get_virtual_path().empty()) {
+	std::string           pt_field_value(_document_root);
+	std::string::iterator it = --pt_field_value.end();
+
+	if (*it == '/') {
+	    pt_field_value.erase(it);
+	}
+	pt_field_value.append(_req->get_virtual_path());
+	_envvar[i++] = strdup(std::string("PATH_TRANSLATED=" + pt_field_value).c_str());
+    }
     _envvar[i++] = strdup("REDIRECT_STATUS=200");
     _envvar[i++] = strdup(std::string("REMOTE_ADDR=" + _req->get_client_addr()).c_str());
     _envvar[i++] = strdup(std::string("REMOTE_PORT=" + _req->get_client_port()).c_str());
-    _envvar[i++] = strdup(std::string("SERVER_PORT=" + n_to_str(_req->get_server_port())).c_str());
-    _envvar[i++] = strdup(std::string("DOCUMENT_ROOT=" + _document_root).c_str());
+    _envvar[i++] = strdup(std::string("REQUEST_METHOD=" + request_method).c_str());
     _envvar[i++] = strdup(std::string("REQUEST_URI=" + request_uri).c_str());
-//    _envvar[i++] = strdup(std::string("PATH_INFO=" + _req->get_path()).c_str());
+    _envvar[i++] = strdup(std::string("SCRIPT_NAME=" + _req->get_path()).c_str());
+    _envvar[i++] = strdup(std::string("SCRIPT_FILENAME=" + _resource_path).c_str());
+    _envvar[i++] = strdup("SERVER_ADDR=172.0.0.1");
+    _envvar[i++] = strdup(std::string("SERVER_NAME=" + _host).c_str());
+    _envvar[i++] = strdup("SERVER_PROTOCOL=HTTP/1.1");
+    _envvar[i++] = strdup("SERVER_SOFTWARE=webserv");   
+    _envvar[i++] = strdup(std::string(
+			      "SERVER_PORT=" +
+			      n_to_str(_req->get_server_port())
+			      ).c_str()
+	);
     _envvar[i] = NULL;
 }
 
@@ -266,11 +304,13 @@ CGI::CGI(Request *req, const std::string& uri, const cgi_pair& cgi_info) :
         throw std::runtime_error("CGI: " + std::string(strerror(errno)) + "\n");
     }
 
-    /* llamada a getcwd: cambio de malloc a reservar memoria en stack por problemas de fugas de memoria */
+    /* llamada a getcwd: cambio de malloc a reservar memoria en stack */
+    /* por problemas de fugas de memoria                              */
     char cwd[S_BUFFR_PWD];
     if (getcwd(cwd, S_BUFFR_PWD) == NULL) {
         throw std::runtime_error("CGI: getcwd() call failure");
     }
+    _host = set_host();
     _document_root = set_document_root(_req->get_location(), cwd);
     _resource_path = set_resource_path(uri, cwd);
     _cgi_path = set_cgi_path(cgi_info.second);
@@ -312,41 +352,40 @@ void CGI::executeCGI_read(void) {
 
 void CGI::executeCGI()
 {
-    if (pipe(_fdOut) < 0 || pipe(_fdIN) < 0)
+    if (pipe(_fdOut) < 0 || pipe(_fdIN) < 0) {
         throw StatusLine(500, REASON_500, "pipe failed in executeCGI method");
+    }
 
     pid_t pid = fork();
     if (pid == -1) {
         throw StatusLine(500, REASON_500, "CGI: fork() call error");
     }
     if (!pid){
-
-        // stdout is now a copy of fdOut[1] and in case post method, stdin is a copy of fdIn[0]
-        dup2(_fdOut[1], STDOUT_FILENO);
+        if (dup2(_fdOut[1], STDOUT_FILENO) == -1 ||
+	    dup2(_fdIN[0], STDIN_FILENO) == -1) {
+	    std::cerr << std::string("[ cgi error ] ") + strerror(errno) << "\n";
+	    throw std::exception();
+	};
         close_fdOut();
-
-        dup2(_fdIN[0], STDIN_FILENO);
         close_fdIN();
-
-        // change the repo into where the program is
-        if (chdir(_path_info.c_str()) == -1) {
+        if (chdir(_path_info.c_str()) == -1 ||
+	    execve(_args[0], _args, _envvar) == -1) {
+	    std::cerr << std::string("[ cgi error ] ") + strerror(errno) << "\n";
 	    throw std::exception();
         }
-        if (execve(_args[0], _args, _envvar) < 0) {
-	    throw std::exception();
-        }
-
     }
     close(_fdOut[1]);
     _fdOut[1] = -1;
 
     if (_req->get_method() == POST) {
 	if (ft_write(_fdIN[1], _req->get_body_string(), _req->get_body_size()) == -1) {
-	    throw StatusLine(500, REASON_500, std::string("CGI: write() - ") + strerror(errno));
+	    throw StatusLine(500,
+			     REASON_500,
+			     std::string("CGI: write() - ") + strerror(errno)
+		);
 	}
     }
     close_fdIN();
-    
     executeCGI_read();
     close_fdOut();
     // Checking if execve correctly worked
