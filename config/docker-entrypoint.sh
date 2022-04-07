@@ -1,3 +1,4 @@
+
 #!/bin/bash
 
 # sshd setup
@@ -37,3 +38,4 @@ echo "<?php phpinfo(); ?>" > /var/www/html/info.php
 cd ${SERVER_PATH}
 make
 sudo -u www-data ./webserver docker.conf
+# exec ./webserver docker.conf # uncomment when finished testing

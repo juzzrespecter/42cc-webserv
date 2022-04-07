@@ -112,12 +112,8 @@ void CGI::set_env_variables(void) {
     _envvar[i++] = strdup(std::string("SERVER_PORT=" + n_to_str(_req->get_server_port())).c_str());
     _envvar[i++] = strdup(std::string("DOCUMENT_ROOT=" + _document_root).c_str());
     _envvar[i++] = strdup(std::string("REQUEST_URI=" + request_uri).c_str());
+//    _envvar[i++] = strdup(std::string("PATH_INFO=" + _req->get_path()).c_str());
     _envvar[i] = NULL;
-
-    /* path_info -> req_parser set _cgi_suffix
-       path_translated ->true path from path_info
-       server_port -> _port in request when built
-    */
 }
 
 void CGI::set_args(void) {
@@ -334,12 +330,10 @@ void CGI::executeCGI()
 
         // change the repo into where the program is
         if (chdir(_path_info.c_str()) == -1) {
-            std::cerr << "[CGI error] chdir(): " << strerror(errno) << "\n";
-            exit(EXECVE_FAIL);
+	    throw std::exception();
         }
         if (execve(_args[0], _args, _envvar) < 0) {
-            std::cerr << "[CGI error] execve(): " << strerror(errno) << "\n";
-            exit(EXECVE_FAIL);
+	    throw std::exception();
         }
 
     }

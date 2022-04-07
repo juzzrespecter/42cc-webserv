@@ -23,9 +23,12 @@ int main(int argc, char *argv[]) {
         Webserver websrv(srv_t);
 
         websrv.run();
-    } catch(std::runtime_error& e) {
+    } catch(std::runtime_error& e) {    /* syscall error handler */
         std::cerr << "[ server fatal error ] " <<  e.what() << "\n";
         return EXIT_FAILURE;
+    } catch(std::exception& e) {        /* child process error handler (clean exit) */
+	std::cerr << "[ cgi error ] " << e.what() << "\n";
+	return EXECVE_FAIL;
     }
 
     return EXIT_SUCCESS;
