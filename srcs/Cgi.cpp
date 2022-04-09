@@ -110,12 +110,12 @@ void CGI::set_env_variables(void) {
 	    _envvar[i++] = strdup((_var_env[cont] + "=" + header_request->second).c_str());
 	}
     }
-    header_map::const_iterator header_authorization = _req->get_headers("Authorization");
-    std::string auth_type_field;
-    if (header_authorization != _req->get_headers().end()) {
-	auth_type_field = header_authorization->second;
+    header_map::const_iterator header_auth = _req->get_headers("Authorization");
+    std::string auth_field_val;
+    if (header_auth != _req->get_headers().end()) {
+	auth_field_val = header_auth->second;
     }
-    _envvar[i++] = strdup(std::string("AUTH_TYPE=" + auth_type_field).c_str());
+    _envvar[i++] = strdup(std::string("AUTH_TYPE=" + auth_field_val).c_str());
     if (_req->get_method() == POST && !_req->get_body_string().empty()) {
 	std::stringstream content_length;
 

@@ -27,4 +27,5 @@ if [[ -z $($SUDO docker images | grep $DOC_IMAGE | awk '{print $1}') ]]; then
     $SUDO docker build . -t $DOC_IMAGE
 fi
 
-$SUDO docker run -p 2222:22 -p 8080:8080 --rm --name $DOC_CONT -it $DOC_IMAGE
+#$SUDO docker run -p 2222:22 -p 8080:8080 --rm --name $DOC_CONT -it $DOC_IMAGE
+$SUDO docker run -p 8080:8080 --rm --name $DOC_CONT -it $DOC_IMAGE
