@@ -109,7 +109,13 @@ void CGI::set_env_variables(void) {
 	if (header_request != _req->get_headers().end()) {
 	    _envvar[i++] = strdup((_var_env[cont] + "=" + header_request->second).c_str());
 	}
-    }   
+    }
+    header_map::const_iterator header_authorization = _req->get_headers("Authorization");
+    std::string auth_type_field;
+    if (header_authorization != _req->get_headers().end()) {
+	auth_type_field = header_authorization->second;
+    }
+    _envvar[i++] = strdup(std::string("AUTH_TYPE=" + auth_type_field).c_str());
     if (_req->get_method() == POST && !_req->get_body_string().empty()) {
 	std::stringstream content_length;
 

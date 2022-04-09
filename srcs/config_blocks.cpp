@@ -9,6 +9,8 @@ location_block_t::location_block_t(const location_block_t& other) :
   *this = other;
 }
 
+location_block_t::~location_block_t() { } 
+
 location_block_t& location_block_t::operator=(const location_block_t& other) {
   if (this == &other) {
     return *this;
@@ -33,6 +35,8 @@ server_block_t::server_block_t(void) { }
 server_block_t::server_block_t(const server_block_t& other) { 
   *this = other;
 }
+
+server_block_t::~server_block_t() { }
 
 server_block_t& server_block_t::operator=(const server_block_t& other) {
   if (this == &other) {
