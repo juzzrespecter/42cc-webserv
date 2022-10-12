@@ -14,7 +14,7 @@ Part of 42 common core cursus: develop a simple HTTP-compilant web server, fully
 web navigator.  
   
 This project consists in developing in __C++__ a fully functioning web server, capable to serve at least a fully static website. 
-For this, we kept in mint __nginx__ as a reference, to compare header response behavior and configuration file structure.  
+For this, we kept in mind __nginx__ as a reference, to compare header response behavior and configuration file structure.  
 Webserv will try to read a configuration file passed as a parameter 
 [ or search in a default path if given none ], and if successful, will set up a series of servers 
 [ opened sockets for listening to new connections ] with proper config. such as root folder in server host filesystem or a default error page.  
