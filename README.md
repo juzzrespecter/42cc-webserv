@@ -1,4 +1,6 @@
 # webserv
+[ Made with ❤️ by [@danrodri](https://profile.intra.42.fr/users/danrodri/) and [@fgomez-s](https://profile.intra.42.fr/users/fgomez-s) ]
+
 <br/><br/>
 <p align="center">
   <i>"I predict the Internet, (...) will soon go <br/>
@@ -92,8 +94,6 @@ Configuration file options implemented:
 ```
 make && ./webserver [path_to_conf_file]
 ```
-
-[ Made by [@danrodri](https://profile.intra.42.fr/users/danrodri/), [@fgomez-s](https://profile.intra.42.fr/users/fgomez-s) ]
   
 <br/><br/>
 _> Project passed with [125/100] mark ✅😎 <_
