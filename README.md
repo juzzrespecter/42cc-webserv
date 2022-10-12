@@ -51,7 +51,7 @@ server {
 
 server {
        listen 8989;
-	  server_name server_2;
+       server_name server_2;
 
        location /cookie_test {
        		accept_method POST GET;
